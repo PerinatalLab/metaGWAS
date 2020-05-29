@@ -120,8 +120,7 @@ rule format_sumstats_allPTD:
 	'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/MOBAGENETICS_allPTD.txt',
         '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DBDS_allPTD.txt'
     run:
-        infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(infiles, output)
+        format_list(input, output)
 
 rule format_sumstats_earlyPTD:
     ''

@@ -17,6 +17,8 @@ rule all:
 	'Files to collect'
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/annotation/top_hits_annotated.txt',
+		'/mnt/hdd/common/pol/metaGWAS/reports/top_hits_annotated.html',
+		'/mnt/hdd/common/pol/metaGWAS/reports/independent_top_hits_annotated.html',
 		'/mnt/hdd/common/pol/metaGWAS/validation/figures/mht_GA_BW.pdf',
 		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/{pheno}/MOBAGENETICS_{pheno}.txt', pheno= ['allPTD', 'earlyPTD', 'postTerm', 'GAraw', 'GAnrm'])
 

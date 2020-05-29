@@ -1,0 +1,49 @@
+---
+title: "**Maternal genetic variants associated with gestational duration.**"
+author:
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+    html_document:
+        theme: default
+        highlight: tango
+        number_sections: no
+        toc: yes
+        toc_depth: 3
+        toc_float:
+            collapsed: no
+            smooth_scroll: yes
+---
+
+```{r dependencies, include=FALSE}
+library("dplyr")
+library("knitr")
+library("gridExtra")
+library("tidyr")
+library("kableExtra")
+library("data.table")
+options(warn=-1)
+opts_chunk$set(dpi=300)
+```
+
+```{r echo= F}
+
+d= fread(snakemake@input[[1]], h=T)
+
+d$metaP= formatC(d$metaP, format = "e", digits = 2)
+d$MAF_average= round(d$MAF_average, 3)
+d$MAF_min= round(d$MAF_min, 3)
+d$MAF_max= round(d$MAF_max, 3)
+d$pos_effect= round(d$pos_effect, 3)
+df= arrange(d, chr, pos)
+df = group_by(df, chr) %>%
+	mutate(d=pos-lag(pos, default=-Inf), clumpid=cumsum(d>2.5e5)) %>%
+	group_by(chr, clumpid) %>%
+	filter(rank(metaP, ties.method = "random")==1)
+
+
+d= arrange(d, metaP)
+
+
+kable(d, align= rep('c', 14), row.names= F, col.names=c('Chr.', 'Pos', 'rsid', 'P-value', 'N cohorts', 'Effect allele', 'Prob. positive effect', 'MAF (average)', 'MAF (min)', 'MAF (max)', 'VEP Consequence', 'VEP Gene', 'Nearest protein coding gene', 'eQTL'), caption = "Summary of all top independent genetic variants.", booktabs = T) %>% kable_styling(latex_options= c('striped', 'scale_down')) %>% column_spec(1:3, bold = T, color = "black", background = "white") %>% footnote(general_title= '', general= c('MAF weighted average using sqrt(sample size)', 'VEP Consequence depicts most likely consequence to the VEP gene according to Variant Effect Predictor', 'Nearest transcription start site of protein coding gene', 'eQTL from any tissue in GTEx v8, LiftedOver to hg19.'), threeparttable= T)
+
+```

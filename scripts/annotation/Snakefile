@@ -124,5 +124,23 @@ rule merge_annotations:
 		d= pd.merge(d, eqtl, on= ['chr', 'pos'], how= 'left')
 		d= pd.merge(d, prot, on= ['chr', 'pos'], how= 'left')
 		d= pd.merge(d, dbsnp, on= ['chr', 'pos'], how= 'left')
+		d['eQTL']= d.eQTL.str.replace('_', ' ')
 		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['chr', 'pos', 'rsid', 'metaP', 'n', 'allele', 'pos_effect', 'MAF_average', 'MAF_min', 'MAF_max', 'Consequence', 'SYMBOL', 'gene', 'eQTL'])
 
+rule pdf_table:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/annotation/top_hits_annotated.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/reports/top_hits_annotated.html'
+	script:
+		'annotate_table.Rmd'
+
+rule independent_SNPS_table:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/annotation/top_hits_annotated.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/reports/independent_top_hits_annotated.html'
+	script:
+		'independent_annotate_table.Rmd'
