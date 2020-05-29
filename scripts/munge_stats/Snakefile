@@ -23,7 +23,7 @@ def is_number(s):
     else: 
         return False
 
-def format_list(input, output, x):
+def format_list(input, output):
         for i in range(len(input)):
             with gzip.open(input[i], 'rt') as f:
                 print(input[i])
@@ -52,18 +52,18 @@ def format_list(input, output, x):
                     if len(row['EFF_ALLELE']) >1: row['EFF_ALLELE']= 'I'
                     if row['REF_ALLELE']== 'I': row['EFF_ALLELE']= 'D'
                     if row['EFF_ALLELE']== 'I': row['REF_ALLELE']= 'D'
-                    a1= ''.join(x.loc[(x.chr== row['CHR']) & (x.pos== row['POS']), 'A1'].values)
-                    a2= ''.join(x.loc[(x.chr== row['CHR']) & (x.pos== row['POS']), 'A2'].values)
-                    if (len(a1)==0) | (len(a2)== 0):
-                        continue
-                    if ((a1 != row['REF_ALLELE']) & (a1 != row['EFF_ALLELE'])):
-                        continue
-                    if ((a2 != row['REF_ALLELE']) & (a2 != row['EFF_ALLELE'])):
-                        continue
-                    if (a1== row['REF_ALLELE']) & (a2== row['EFF_ALLELE']):
-                        row['BETA_ADD']= row['BETA_ADD'] * -1
-                        row['REF_ALLELE']= a2
-                        row['EFF_ALLELE']= a1
+#                    a1= ''.join(x.loc[(x.chr== row['CHR']) & (x.pos== row['POS']), 'A1'].values)
+#                    a2= ''.join(x.loc[(x.chr== row['CHR']) & (x.pos== row['POS']), 'A2'].values)
+#                    if (len(a1)==0) | (len(a2)== 0):
+#                        continue
+#                    if ((a1 != row['REF_ALLELE']) & (a1 != row['EFF_ALLELE'])):
+#                        continue
+#                    if ((a2 != row['REF_ALLELE']) & (a2 != row['EFF_ALLELE'])):
+#                        continue
+#                    if (a1== row['REF_ALLELE']) & (a2== row['EFF_ALLELE']):
+#                        row['BETA_ADD']= row['BETA_ADD'] * -1
+#                        row['REF_ALLELE']= a2
+#                        row['EFF_ALLELE']= a1
                     df_list.append([row['CHR'], row['POS'], row['EAF_CONTR'], row['N'], row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['P_VAL_ADD']])
                     if len(df_list)== 1000:
                         with open(output[i], 'a', newline= '') as file_handler:
@@ -121,10 +121,8 @@ rule format_sumstats_allPTD:
 	'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/MOBAGENETICS_allPTD.txt',
         '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DBDS_allPTD.txt'
     run:
-        x= pd.read_csv(input[0], sep= '\t', header= 0)
-	x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(infiles, output, x)
+        format_list(infiles, output)
 
 rule format_sumstats_earlyPTD:
     ''
@@ -162,8 +160,6 @@ rule format_sumstats_earlyPTD:
 	'/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/MOBAGENETICS_earlyPTD.txt',
         '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/DBDS_earlyPTD.txt'
     run:
-        x= pd.read_csv(input[0], sep= '\t', header= 0)
-        x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
         format_list(infiles, output, x)
 
@@ -203,8 +199,6 @@ rule format_sumstats_postTerm:
 	'/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/MOBAGENETICS_postTerm.txt',
         '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DBDS_postTerm.txt'
     run:
-        x= pd.read_csv(input[0], sep= '\t', header= 0)
-        x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
         format_list(infiles, output, x)
 
@@ -261,8 +255,6 @@ rule format_sumstats_GAraw:
 	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/MOBAGENETICS_GAraw.txt',
         '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DBDS_GAraw.txt'
     run:
-        x= pd.read_csv(input[0], sep= '\t', header= 0)
-        x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
         format_list(infiles, output, x)
 
@@ -316,8 +308,6 @@ rule format_sumstats_GAnrm:
 	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/MOBAGENETICS_GAnrm.txt',
         '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DBDS_GAnrm.txt'
     run:
-        x= pd.read_csv(input[0], sep= '\t', header= 0)
-        x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
         format_list(infiles, output, x)
 
