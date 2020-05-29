@@ -1,0 +1,324 @@
+import csv
+import numpy as np
+import gzip
+import math
+
+allPTD_coh_nms= ['23andme', 'ALSPAC', 'BIB', 'CHOP', 'DECODE', 'EGCUT', 'HARVEST', 'MOBA2008', 'NFBC1966', 'normentfeb', 'normentjan', 'normentjun', 'nomentmay', 'rotterdam1', 'rotterdam2', 'HUNT', 'MOBAGENETICS', 'DBDS']
+
+earlyPTD_coh_nms= ['ALSPAC', 'BIB', 'DECODE', 'MOBA2008', 'NFBC1966sub', 'NFBC1966', 'normentfeb', 'normentjan', 'normentjun', 'nomentmay', 'rotterdam1', 'rotterdam2', 'HUNT', 'MOBAGENETICS', 'DBDS']
+
+postTerm_coh_nms= ['ALSPAC', 'BIB', 'DECODE', 'HARVEST', 'NFBC1966sub', 'NFBC1966', 'normentfeb', 'normentjan', 'normentjun', 'nomentmay', 'rotterdam1', 'rotterdam2', 'HUNT', 'MOBAGENETICS', 'DBDS']
+
+GAraw_coh_nms= ['23andme', 'ALSPAC', 'BIB', 'CHOP', 'DECODE', 'EFSOCH', 'HAPO', 'HARVEST', 'MOBA2008', 'NFBC1966sub', 'NFBC1966', 'normentfeb', 'normentjan', 'normentjun', 'nomentmay', 'rotterdam1', 'rotterdam2', 'STORK', 'STORKGROR', 'Viva', 'HUNT', 'MOBAGENETICS', 'DBDS']
+
+GAnrm_coh_nms= ['ALSPAC', 'BIB', 'CHOP', 'DECODE', 'EFSOCH', 'HAPO', 'HARVEST', 'MOBA2008', 'NFBC1966sub', 'NFBC1966', 'normentfeb', 'normentjan', 'normentjun', 'nomentmay', 'rotterdam1', 'rotterdam2', 'STORK', 'STORKGROR', 'Viva', 'HUNT', 'MOBAGENETICS', 'DBDS']
+
+def is_number(s):
+    if s != None:
+        try:
+            float(s)
+            return True
+        except ValueError:
+            return False
+    else: 
+        return False
+
+def format_list(input, output, x):
+        for i in range(len(input)):
+            with gzip.open(input[i], 'rt') as f:
+                print(input[i])
+                dialect = csv.Sniffer().sniff(f.readline(), delimiters= ' \t')
+                f.seek(0)
+                input_file= csv.DictReader(f, dialect= dialect)
+                df_list= list()
+                with open(output[i], 'w') as csvfile:
+                    writer = csv.writer(csvfile, delimiter= '\t')
+                    writer.writerow([g for g in ['CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']])
+                for row in input_file:
+                    if ('HUNT' in input[i]) and ('GAraw' in input[i]): row['EAF_CONTR']= row['EAF']
+                    if ('Viva' in input[i]) and ('GA' in input[i]): row['EAF_CONTR']= row['EAF_ALL']
+                    if 'DECODE' in input[i]: row['EAF_CONTR'], row['CHR'], row['POS'], row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['N'], row['P_VAL_ADD']= row['EAF_CASES'], row['BUILD'], row['CHR'], row['EFF_ALLELE'], row['POS'], row['EAF_CONTR'], row['BETA_ADD'], row['REF_ALLELE'], row['SE_ADD']
+                    if ((row['BETA_ADD'] == '.') | (row['BETA_ADD']== 'NA') | (row['SE_ADD']!= row['SE_ADD']) | (row['BETA_ADD'] != row['BETA_ADD']) | (row['EAF_CONTR'] != row['EAF_CONTR']) | (row['EAF_CONTR']== 'NA') | (not is_number(row['EAF_CONTR']))):
+                        continue
+                    maf= np.where(float(row['EAF_CONTR'])> 0.5, 1 - float(row['EAF_CONTR']), float(row['EAF_CONTR']))
+                    if (maf< 0.001):
+                        continue
+                    if 'INFO' in row: 
+                        if is_number(row['INFO']):
+                            if float(row['INFO'])< 0.8:
+                                continue
+                    row['CHR']= row['CHR'].replace('X', '23')
+                    if len(row['REF_ALLELE']) >1: row['REF_ALLELE']= 'I'
+                    if len(row['EFF_ALLELE']) >1: row['EFF_ALLELE']= 'I'
+                    if row['REF_ALLELE']== 'I': row['EFF_ALLELE']= 'D'
+                    if row['EFF_ALLELE']== 'I': row['REF_ALLELE']= 'D'
+                    a1= ''.join(x.loc[(x.chr== row['CHR']) & (x.pos== row['POS']), 'A1'].values)
+                    a2= ''.join(x.loc[(x.chr== row['CHR']) & (x.pos== row['POS']), 'A2'].values)
+                    if (len(a1)==0) | (len(a2)== 0):
+                        continue
+                    if ((a1 != row['REF_ALLELE']) & (a1 != row['EFF_ALLELE'])):
+                        continue
+                    if ((a2 != row['REF_ALLELE']) & (a2 != row['EFF_ALLELE'])):
+                        continue
+                    if (a1== row['REF_ALLELE']) & (a2== row['EFF_ALLELE']):
+                        row['BETA_ADD']= row['BETA_ADD'] * -1
+                        row['REF_ALLELE']= a2
+                        row['EFF_ALLELE']= a1
+                    df_list.append([row['CHR'], row['POS'], row['EAF_CONTR'], row['N'], row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['P_VAL_ADD']])
+                    if len(df_list)== 1000:
+                        with open(output[i], 'a', newline= '') as file_handler:
+                            writer1= csv.writer(file_handler, delimiter= '\t')
+                            for item in df_list:
+                                writer1.writerow(item)
+                        df_list= list()
+                with open(output[i], 'a', newline= '') as file_handler:
+                    writer1= csv.writer(file_handler, delimiter= '\t')
+                    for item in df_list:
+                        writer1.writerow(item)
+
+
+rule format_sumstats_allPTD:
+    ''
+    input:
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/23andme-allPTD-RESULTS-20180524.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-allPTD-RESULTS-23042018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-allPTD-RESULTS-15072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/CHOP-allPTD-RESULTS-19062018_PSN.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-allPTD-RESULTS-05072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/EGCUT_PTD_RESULTS_210818.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HARVEST-allPTD-RESULTS-23052018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/MOBA2008-allPTD-RESULTS-18082018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-allPTD-RESULTS-20180418_sub1.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-allPTD-RESULTS-20180418.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentfeb-allPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjan-allPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjun-allPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentmay-allPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ROTT1-allPTD-RESULTS-25072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/rotterdam2-allPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-allPTD-RESULTS-18122018.txt.gz',
+	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-allPTD-add-RESULTS-25022020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-allPTD-RESULTS-30032020.txt.gz'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/23andme_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/ALSPAC_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/BIB_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/CHOP_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DECODE_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/EGCUT_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/HARVEST_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/MOBA2008_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/NFBC1966sub_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/NFBC1966_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/normentfeb_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/normentjan_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/normentjun_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/nomentmay_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/rotterdam1_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/rotterdam2_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/HUNT_allPTD.txt',
+	'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/MOBAGENETICS_allPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DBDS_allPTD.txt'
+    run:
+        x= pd.read_csv(input[0], sep= '\t', header= 0)
+	x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
+        infiles= [infile for infile in input if infile.endswith('txt.gz')]
+        format_list(infiles, output, x)
+
+rule format_sumstats_earlyPTD:
+    ''
+    input:
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-earlyPTD-RESULTS-23042018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-earlyPTD-RESULTS-15072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-earlyPTD-RESULTS-05072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/MOBA2008-earlyPTD-RESULTS-18082018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-earlyPTD-RESULTS-20180418_sub1.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-earlyPTD-RESULTS-20180418.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentfeb-earlyPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjan-earlyPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjun-earlyPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentmay-earlyPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ROTT1-earlyPTD-RESULTS-25072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/rotterdam2-earlyPTD-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-earlyPTD-RESULTS-18122018.txt.gz',
+	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-earlyPTD-add-RESULTS-25022020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-earlyPTD-RESULTS-30032020.txt.gz'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/ALSPAC_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/BIB_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/DECODE_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/MOBA2008_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/NFBC1966sub_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/NFBC1966_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/normentfeb_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/normentjan_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/normentjun_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/nomentmay_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/rotterdam1_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/rotterdam2_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/HUNT_earlyPTD.txt',
+	'/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/MOBAGENETICS_earlyPTD.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/DBDS_earlyPTD.txt'
+    run:
+        x= pd.read_csv(input[0], sep= '\t', header= 0)
+        x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
+        infiles= [infile for infile in input if infile.endswith('txt.gz')]
+        format_list(infiles, output, x)
+
+rule format_sumstats_postTerm:
+    ''
+    input:
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-postTerm-RESULTS-23042018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-postTerm-RESULTS-15072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-postTerm-RESULTS-05072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HARVEST-postTerm-RESULTS-23052018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-postTerm-RESULTS-20180418_sub1.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-postTerm-RESULTS-20180418.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentfeb-postTerm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjan-postTerm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjun-postTerm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentmay-postTerm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ROTT1-postTerm-RESULTS-25072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/rotterdam2-postTerm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-postTerm-RESULTS-18122018.txt.gz',
+	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-postTerm-add-RESULTS-25022020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-postTerm-RESULTS-30032020.txt.gz'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/ALSPAC_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/BIB_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DECODE_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/HARVEST_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/NFBC1966sub_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/NFBC1966_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/normentfeb_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/normentjan_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/normentjun_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/nomentmay_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/rotterdam1_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/rotterdam2_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/HUNT_postTerm.txt',
+	'/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/MOBAGENETICS_postTerm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DBDS_postTerm.txt'
+    run:
+        x= pd.read_csv(input[0], sep= '\t', header= 0)
+        x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
+        infiles= [infile for infile in input if infile.endswith('txt.gz')]
+        format_list(infiles, output, x)
+
+
+rule format_sumstats_GAraw:
+    ''
+    input:
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/23andme-GAraw-RESULTS-20180524.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-GAraw-RESULTS-23042018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-GAraw-RESULTS-15072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/CHOP-GAraw-RESULTS-19062018_PSN.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-GAraw-RESULTS-05072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/EFSOCH-GAraw-RESULTS-18012018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HAPO-GAraw-RESULTS-15082018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HARVEST-GAraw-RESULTS-23052018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/MOBA2008-GAraw-RESULTS-18082018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAraw-RESULTS-20180418_sub1.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAraw-RESULTS-20180418.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentfeb-GAraw-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjan-GAraw-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjun-GAraw-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentmay-GAraw-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ROTT1-GAraw-RESULTS-25072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/rotterdam2-GAraw-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/STORK-GAraw-RESULTS-28052018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/STORKGROR-GAraw-RESULTS-28052018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/Viva-GAraw-RESULTS-05142018.txt.gz',
+	'/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-GAraw-RESULTS-18122018.txt.gz',
+	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-GAraw-add-RESULTS-25022020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-GAraw-RESULTS-30032020.txt.gz'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/23andme_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/ALSPAC_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/BIB_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/CHOP_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DECODE_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/EFSOCH_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/HAPO_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/HARVEST_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/MOBA2008_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/NFBC1966sub_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/NFBC1966_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/normentfeb_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/normentjan_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/normentjun_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/nomentmay_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/rotterdam1_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/rotterdam2_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/STORK_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/STORKGROR_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/Viva_GAraw.txt',
+	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/HUNT_GAraw.txt',
+	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/MOBAGENETICS_GAraw.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DBDS_GAraw.txt'
+    run:
+        x= pd.read_csv(input[0], sep= '\t', header= 0)
+        x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
+        infiles= [infile for infile in input if infile.endswith('txt.gz')]
+        format_list(infiles, output, x)
+
+rule format_sumstats_GAnrm:
+    ''
+    input:
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-GAnrm-RESULTS-23042018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-GAnrm-RESULTS-15072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/CHOP-GAnrm-RESULTS-19062018_PSN.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-GAnrm-RESULTS-05072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/EFSOCH-GAnrm-RESULTS-18012018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HAPO-GAnrm-RESULTS-15082018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/HARVEST-GAnrm-RESULTS-23052018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/MOBA2008-GAnrm-RESULTS-18082018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAnrm-RESULTS-20180418_sub1.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAnrm-RESULTS-20180418.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentfeb-GAnrm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjan-GAnrm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentjun-GAnrm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/normentmay-GAnrm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/ROTT1-GAnrm-RESULTS-25072018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/rotterdam2-GAnrm-RESULTS-10012020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/STORK-GAnrm-RESULTS-28052018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/STORKGROR-GAnrm-RESULTS-28052018.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/Viva-GAnrm-RESULTS-05142018.txt.gz',
+	'/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-GAnrm-RESULTS-18122018.txt.gz',
+	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-GAnrm-add-RESULTS-25022020.txt.gz',
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-GAnrm-RESULTS-30032020.txt.gz'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/ALSPAC_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/BIB_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/CHOP_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DECODE_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/EFSOCH_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/HAPO_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/HARVEST_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/MOBA2008_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/NFBC1966sub_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/NFBC1966_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/normentfeb_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/normentjan_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/normentjun_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/nomentmay_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/rotterdam1_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/rotterdam2_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/STORK_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/STORKGROR_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/Viva_GAnrm.txt',
+	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/HUNT_GAnrm.txt',
+	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/MOBAGENETICS_GAnrm.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DBDS_GAnrm.txt'
+    run:
+        x= pd.read_csv(input[0], sep= '\t', header= 0)
+        x[['chr', 'pos']]= x.SNP.str.split(':', expand= True)
+        infiles= [infile for infile in input if infile.endswith('txt.gz')]
+        format_list(infiles, output, x)
+
+

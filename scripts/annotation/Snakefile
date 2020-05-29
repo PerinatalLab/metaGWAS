@@ -1,0 +1,128 @@
+import pandas as pd
+import numpy as np
+import glob
+import collections
+
+tissue_nms= [f.split('/')[7].split('.')[0] for f in glob.glob('/mnt/hdd/common/pol/references/GTEx_Analysis_v8_eQTL/*.egenes.txt.gz')]
+
+
+rule cohort_specific_MAF:
+	'Obtain median, max and min MAF for each top variant.'
+	input:
+		'/home/pol/metaGWAS/raw_data/xtrct_SINGLESTAGE_2x0.05_m0.0001_laufwirebd_20200526.txt',
+		'/home/pol/metaGWAS/raw_data/cohort_desc.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/annotation/all_maf.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header=0)
+		df= pd.read_csv(input[1], sep= '\t', header=0, usecols= ['cohort', 'N'])
+		d= pd.merge(d, df, on= 'cohort')
+		d['MAF']= np.where(d.EAF_CONTR> 0.5, 1- d.EAF_CONTR, np.where(d.EAF_CONTR<0.5, d.EAF_CONTR, np.nan))
+		d.dropna(subset= ['MAF'], inplace= True)
+		maf_average= d.groupby('chrpos').apply(lambda x: np.average(x.MAF, weights= np.sqrt(x.N))).reset_index()
+		maf_average.columns= ['chrpos', 'MAF_average']
+		maf_min_max= d.groupby('chrpos')['MAF'].aggregate(['min', 'max']).reset_index()
+		maf_min_max.columns= ['chrpos', 'MAF_min', 'MAF_max']
+		d= pd.merge(maf_average, maf_min_max, on= 'chrpos')
+		d[['chr', 'pos']]= d.chrpos.str.split('_', expand= True)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule map_GTEx_hg38_to_hg19:
+	'Latest version of GTEx is mapped to hg38. Change to hg19.'
+	input:
+		'/mnt/hdd/common/pol/references/GTEx_Analysis_v8_eQTL/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.lookup_table.txt.gz',
+		'/mnt/hdd/common/pol/references/GTEx_Analysis_v8_eQTL/{tissue}.v8.egenes.txt.gz'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/annotation/GTEx_hg19_{tissue}.txt')
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, compression= 'gzip', usecols= ['variant_id', 'variant_id_b37'])
+		x= pd.read_csv(input[1], compression= 'gzip', header=0, sep= '\t') 
+		x= pd.merge(x, d, on= 'variant_id', how= 'left')
+		x['tissue']= wildcards.tissue
+		x[['chr', 'pos', 'A1', 'A2', 'build']]= x.variant_id_b37.str.split('_', expand= True)
+		x['chr']= x.chr.str.replace('X', '23')
+		x= x[['gene_name', 'chr', 'pos', 'tissue']]
+		x.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule concat_GTEx_hg19:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/annotation/GTEx_hg19_{tissue}.txt', tissue= tissue_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/annotation/all_tissues_GTEx_hg19.txt'
+	shell:
+		'cat {input} > {output[0]}'
+
+rule GTEx_v8_Tissue_gene:
+	'Obtain list of tissue - gene for each eQTL that is also a top hit.'
+	input:
+		'/home/pol/metaGWAS/raw_data/results_singlestage_laufwirebd_20200526.txt',
+		'/mnt/hdd/common/pol/metaGWAS/annotation/all_tissues_GTEx_hg19.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/annotation/top_hits_eQTL.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['chr', 'pos'])
+		df= pd.read_csv(input[1], sep= '\t', header= None, names= ['gene_name', 'chr', 'pos', 'tissue'])
+		df['chr']= pd.to_numeric(df.chr, errors= 'coerce')
+		df.dropna(subset=['chr'], inplace= True)
+		df.sort_values(['tissue'], inplace= True)
+		d= pd.merge(d, df, on= ['chr', 'pos'])
+		d= d.groupby(['chr', 'pos', 'gene_name'])['tissue'].aggregate(lambda x: ', '.join(tuple(x))).reset_index()
+		d['gene_name']= d.gene_name + ' (' + d.tissue + ')'
+		d= d.groupby(['chr', 'pos'])['gene_name'].aggregate(lambda x: ', '.join(tuple(x))).reset_index()
+		d.columns= ['chr', 'pos', 'eQTL']
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule nearest_protein_coding:
+	''
+	input:
+		'/home/pol/metaGWAS/raw_data/results_singlestage_laufwirebd_20200526.txt',
+		'/home/pol/metaGWAS/raw_data/UCSC_gene_transcription.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/annotation/protein_coding_top_hits.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		df= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['chr', 'gene', 'start'])
+		d= pd.merge(d, df, on= 'chr')
+		d['diff']= abs(d.start - d.pos)
+		d= d.groupby(['chr', 'pos']).agg({'diff': 'min', 'gene': 'first'}).reset_index()
+		d.to_csv(output[0], header= True, sep= '\t', index= False)
+
+rule merge_annotations:
+	'Merge all annotation (MAF, eQTL, consequence)'
+	input:
+		'/home/pol/metaGWAS/raw_data/results_singlestage_laufwirebd_20200526.txt',
+		'/mnt/hdd/common/pol/metaGWAS/annotation/all_maf.txt',
+		'/mnt/hdd/common/pol/metaGWAS/annotation/top_hits_eQTL.txt',
+		'/home/pol/metaGWAS/raw_data/VEP_annotation.txt',
+		'/mnt/hdd/common/pol/metaGWAS/annotation/protein_coding_top_hits.txt',
+		'/mnt/hdd/common/pol/references/dbSNP153.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/annotation/top_hits_annotated.txt'
+	run:
+		d= pd.read_csv(input[0], header= 0, sep= '\t', usecols= ['chr', 'pos', 'effect', 'allele', 'metaP', 'n'])
+		d['pos_effect']= d.effect.str.count('\+') / d.n
+		d['allele']= d.allele.str.replace('\.', '')
+		d['allele']= d.allele.apply(lambda x: collections.Counter(x).most_common(1)[0][0])
+		maf= pd.read_csv(input[1], header=0, sep= '\t')
+		eqtl= pd.read_csv(input[2], header= 0, sep= '\t')
+		vep= pd.read_csv(input[3], header= 0, sep= '\t', usecols= ['Uploaded_variation', 'Consequence', 'SYMBOL'])
+		vep.drop_duplicates('Uploaded_variation', inplace= True, keep= 'first')
+		vep['Uploaded_variation']= vep.Uploaded_variation.str.replace('X', '23')
+		vep[['chr', 'pos', 'A']]= vep.Uploaded_variation.str.split('_', expand= True)
+		vep= vep[['chr', 'pos', 'Consequence', 'SYMBOL']]
+		vep['chr']= pd.to_numeric(vep.chr, errors= 'coerce')
+		vep['pos']= pd.to_numeric(vep.pos, errors= 'coerce')
+		prot= pd.read_csv(input[4], header= 0, sep= '\t')
+		dbsnp= pd.read_csv(input[5], sep= '\t', header= 0, usecols= ['#chrom', 'chromEnd', 'name'], compression= 'gzip')
+		dbsnp.columns= ['chr', 'pos', 'rsid']
+		dbsnp['chr']= dbsnp.chr.str.replace('chr', '')
+		dbsnp['chr']= dbsnp.chr.str.replace('X', '23')
+		dbsnp['chr']= pd.to_numeric(dbsnp.chr, errors= 'coerce')
+		d= pd.merge(d, maf, on= ['chr', 'pos'], how= 'left')
+		d= pd.merge(d, vep, on= ['chr', 'pos'], how= 'left')
+		d= pd.merge(d, eqtl, on= ['chr', 'pos'], how= 'left')
+		d= pd.merge(d, prot, on= ['chr', 'pos'], how= 'left')
+		d= pd.merge(d, dbsnp, on= ['chr', 'pos'], how= 'left')
+		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['chr', 'pos', 'rsid', 'metaP', 'n', 'allele', 'pos_effect', 'MAF_average', 'MAF_min', 'MAF_max', 'Consequence', 'SYMBOL', 'gene', 'eQTL'])
+

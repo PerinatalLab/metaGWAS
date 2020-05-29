@@ -1,0 +1,29 @@
+Building DAG of jobs...
+Using shell: /bin/bash
+Provided cores: 1
+Rules claiming more threads will be scaled down.
+Job counts:
+	count	jobs
+	1	all
+	1	plot_BW_GA
+	2
+
+[Tue May 26 15:34:46 2020]
+rule plot_BW_GA:
+    input: results_singlestage_laufwirebd_20200526.txt, /mnt/hdd/common/pol/metaGWAS/validation/birthweight_mother.tsv.gz, UCSC_gene_transcription.txt
+    output: /mnt/hdd/common/pol/metaGWAS/validation/figures/mht_GA_BW.pdf
+    jobid: 1
+
+[Tue May 26 15:36:58 2020]
+Error in rule plot_BW_GA:
+    jobid: 1
+    output: /mnt/hdd/common/pol/metaGWAS/validation/figures/mht_GA_BW.pdf
+
+RuleException:
+CalledProcessError in line 26 of /home/pol/metaGWAS/validation/Snakefile:
+Command ' set -euo pipefail;  Rscript --vanilla /home/pol/metaGWAS/validation/.snakemake/scripts/tmp6x_kgbkq.manhattan_plot.R ' returned non-zero exit status 1.
+  File "/home/pol/metaGWAS/validation/Snakefile", line 26, in __rule_plot_BW_GA
+  File "/usr/lib/python3.6/concurrent/futures/thread.py", line 56, in run
+Shutting down, this might take some time.
+Exiting because a job execution failed. Look above for error message
+Complete log: /home/pol/metaGWAS/validation/.snakemake/log/2020-05-26T153446.595678.snakemake.log

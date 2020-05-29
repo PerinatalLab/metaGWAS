@@ -1,0 +1,27 @@
+
+
+
+rule download_BW_sumstats:
+	''
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/validation/birthweight_mother.tsv.gz'
+	params:
+		'https://www.dropbox.com/s/rz2qrgx3u7jco5q/2744.gwas.imputed_v3.female.tsv.bgz?dl=0'
+	shell:
+		'wget {params[0]} -O {output[0]}'
+
+rule plot_BW_GA:
+	''
+	input:
+		'results_singlestage_laufwirebd_20200526.txt',
+		'/mnt/hdd/common/pol/metaGWAS/validation/birthweight_mother.tsv.gz',
+		'UCSC_gene_transcription.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/validation/figures/mht_GA_BW.pdf'
+	script:
+		'manhattan_plot.R'
+
+
+	
+
+
