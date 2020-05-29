@@ -161,7 +161,7 @@ rule format_sumstats_earlyPTD:
         '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/DBDS_earlyPTD.txt'
     run:
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(infiles, output, x)
+        format_list(infiles, output)
 
 rule format_sumstats_postTerm:
     ''
@@ -200,7 +200,7 @@ rule format_sumstats_postTerm:
         '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DBDS_postTerm.txt'
     run:
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(infiles, output, x)
+        format_list(infiles, output)
 
 
 rule format_sumstats_GAraw:
@@ -256,7 +256,7 @@ rule format_sumstats_GAraw:
         '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DBDS_GAraw.txt'
     run:
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(infiles, output, x)
+        format_list(infiles, output)
 
 rule format_sumstats_GAnrm:
     ''
@@ -309,6 +309,6 @@ rule format_sumstats_GAnrm:
         '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DBDS_GAnrm.txt'
     run:
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(infiles, output, x)
+        format_list(infiles, output)
 
 
