@@ -80,7 +80,6 @@ def format_list(input, output):
 rule format_sumstats_allPTD:
     ''
     input:
-        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/23andme-allPTD-RESULTS-20180524.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-allPTD-RESULTS-23042018.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-allPTD-RESULTS-15072018.txt.gz',
@@ -127,7 +126,6 @@ rule format_sumstats_allPTD:
 rule format_sumstats_earlyPTD:
     ''
     input:
-        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-earlyPTD-RESULTS-23042018.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-earlyPTD-RESULTS-15072018.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-earlyPTD-RESULTS-05072018.txt.gz',
@@ -166,7 +164,6 @@ rule format_sumstats_earlyPTD:
 rule format_sumstats_postTerm:
     ''
     input:
-        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-postTerm-RESULTS-23042018.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-postTerm-RESULTS-15072018.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-postTerm-RESULTS-05072018.txt.gz',
@@ -206,7 +203,6 @@ rule format_sumstats_postTerm:
 rule format_sumstats_GAraw:
     ''
     input:
-        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/23andme-GAraw-RESULTS-20180524.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-GAraw-RESULTS-23042018.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-GAraw-RESULTS-15072018.txt.gz',
@@ -261,7 +257,6 @@ rule format_sumstats_GAraw:
 rule format_sumstats_GAnrm:
     ''
     input:
-        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-GAnrm-RESULTS-23042018.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-GAnrm-RESULTS-15072018.txt.gz',
         '/mnt/hdd/data/sumstats/GAmetaGWAS/CHOP-GAnrm-RESULTS-19062018_PSN.txt.gz',
