@@ -38,12 +38,14 @@ def format_list(input, output):
                     if ('HUNT' in input[i]) and ('GAraw' in input[i]): row['EAF_CONTR']= row['EAF']
                     if ('Viva' in input[i]) and ('GA' in input[i]): row['EAF_CONTR']= row['EAF_ALL']
                     if 'DECODE' in input[i]: row['EAF_CONTR'], row['CHR'], row['POS'], row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['N'], row['P_VAL_ADD']= row['EAF_CASES'], row['BUILD'], row['CHR'], row['EFF_ALLELE'], row['POS'], row['EAF_CONTR'], row['BETA_ADD'], row['REF_ALLELE'], row['SE_ADD']
-                    if ((row['BETA_ADD'] == '.') | (row['BETA_ADD']== 'NA') | (row['SE_ADD']!= row['SE_ADD']) | (row['BETA_ADD'] != row['BETA_ADD']) | (row['EAF_CONTR'] != row['EAF_CONTR']) | (row['EAF_CONTR']== 'NA') | (not is_number(row['EAF_CONTR']))):
+                    if ((row['BETA_ADD'] == '.') | (row['BETA_ADD']== 'NA') | (row['SE_ADD']!= row['SE_ADD']) | (row['BETA_ADD'] != row['BETA_ADD']) | (row['EAF_CONTR'] != row['EAF_CONTR'])):
                         continue
                     if is_number(row['EAF_CONTR']):
                         maf= np.where(float(row['EAF_CONTR'])> 0.5, 1 - float(row['EAF_CONTR']), float(row['EAF_CONTR']))
                         if (maf< 0.001):
                             continue
+                    else:
+                        row['EAF_CONTR']= ''
                     if 'INFO' in row: 
                         if is_number(row['INFO']):
                             if float(row['INFO'])< 0.8:
