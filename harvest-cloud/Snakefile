@@ -1,0 +1,75 @@
+CHR_nms= ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22']
+sample_nms= ['moms', 'dads', 'fets']
+cohort_nms= ['harvestm12', 'harvestm24', 'rotterdam1', 'rotterdam2', 'normentfeb', 'normentmay', 'normentjan', 'normentjun']
+
+include: 'scripts/effect_origin/Snakefile'
+
+
+rule all:
+        'Collect all result files.'
+        input:
+                '/mnt/work2/pol/metaGWAS/pheno/pheno_all.txt',
+		expand('/mnt/work2/pol/metaGWAS/processed_data/haplotypes/{haplo}_PREG_ID', haplo= ['h1', 'h2', 'h3', 'h4']),
+		'/mnt/work2/pol/metaGWAS/results/effect_origin.txt'
+
+rule phenofile:
+        'Merge all data necessary to create a phenotype file for spontaneous delivery and PROM.'
+        input:
+                '/mnt/work/pol/{cohort}/pheno/{cohort}_mfr.csv',
+                '/mnt/work2/pol/metaGWAS/processed_data/family_trios.txt',
+                '/mnt/work/pol/{cohort}/pheno/flag_list.txt',
+                '/mnt/work/pol/{cohort}/pca/pca_exclude.txt'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/pheno/{cohort}/temp_pheno.txt')
+        script:
+                'scripts/pheno_file.py'
+
+rule concat_phenos_PCA:
+        'Concat pheno files, and add PCA.'
+        input:
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pca/mobagen-total/mobagen-total-proj-pc',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pedigree/mobagen-ethnic-core-samples.kin0',
+                expand('/mnt/work2/pol/metaGWAS/pheno/{cohort}/temp_pheno.txt', cohort= cohort_nms)
+        output:
+                '/mnt/work2/pol/metaGWAS/pheno/pheno_all.txt'
+        run:
+                def selectUnrelated(df, x):
+                        kin= pd.read_csv(input[1], header= 0, sep= '\t')
+                        kin= kin.loc[kin.Kinship > 0.0884, :]
+                        kin= kin.loc[kin.ID1.isin(x.values)]
+                        kin= kin.loc[kin.ID2.isin(x.values)]
+                        kin= kin.loc[:, ['ID1','ID2','Kinship']]
+                        kin_temp= kin.copy()
+                        kin_temp.columns= ['ID2', 'ID1', 'Kinship']
+                        kin_temp= kin_temp.append(kin)
+                        kin_temp['n']= kin_temp.groupby('ID1')['ID1'].transform('count')
+                        kin_temp['nn']= kin_temp.groupby('ID2')['ID2'].transform('count')
+                        kin_temp.sort_values(by=['n', 'nn'], inplace= True)
+                        to_keep= list()
+                        for i in range(0, len(kin_temp.index)):
+                                if kin_temp.iloc[i, 0] in kin_temp.iloc[0:i, 1].values:
+                                        kin_temp.iloc[i, 1]= "X"
+                                else:
+                                        to_keep.append(kin_temp.iloc[i, 0])
+                        to_remove= [i for i in kin_temp.ID1 if i not in to_keep]
+                        to_remove= list(set(to_remove))
+                        remove= pd.DataFrame({'FID': to_remove})
+                        remove['IID']= remove.FID
+                        return remove
+                df_list= list()
+                flist= [infile for infile in input if 'pheno' in infile]
+                for infile in flist:
+                        x= pd.read_csv(infile, sep= '\t', header= 0)
+                        df_list.append(x)
+                d= pd.concat(df_list)
+                remove= selectUnrelated(d, d.Mother)
+                d= d.loc[~d.Mother.isin(remove), :]
+                remove= selectUnrelated(d, d.Father)
+                d= d.loc[~d.Father.isin(remove), :]
+                remove= selectUnrelated(d, d.Child)
+                d= d.loc[~d.Child.isin(remove), :]
+		pc= pd.read_csv(input[0], header=0, sep= '\t')
+		pc= pc.loc[pc.IID.isin(d.Child), :]
+		d= pd.merge(d, pc, left_on= 'Child', right_on= 'IID')
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+

@@ -1,0 +1,167 @@
+import pandas as pd
+import numpy as np
+
+CHR_nms= ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22']
+sample_nms= ['moms', 'dads', 'fets']
+cohort_nms= ['harvestm12', 'harvestm24', 'rotterdam1', 'rotterdam2', 'normentfeb', 'normentmay', 'normentjan', 'normentjun']
+
+rule extract_vcf_samples:
+        'Extract samples id included in the VCF file.'
+        input:
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/vcf/1.vcf.gz'
+        output:
+                '/mnt/work2/pol/metaGWAS/raw_data/vcf_ids'
+        shell:
+                """
+		set +o pipefail
+		zgrep -v '##' {input[0]} | head -1 | cut -f10- | sed  -e 's/\\t/\\n/g' > {output[0]}
+		"""
+
+rule extract_samples:
+        'Samples for filtering VCF files.'
+        input:
+                '/mnt/work/pol/{cohort}/pheno/{cohort}_linkage.csv',
+                '/mnt/work2/pol/metaGWAS/raw_data/vcf_ids',
+        output:
+                '/mnt/work2/pol/metaGWAS/raw_data/{cohort}/cohort_{sample}_toextract'
+        run:
+                if 'harvest' in wildcards.cohort:
+                        d= pd.read_csv(input[0], delim_whitespace= True, header= 0)
+                        Sentrix= 'SentrixID_1'
+                if 'harvest' not in wildcards.cohort:
+                        d= pd.read_csv(input[0], delim_whitespace= True, header= 0)
+                        Sentrix= 'SentrixID'
+                if 'moms' in wildcards.sample:
+                        d= d.loc[d.Role=='Mother', :]
+                if 'dads' in wildcards.sample:
+                        d= d.loc[d.Role=='Father', :]
+                if 'fets' in wildcards.sample:
+                        d= d.loc[d.Role=='Child', :]
+                x= [line.strip() for line in open(input[1], 'r')]
+                d= d.loc[d[Sentrix].isin(x)]
+                d.drop_duplicates(subset= [Sentrix], inplace= True)
+                d.to_csv(output[0], header= False, columns= [Sentrix], index= False, sep= '\t')
+
+rule concat_samples_extracted:
+        ''
+        input:
+                expand('/mnt/work2/pol/metaGWAS/raw_data/{cohort}/cohort_{{sample}}_toextract', cohort= cohort_nms)
+        output:
+                '/mnt/work2/pol/metaGWAS/processed_data/{sample}_toextract'
+        shell:
+                'cat {input} > {output}'
+
+rule extract_regions:
+	''
+	input:
+		'/home/pol.sole.navais/metaGWAS/raw_data/results_singlestage_laufwirebd_20200526.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/processed_data/regions_extracted.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header=0)
+		d= d[['chr', 'pos']]
+		d.sort_values(['chr', 'pos'], inplace= True)
+		d['pos2']= d.pos
+		d.to_csv(output[0], header= False, index= False, sep= '\t')
+
+rule get_GT:
+        'Extract GT from VCF file for a subset of genetic variants.'
+        input:
+                '/mnt/work2/pol/metaGWAS/processed_data/regions_extracted.txt',
+                '/mnt/work2/pol/metaGWAS/processed_data/{sample}_toextract',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/vcf/{CHR}.vcf.gz'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/processed_data/GT/temp/{sample}_gt{CHR}')
+        run:
+                shell("~/soft/bcftools-1.9/bin/bcftools query -S {input[1]} -R {input[0]} -f '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n' {input[2]} -o {output[0]}")
+
+rule add_header_GT:
+        'Add header to genotype files.'
+        input:
+                '/mnt/work2/pol/metaGWAS/processed_data/{sample}_toextract',
+                '/mnt/work2/pol/metaGWAS/processed_data/GT/temp/{sample}_gt{CHR}'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/processed_data/GT/{sample}_GT{CHR}')
+        run:
+                cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[0], 'r')]
+                d= pd.read_csv(input[1], header= None, names= cols, sep= '\t')
+                d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule concat_GT_chr:
+        'Collect GT from all CHR.'
+        input:
+                expand('/mnt/work2/pol/metaGWAS/processed_data/GT/{{sample}}_GT{CHR}', CHR= CHR_nms)
+        output:
+                temp('/mnt/work2/pol/metaGWAS/processed_data/GT/{sample}_GT.txt')
+        shell:
+                '''
+                set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'chr' >> {output[0]}
+                '''
+
+rule get_family_trios:
+        'Obtain file with family trios, one row per pregnancy.'
+        input:
+                '/mnt/work/pol/{cohort}/pheno/{cohort}_linkage.csv',
+                '/mnt/work2/pol/metaGWAS/raw_data/vcf_ids'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/processed_data/{cohort}/family_trios.txt')
+        run:
+                if 'harvest' in wildcards.cohort:
+                        d= pd.read_csv(input[0], delim_whitespace= True, header= 0)
+                        d.dropna(subset= ['Role'], inplace= True)
+                        d= d.pivot(index= 'PREG_ID_1724', columns= 'Role', values= 'SentrixID_1').reset_index()
+                        d['PREG_ID_1724']= pd.to_numeric(d.PREG_ID_1724, errors= 'coerce')
+                        d.dropna(subset= ['PREG_ID_1724'], inplace= True)
+                        d['PREG_ID']= wildcards.cohort + '_' + d.PREG_ID_1724.astype(int).map(str)
+                else:
+                        d= pd.read_csv(input[0], delim_whitespace= True, header= 0)
+                        d.dropna(subset= ['Role'], inplace= True)
+                        d= d.pivot(index= 'PREG_ID_315', columns= 'Role', values= 'SentrixID').reset_index()
+                        d['PREG_ID']= wildcards.cohort + '_' + d.PREG_ID_315.astype(int).map(str)
+                m= [line.strip() for line in open(input[1], 'r')]
+                if 'Child' not in d.columns:
+                        d= d.loc[(d.Mother.isin(m)) | (d.Father.isin(m)), :]
+                        d['Child']= np.nan
+                else:
+                        d= d.loc[(d.Child.isin(m)) | (d.Mother.isin(m)) | (d.Father.isin(m)), :]
+                d.to_csv(output[0], header= False, sep= '\t', index= False, columns= ['PREG_ID', 'Child', 'Father', 'Mother'])
+
+rule concat_family_trios:
+        ''
+        input:
+                expand('/mnt/work2/pol/metaGWAS/processed_data/{cohort}/family_trios.txt', cohort= cohort_nms)
+        output:
+                '/mnt/work2/pol/metaGWAS/processed_data/family_trios.txt'
+        shell:
+                'cat {input} > {output[0]}'
+
+rule get_allele_transmission:
+        'Retrieve allele transmission from family trios (after phasing).'
+        input:
+                '/mnt/work2/pol/metaGWAS/processed_data/GT/fets_GT.txt',
+                '/mnt/work2/pol/metaGWAS/processed_data/GT/moms_GT.txt',
+                '/mnt/work2/pol/metaGWAS/processed_data/family_trios.txt',
+                '/mnt/work2/pol/metaGWAS/processed_data/GT/dads_GT.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/processed_data/haplotypes/h1_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/processed_data/haplotypes/h2_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/processed_data/haplotypes/h3_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/processed_data/haplotypes/h4_PREG_ID'
+        script:
+                'allele_transmission.py'
+
+rule haplotype_based_analysis:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/processed_data/haplotypes/h1_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/processed_data/haplotypes/h2_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/processed_data/haplotypes/h3_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/processed_data/haplotypes/h4_PREG_ID',
+		'/mnt/work2/pol/metaGWAS/pheno/pheno_all.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/results/effect_origin.txt'
+	script:
+		'linear_hypotheses.R'
