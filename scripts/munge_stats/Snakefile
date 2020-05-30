@@ -305,4 +305,143 @@ rule format_sumstats_GAnrm:
         infiles= [infile for infile in input if infile.endswith('txt.gz')]
         format_list(infiles, output)
 
+rule prepare_LD_SCORE_allPTD:
+    ''
+    input:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{allPTD_coh}_allPTD.txt',
+        '/mnt/hdd/common/pol/references/dbSNP153.gz',
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/ldsc_input_{allPTD_coh}.txt'
+    run:
+        d= pd.read_csv(input[0], sep= '\t', header= 0)
+        db= pd.read_csv(input[1], sep= '\t', header= 0, compression= 'gzip', usecols= [0, 2, 3], names= ['chr', 'pos', 'SNP'])
+        db['chr']= db.chr.str.replace('chrX', 'chr23')
+        db['chr']= db.chr.str.replace('chr', '')
+        db['chr']= pd.to_numeric(db.chr, errors= 'coerce')
+        db.dropna(subset= ['chr'], inplace= True)
+        hm= pd.read_csv(input[2], sep= '\t', header= 0, names= ['id', 'EFF', 'REF'])
+        hm[['chr', 'pos']]= hm.id.str.split(':', expand= True)
+        hm['chr']= pd.to_numeric(hm.chr, errors= 'coerce')
+        hm['pos']= pd.to_numeric(hm.pos, errors= 'coerce')
+        d= pd.merge(d, db, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d.dropna(subset= ['SNP'], inplace= True)
+        d= pd.merge(d, hm, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
+        d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
+        d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
+        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule prepare_LD_SCORE_GAnrm:
+    ''
+    input:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_GAnrm.txt',
+        '/mnt/hdd/common/pol/references/dbSNP153.gz',
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/ldsc_input_{GAnrm_coh}.txt'
+    run:
+        d= pd.read_csv(input[0], sep= '\t', header= 0)
+        db= pd.read_csv(input[1], sep= '\t', header= 0, compression= 'gzip', usecols= [0, 2, 3], names= ['chr', 'pos', 'SNP'])
+        db['chr']= db.chr.str.replace('chrX', 'chr23')
+        db['chr']= db.chr.str.replace('chr', '')
+        db['chr']= pd.to_numeric(db.chr, errors= 'coerce')
+        db.dropna(subset= ['chr'], inplace= True)
+        hm= pd.read_csv(input[2], sep= '\t', header= 0, names= ['id', 'EFF', 'REF'])
+        hm[['chr', 'pos']]= hm.id.str.split(':', expand= True)
+        hm['chr']= pd.to_numeric(hm.chr, errors= 'coerce')
+        hm['pos']= pd.to_numeric(hm.pos, errors= 'coerce')
+        d= pd.merge(d, db, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d.dropna(subset= ['SNP'], inplace= True)
+        d= pd.merge(d, hm, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
+        d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
+        d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
+        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule prepare_LD_SCORE_postterm:
+    ''
+    input:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{postTerm_coh}_postTerm.txt',
+        '/mnt/hdd/common/pol/references/dbSNP153.gz',
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/ldsc_input_{postTerm_coh}.txt'
+    run:
+        d= pd.read_csv(input[0], sep= '\t', header= 0)
+        db= pd.read_csv(input[1], sep= '\t', header= 0, compression= 'gzip', usecols= [0, 2, 3], names= ['chr', 'pos', 'SNP'])
+        db['chr']= db.chr.str.replace('chrX', 'chr23')
+        db['chr']= db.chr.str.replace('chr', '')
+        db['chr']= pd.to_numeric(db.chr, errors= 'coerce')
+        db.dropna(subset= ['chr'], inplace= True)
+        hm= pd.read_csv(input[2], sep= '\t', header= 0, names= ['id', 'EFF', 'REF'])
+        hm[['chr', 'pos']]= hm.id.str.split(':', expand= True)
+        hm['chr']= pd.to_numeric(hm.chr, errors= 'coerce')
+        hm['pos']= pd.to_numeric(hm.pos, errors= 'coerce')
+        d= pd.merge(d, db, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d.dropna(subset= ['SNP'], inplace= True)
+        d= pd.merge(d, hm, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
+        d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
+        d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
+        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule prepare_LD_SCORE_GAraw:
+    ''
+    input:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_GAraw.txt',
+        '/mnt/hdd/common/pol/references/dbSNP153.gz',
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/ldsc_input_{GAraw_coh}.txt'
+    run:
+        d= pd.read_csv(input[0], sep= '\t', header= 0)
+        db= pd.read_csv(input[1], sep= '\t', header= 0, compression= 'gzip', usecols= [0, 2, 3], names= ['chr', 'pos', 'SNP'])
+        db['chr']= db.chr.str.replace('chrX', 'chr23')
+        db['chr']= db.chr.str.replace('chr', '')
+        db['chr']= pd.to_numeric(db.chr, errors= 'coerce')
+        db.dropna(subset= ['chr'], inplace= True)
+        hm= pd.read_csv(input[2], sep= '\t', header= 0, names= ['id', 'EFF', 'REF'])
+        hm[['chr', 'pos']]= hm.id.str.split(':', expand= True)
+        hm['chr']= pd.to_numeric(hm.chr, errors= 'coerce')
+        hm['pos']= pd.to_numeric(hm.pos, errors= 'coerce')
+        d= pd.merge(d, db, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d.dropna(subset= ['SNP'], inplace= True)
+        d= pd.merge(d, hm, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
+        d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
+        d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
+        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule prepare_LD_SCORE_earlyPTD:
+    ''
+    input:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/{earlyPTD_coh}_earlyPTD.txt',
+        '/mnt/hdd/common/pol/references/dbSNP153.gz',
+        '/home/pol/software/ldsc/eur_w_ld_chr/w_hm3.snplist'
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/ldsc_input_{earlyPTD_coh}.txt'
+    run:
+        d= pd.read_csv(input[0], sep= '\t', header= 0)
+        db= pd.read_csv(input[1], sep= '\t', header= 0, compression= 'gzip', usecols= [0, 2, 3], names= ['chr', 'pos', 'SNP'])
+        db['chr']= db.chr.str.replace('chrX', 'chr23')
+        db['chr']= db.chr.str.replace('chr', '')
+        db['chr']= pd.to_numeric(db.chr, errors= 'coerce')
+        db.dropna(subset= ['chr'], inplace= True)
+        hm= pd.read_csv(input[2], sep= '\t', header= 0, names= ['id', 'EFF', 'REF'])
+        hm[['chr', 'pos']]= hm.id.str.split(':', expand= True)
+        hm['chr']= pd.to_numeric(hm.chr, errors= 'coerce')
+        hm['pos']= pd.to_numeric(hm.pos, errors= 'coerce')
+        d= pd.merge(d, db, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d.dropna(subset= ['SNP'], inplace= True)
+        d= pd.merge(d, hm, left_on= ['CHR', 'POS'], right_on= ['chr', 'pos'])
+        d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
+        d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
+        d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
+        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d.to_csv(output[0], sep= '\t', header= True, index= False)
 
