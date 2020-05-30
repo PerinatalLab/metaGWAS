@@ -21,11 +21,11 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/reports/independent_top_hits_annotated.html',
 		'/mnt/hdd/common/pol/metaGWAS/validation/figures/mht_GA_BW.pdf',
 		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/{pheno}/MOBAGENETICS_{pheno}.txt', pheno= ['allPTD', 'earlyPTD', 'postTerm', 'GAraw', 'GAnrm']),
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/ldsc_input_{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms),
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/ldsc_input_{earlyPTD_coh}.txt', earlyPTD_coh= earlyPTD_coh_nms),
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/ldsc_input_{postTerm_coh}.txt', postTerm_coh= postTerm_coh_nms),
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/ldsc_input_{GAnrm_coh}.txt', GAnrm_coh= GAnrm_coh_nms),
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/ldsc_input_{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms)
+		expand('/mnt/hdd/common/pol/metaGWAS/LDsc/allPTD/{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/LDsc/earlyPTD/{earlyPTD_coh}.txt', earlyPTD_coh= earlyPTD_coh_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/LDsc/postTerm/{postTerm_coh}.txt', postTerm_coh= postTerm_coh_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/LDsc/GAnrm/{GAnrm_coh}.txt', GAnrm_coh= GAnrm_coh_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/LDsc/GAraw/{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms)
 
 
 	

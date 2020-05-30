@@ -1,2 +1,88 @@
 
 
+rule munge_LDSC_allPTD:
+	'Format sumstats according to LDSC.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/ldsc_input_{allPTD_coh}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDsc/allPTD/{allPTD_coh}.txt'
+	conda:
+		'/home/pol/software/ldsc/environment.yml'
+	shell:
+		"""
+		source activate ldsc
+		python2 /home/pol/software/ldsc/munge_sumstats.py \
+		--out {output[0]} \
+		--sumstats {input[0]}
+		source deactivate
+		"""
+
+rule munge_LDSC_earlyPTD:
+        'Format sumstats according to LDSC.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/earlyPTD/ldsc_input_{earlyPTD_coh}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDsc/earlyPTD/{earlyPTD_coh}.txt'
+        conda:
+                '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+		source activate ldsc
+                python2 /home/pol/software/ldsc/munge_sumstats.py \
+                --out {output[0]} \
+                --sumstats {input[0]}
+		source deactivate 
+                """
+
+rule munge_LDSC_postTerm:
+        'Format sumstats according to LDSC.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/ldsc_input_{postTerm_coh}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDsc/postTerm/{postTerm_coh}.txt'
+        conda:
+                '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+		source activate ldsc
+                python2 /home/pol/software/ldsc/munge_sumstats.py \
+                --out {output[0]} \
+                --sumstats {input[0]}
+		source deactivate
+                """
+
+rule munge_LDSC_GAnrm:
+        'Format sumstats according to LDSC.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/ldsc_input_{GAnrm_coh}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDsc/GAnrm/{GAnrm_coh}.txt'
+        conda:
+                '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+		source activate ldsc
+                python2 /home/pol/software/ldsc/munge_sumstats.py \
+                --out {output[0]} \
+                --sumstats {input[0]}
+		source deactivate 
+                """
+
+rule munge_LDSC_GAraw:
+        'Format sumstats according to LDSC.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/ldsc_input_{GAraw_coh}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDsc/GAraw/{GAraw_coh}.txt'
+        conda:
+                '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+		source activate ldsc
+                python2 /home/pol/software/ldsc/munge_sumstats.py \
+                --out {output[0]} \
+                --sumstats {input[0]}
+		source deactivate 
+                """
+
+
