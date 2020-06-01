@@ -44,6 +44,6 @@ df = group_by(df, chr) %>%
 d= arrange(d, metaP)
 
 
-kable(d, align= rep('c', 14), row.names= F, col.names=c('Chr.', 'Pos', 'rsid', 'P-value', 'N cohorts', 'Effect allele', 'Prob. positive effect', 'MAF (average)', 'MAF (min)', 'MAF (max)', 'VEP Consequence', 'VEP Gene', 'Nearest protein coding gene', 'eQTL'), caption = "Summary of all top independent genetic variants.", booktabs = T) %>% kable_styling(latex_options= c('striped', 'scale_down')) %>% column_spec(1:3, bold = T, color = "black", background = "white") %>% footnote(general_title= '', general= c('MAF weighted average using sqrt(sample size)', 'VEP Consequence depicts most likely consequence to the VEP gene according to Variant Effect Predictor', 'Nearest transcription start site of protein coding gene', 'eQTL from any tissue in GTEx v8, LiftedOver to hg19.'), threeparttable= T)
+kable(d, align= rep('c', 13), row.names= F, col.names=c('Chr.', 'Pos', 'rsid', 'P-value', 'N cohorts', 'Effect allele', 'Prob. positive effect', 'MAF (average)', 'MAF (min)', 'MAF (max)', 'VEP Consequence', 'VEP Gene','eQTL'), caption = "Summary of all top independent genetic variants.", booktabs = T) %>% kable_styling(latex_options= c('striped', 'scale_down')) %>% column_spec(1:3, bold = T, color = "black", background = "white") %>% footnote(general_title= '', general= c('MAF weighted average using sqrt(sample size)', 'VEP Consequence depicts most likely consequence to the VEP gene according to Variant Effect Predictor', 'eQTL from any tissue in GTEx v8, LiftedOver to hg19.'), threeparttable= T)
 
 ```

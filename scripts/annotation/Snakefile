@@ -3,7 +3,9 @@ import numpy as np
 import glob
 import collections
 
-tissue_nms= [f.split('/')[7].split('.')[0] for f in glob.glob('/mnt/hdd/common/pol/references/GTEx_Analysis_v8_eQTL/*.egenes.txt.gz')]
+#tissue_nms= [f.split('/')[7].split('.')[0] for f in glob.glob('/mnt/hdd/common/pol/references/GTEx_Analysis_v8_eQTL/*.egenes.txt.gz')]
+
+tissue_nms= ['Cells_Cultured_fibroblasts', 'Muscle_Skeletal', 'Ovary', 'Uterus', 'Vagina', 'Whole_Blood']
 
 
 rule cohort_specific_MAF:
@@ -31,6 +33,7 @@ rule map_GTEx_hg38_to_hg19:
 	'Latest version of GTEx is mapped to hg38. Change to hg19.'
 	input:
 		'/mnt/hdd/common/pol/references/GTEx_Analysis_v8_eQTL/GTEx_Analysis_2017-06-05_v8_WholeGenomeSeq_838Indiv_Analysis_Freeze.lookup_table.txt.gz',
+		'/mnt/hdd/common/pol/references/GTEx_Analysis_v8_eQTL/{tissue}.v8.signif_variant_gene_pairs.txt.gz',
 		'/mnt/hdd/common/pol/references/GTEx_Analysis_v8_eQTL/{tissue}.v8.egenes.txt.gz'
 	output:
 		temp('/mnt/hdd/common/pol/metaGWAS/annotation/GTEx_hg19_{tissue}.txt')
@@ -41,7 +44,9 @@ rule map_GTEx_hg38_to_hg19:
 		x['tissue']= wildcards.tissue
 		x[['chr', 'pos', 'A1', 'A2', 'build']]= x.variant_id_b37.str.split('_', expand= True)
 		x['chr']= x.chr.str.replace('X', '23')
-		x= x[['gene_name', 'chr', 'pos', 'tissue']]
+		x= x[['gene_id', 'chr', 'pos', 'tissue']]
+		df= pd.read_csv(input[2], compression= 'gzip', header=0, sep= '\t', usecols= ['gene_id', 'gene_name'])
+		x= pd.merge(x, df, on= ['gene_id'], how= 'left')
 		x.to_csv(output[0], sep= '\t', header= False, index= False)
 
 rule concat_GTEx_hg19:
@@ -62,7 +67,7 @@ rule GTEx_v8_Tissue_gene:
 		'/mnt/hdd/common/pol/metaGWAS/annotation/top_hits_eQTL.txt'
 	run:
 		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['chr', 'pos'])
-		df= pd.read_csv(input[1], sep= '\t', header= None, names= ['gene_name', 'chr', 'pos', 'tissue'])
+		df= pd.read_csv(input[1], sep= '\t', header= None, names= ['gene_id', 'chr', 'pos', 'tissue', 'gene_name'])
 		df['chr']= pd.to_numeric(df.chr, errors= 'coerce')
 		df.dropna(subset=['chr'], inplace= True)
 		df.sort_values(['tissue'], inplace= True)
@@ -84,8 +89,9 @@ rule nearest_protein_coding:
 		d= pd.read_csv(input[0], sep= '\t', header= 0)
 		df= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['chr', 'gene', 'start'])
 		d= pd.merge(d, df, on= 'chr')
-		d['diff']= abs(d.start - d.pos)
-		d= d.groupby(['chr', 'pos']).agg({'diff': 'min', 'gene': 'first'}).reset_index()
+		d['tss_dist']= d.pos - d.start
+		d['tss_dist']= np.where(d.tss_dist>0, np.nan, d.tss_dist)
+		d= d.groupby(['chr', 'pos']).agg({'tss_dist': 'max', 'gene': 'first'}).reset_index()
 		d.to_csv(output[0], header= True, sep= '\t', index= False)
 
 rule merge_annotations:
@@ -122,10 +128,10 @@ rule merge_annotations:
 		d= pd.merge(d, maf, on= ['chr', 'pos'], how= 'left')
 		d= pd.merge(d, vep, on= ['chr', 'pos'], how= 'left')
 		d= pd.merge(d, eqtl, on= ['chr', 'pos'], how= 'left')
-		d= pd.merge(d, prot, on= ['chr', 'pos'], how= 'left')
+#		d= pd.merge(d, prot, on= ['chr', 'pos'], how= 'left')
 		d= pd.merge(d, dbsnp, on= ['chr', 'pos'], how= 'left')
 		d['eQTL']= d.eQTL.str.replace('_', ' ')
-		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['chr', 'pos', 'rsid', 'metaP', 'n', 'allele', 'pos_effect', 'MAF_average', 'MAF_min', 'MAF_max', 'Consequence', 'SYMBOL', 'gene', 'eQTL'])
+		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['chr', 'pos', 'rsid', 'metaP', 'n', 'allele', 'pos_effect', 'MAF_average', 'MAF_min', 'MAF_max', 'Consequence', 'SYMBOL', 'eQTL'])
 
 rule pdf_table:
 	''
