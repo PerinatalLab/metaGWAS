@@ -40,6 +40,12 @@ def format_list(input, output):
                     if 'DECODE' in input[i]: row['EAF_CONTR'], row['CHR'], row['POS'], row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['N'], row['P_VAL_ADD']= row['EAF_CASES'], row['BUILD'], row['CHR'], row['EFF_ALLELE'], row['POS'], row['EAF_CONTR'], row['BETA_ADD'], row['REF_ALLELE'], row['SE_ADD']
                     if ((row['BETA_ADD'] == '.') | (row['BETA_ADD']== 'NA') | (row['SE_ADD']!= row['SE_ADD']) | (row['BETA_ADD'] != row['BETA_ADD']) | (row['EAF_CONTR'] != row['EAF_CONTR'])):
                         continue
+                    if not is_number(row['BETA_ADD']):
+                        continue
+                    if not is_number(row['SE_ADD']):
+                        continue
+                    if not is_number(row['N']):
+                        continue
                     if is_number(row['EAF_CONTR']):
                         maf= np.where(float(row['EAF_CONTR'])> 0.5, 1 - float(row['EAF_CONTR']), float(row['EAF_CONTR']))
                         if (maf< 0.001):
@@ -333,7 +339,7 @@ rule prepare_LD_SCORE_allPTD:
         d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
         d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
         d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
-        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d= d[['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
         d.to_csv(output[0], sep= '\t', header= True, index= False)
 
 rule prepare_LD_SCORE_GAnrm:
@@ -361,7 +367,7 @@ rule prepare_LD_SCORE_GAnrm:
         d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
         d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
         d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
-        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d= d[['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
         d.to_csv(output[0], sep= '\t', header= True, index= False)
 
 rule prepare_LD_SCORE_postterm:
@@ -389,7 +395,7 @@ rule prepare_LD_SCORE_postterm:
         d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
         d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
         d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
-        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d= d[['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
         d.to_csv(output[0], sep= '\t', header= True, index= False)
 
 rule prepare_LD_SCORE_GAraw:
@@ -417,7 +423,7 @@ rule prepare_LD_SCORE_GAraw:
         d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
         d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
         d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
-        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d= d[['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
         d.to_csv(output[0], sep= '\t', header= True, index= False)
 
 rule prepare_LD_SCORE_earlyPTD:
@@ -445,6 +451,6 @@ rule prepare_LD_SCORE_earlyPTD:
         d= d.loc[((d.A1 == d.REF) | (d.A1== d.EFF)) & ((d.A2 == d.REF) | (d.A2 == d.EFF)), :]
         d['BETA']= np.where((d.A1== d.REF) & (d.A2== d.EFF), d.BETA * -1, d.BETA)
         d['A1'], d['A2']= np.where((d.A1== d.REF) & (d.A2== d.EFF), [d['EFF'], d['REF']], [d['REF'], d['EFF']])
-        d= d[['SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
+        d= d[['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']]
         d.to_csv(output[0], sep= '\t', header= True, index= False)
 
