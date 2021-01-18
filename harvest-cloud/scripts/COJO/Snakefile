@@ -1,0 +1,58 @@
+allchrs_nms= ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X']
+
+rule filter_INFO_COJO:
+	'Filter out variants with INFO score< 0.4.'
+	input:
+		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/markerinfo/{allchrs}-markerinfo'
+	output:
+		'/mnt/work2/pol/metaGWAS/processed_data/cojo/filter_{allchrs}_variants.txt'
+	run:
+		d= pd.read_csv(input[0], sep='\t', header=0, usecols= ['# [1]CHROM', '[2]POS', '[7]INFO'])
+                d.columns= ['CHR', 'POS', 'INFO']
+		d= d.loc[d.INFO>= 0.4, :]
+                d['ID']= d.CHR.map(str) + ':' + d.POS.map(str)
+                with open(output[0], 'w') as f:
+                        writer= csv.writer(f, delimiter= ' ')
+                        writer.writerow(d['ID'])
+
+rule filter_MOBAGENETICS_COJO:
+        'Extract from MoBaGenetics all genetic variants matching women.'
+        input:
+                '/mnt/work2/pol/metaGWAS/processed_data/chrX_IDS.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/bgen/{allchrs}.bgen',
+                '/mnt/work2/pol/metaGWAS/processed_data/cojo/filter_{allchrs}_variants.txt'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/cojo/data/{allchrs}.vcf.gz')
+        shell:
+                '/home/pol.sole.navais/soft/qctool_v2.0.8/qctool -g {input[1]} -incl-samples {input[0]} -incl-positions {input[2]} -og {output[0]}'
+
+rule vcf_to_bed_cojo:
+        'VCF file to bed format and filter MAF.'
+        input:
+                '/mnt/work2/pol/metaGWAS/cojo/data/{allchrs}.vcf.gz'
+        output:
+                '/mnt/work2/pol/metaGWAS/cojo/data/MOBAGENETICS_{allchrs}.bim',
+                '/mnt/work2/pol/metaGWAS/cojo/data/MOBAGENETICS_{allchrs}.fam',
+                '/mnt/work2/pol/metaGWAS/cojo/data/MOBAGENETICS_{allchrs}.bed'
+        params:
+                '/mnt/work2/pol/metaGWAS/cojo/data/MOBAGENETICS_{allchrs}'
+        shell:
+                '''
+                /home/pol.sole.navais/soft/plink2 --vcf {input[0]} --maf 0.005 --exclude bed1 {input[1]} --make-bed --out {params[0]}
+		'''
+
+rule format_sumstats_cojo:
+	'Format sumstats according to CGTA cojo.'
+	input:
+		'/mnt/work2/pol/metaGWAS/results/meta/Maternal_GWAMA_{pheno}.txt.gz',
+		'/mnt/work2/pol/metaGWAS/results/top_regions_FINEMAP_{pheno}.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/cojo/sumstats_{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, compression= 'gzip', usecols= ['CHR', 'POS', 'RSID', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue'])[['CHR', 'POS', 'RSID', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']]
+		d= d.loc[d.RSID!='', :]
+		d.drop_duplicates('RSID', inplace= True, keep= 'first')
+		d.columns= ['CHR', 'POS', 'SNP', 'A1', 'A2', 'N', 'freq', 'b', 'se', 'p']
+		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['SNP', 'A1', 'A2', 'freq', 'b', 'se', 'p', 'N'])
+		
+
