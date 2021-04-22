@@ -1,0 +1,39 @@
+SCHEME   STDERR
+
+AVERAGEFREQ ON
+MINMAXFREQ ON
+FREQLABEL EAF 
+
+CUSTOMVARIABLE TOTALSAMPLESIZE
+
+LABEL TOTALSAMPLESIZE AS N
+
+MARKER SNP
+ALLELE EFF REF
+EFFECT BETA
+STDERR SE
+PVALUE pvalue 
+WEIGHT N
+SEPARATOR TAB
+
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/ALSPAC_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/CHOP_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DECODE_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/NFBC1966_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/STORK_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/STORKGROR_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/HUNT_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/MOBAGENETICS_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DBDS_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCCASES_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCCONTROLS_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCPTD_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DILT1DGC_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/WTCCC58BC_GAnrm.txt
+
+OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_GAnrm_ .txt
+
+ANALYZE HETEROGENEITY
+
+QUIT
+

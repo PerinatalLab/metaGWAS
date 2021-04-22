@@ -1,0 +1,36 @@
+SCHEME   STDERR
+
+AVERAGEFREQ ON
+MINMAXFREQ ON
+FREQLABEL EAF 
+
+CUSTOMVARIABLE TOTALSAMPLESIZE
+
+LABEL TOTALSAMPLESIZE AS N
+
+MARKER SNP
+ALLELE EFF REF
+EFFECT BETA
+STDERR SE
+PVALUE pvalue 
+WEIGHT N
+SEPARATOR TAB
+
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/23andme_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DECODE_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/EGCUT_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/HUNT_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/MOBAGENETICS_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DBDS_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/ALSPAC_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/CHOP_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DNBCCASES_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DILT1DGC_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/WTCCC58BC_allPTD.txt
+
+OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_allPTD_ .txt
+
+ANALYZE HETEROGENEITY
+
+QUIT
+
