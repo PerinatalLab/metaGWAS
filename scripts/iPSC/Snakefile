@@ -1,0 +1,17 @@
+import pandas as pd
+import numpy as np
+
+
+rule iPSC_eQTL_colocalization:
+	'Use data from Identification of rare and common regulatory variants in pluripotent cells using population-scale transcriptomics'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
+		'/home/pol/sumstats/iPSC2/processed_data/full_qtl_results_iPSC.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/iPSC2/pph_{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/iPSC2/results_{pheno}.txt'
+	conda:
+		'environments/coloc.yml'
+	script:
+		'coloc_iPSC.R'
+
