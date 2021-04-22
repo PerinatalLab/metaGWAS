@@ -1,0 +1,255 @@
+
+nonadd_cohort_nms= ['DECODE', 'MOBAGENETICS', 'HUNT', 'ALSPAC', 'CHOP', 'NFBC1966', 'STORK', 'STORKGROR', 'DNBCPTD', 'DILT1DGC', 'WTCCC58BCWTCCC58BC']
+
+models_nms= ['dom', 'rec']
+
+rule format_sumstats_DECODE_nonadditive:
+	''
+	input:
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-GAraw-RESULTS-05072018.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_DECODE_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_DECODE_rec.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		dcols= d.columns.values[1:]
+		d.drop('INFO', 1, inplace= True)
+		d.columns= dcols
+		d= d.loc[d.INFO>= 0.4, :]
+		d['MAF']=  np.where(d.EAF_CONTR> 0.5, 1- d.EAF_CONTR, d.EAF_CONTR)
+		d= d.loc[d.MAF * 2 * d.N >6, :]
+		d.drop('MAF', 1, inplace= True)
+		d['REF_ALLELE']= np.where(d.REF_ALLELE.str.len()> d.EFF_ALLELE.str.len(), 'I', d.REF_ALLELE)
+		d['EFF_ALLELE']= np.where(d.REF_ALLELE.str.len()< d.EFF_ALLELE.str.len(), 'I', d.EFF_ALLELE)
+		d['REF_ALLELE']= np.where(d.EFF_ALLELE== 'I', 'D', d.REF_ALLELE)
+		d['EFF_ALLELE']= np.where(d.REF_ALLELE== 'I', 'D', d.EFF_ALLELE)
+		d['CHR']= d.CHR.apply(str)
+		d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+		d['ID']= np.where(d.REF_ALLELE> d.EFF_ALLELE, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.EFF_ALLELE + ':' + d.REF_ALLELE, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.REF_ALLELE + ':' + d.EFF_ALLELE)
+		d= d[['ID', 'CHR', 'POS', 'EFF_ALLELE', 'REF_ALLELE', 'N', 'EAF_CONTR', 'BETA_ADD', 'P_VAL_DOM', 'P_VAL_REC', 'INFO']]
+		df= d[['ID', 'CHR', 'POS', 'EFF_ALLELE', 'REF_ALLELE', 'N', 'EAF_CONTR', 'BETA_ADD', 'P_VAL_REC', 'INFO']]
+		d= d[['ID', 'CHR', 'POS', 'EFF_ALLELE', 'REF_ALLELE', 'N', 'EAF_CONTR', 'BETA_ADD', 'P_VAL_DOM','INFO']]
+		d= d.loc[(d.P_VAL_DOM!= '.' ), :]
+		df= df.loc[(df.P_VAL_REC!= '.'), :]
+		d[['BETA_ADD', 'P_VAL_DOM']]= d[['BETA_ADD', 'P_VAL_DOM']].apply(pd.to_numeric, errors= 'coerce')
+		df[['BETA_ADD', 'P_VAL_REC']]= df[['BETA_ADD', 'P_VAL_REC']].apply(pd.to_numeric, errors= 'coerce')
+		d.dropna(axis= 0, inplace= True)
+		df.dropna(axis= 0, inplace= True)
+		d.columns= ['ID', 'CHR', 'POS', 'EFF', 'REF', 'N', 'EAF', 'BETA', 'P', 'INFO']
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+		df.columns= ['ID', 'CHR', 'POS', 'EFF', 'REF', 'N', 'EAF', 'BETA', 'P', 'INFO']
+		df.to_csv(output[1], sep= '\t', header= True, index= False)
+		
+
+rule format_MOBAGENETICS_HUNT_nonadditive:
+	''
+	input:
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-GAraw-dom-RESULTS_full.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-GAraw-rec-RESULTS_full.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-GAraw-RESULTS-dom.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-GAraw-RESULTS-rec.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_MOBAGENETICS_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_MOBAGENETICS_rec.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_HUNT_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_HUNT_rec.txt'
+	run:
+		for i in range(len(input)):
+			d= pd.read_csv(input[i], sep= '\t', header= 0)
+			d= d.loc[d.INFO>= 0.4, :]
+			d['MAF']=  np.where(d.EAF> 0.5, 1- d.EAF, d.EAF)
+        	        d= d.loc[d.MAF * 2 * d.N >6, :]
+                	d.drop('MAF', 1, inplace= True)
+	                d['REF_ALLELE']= np.where(len(d.REF_ALLELE)> len(d.EFF_ALLELE), 'I', d.REF_ALLELE)
+        	        d['EFF_ALLELE']= np.where(len(d.REF_ALLELE)< len(d.EFF_ALLELE), 'I', d.EFF_ALLELE)
+                	d['REF_ALLELE']= np.where(d.EFF_ALLELE== 'I', 'D', d.REF_ALLELE)
+	                d['EFF_ALLELE']= np.where(d.REF_ALLELE== 'I', 'D', d.EFF_ALLELE)
+        	        d['CHR']= d.CHR.apply(str)
+                	d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+	                d['ID']= np.where(d.REF_ALLELE> d.EFF_ALLELE, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.EFF_ALLELE + ':' + d.REF_ALLELE, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.REF_ALLELE + ':' + d.EFF_ALLELE)
+			d= d.loc[(d.P!= '.'), :]
+			d[['BETA', 'SE', 'P']]= d[['BETA', 'SE', 'P']].apply(pd.to_numeric, errors= 'coerce')
+			d.dropna(axis= 0, inplace= True)
+			d= d[['ID', 'CHR', 'POS', 'EFF_ALLELE', 'REF_ALLELE', 'N', 'EAF', 'BETA', 'SE', 'P', 'INFO']]
+			d.columns= ['ID', 'CHR', 'POS', 'EFF', 'REF', 'N', 'EAF', 'BETA', 'SE', 'P', 'INFO']
+			d.to_csv(output[i], sep= '\t', header= True, index= False)
+
+rule format_other_sumstats_nonadditive:
+	''
+	input:
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-GAraw-RESULTS-23042018.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/CHOP-GAraw-RESULTS-19062018_PSN.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAraw-RESULTS-20180418.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/STORK-GAraw-RESULTS-28052018.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/STORKGROR-GAraw-RESULTS-28052018.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCPTD-GAraw-RESULTS-15052018.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/DILT1DGC-GAraw-RESULTS-28052018.txt.gz',
+		'/mnt/hdd/data/sumstats/GAmetaGWAS/WTCCC58BC-GAraw-RESULTS-28052018.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_ALSPAC_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_CHOP_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_NFBC1966_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_STORK_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_STORKGROR_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_DNBCPTD_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_DILT1DGC_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_WTCCC58BCWTCCC58BC_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_ALSPAC_rec.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_CHOP_rec.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_NFBC1966_rec.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_STORK_rec.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_STORKGROR_rec.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_DNBCPTD_rec.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_DILT1DGC_rec.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_WTCCC58BCWTCCC58BC_rec.txt'
+	run:
+		for i in range(len(input)):
+			print(input[i])
+			d= pd.read_csv(input[i], header= 0, delim_whitespace= True)
+			d[['BETA_ADD', 'P_VAL_DOM', 'P_VAL_REC', 'INFO', 'EAF_CONTR']]= d[['BETA_ADD', 'P_VAL_DOM', 'P_VAL_REC', 'INFO', 'EAF_CONTR']].apply(pd.to_numeric, errors= 'coerce')
+			d= d.loc[d.INFO>= 0.4, :]
+			d['MAF']=  np.where(d.EAF_CONTR> 0.5, 1- d.EAF_CONTR, d.EAF_CONTR)
+			d= d.loc[d.MAF * 2 * d.N >6, :]
+			d.drop('MAF', 1, inplace= True)
+			d['REF_ALLELE']= np.where(len(d.REF_ALLELE)> len(d.EFF_ALLELE), 'I', d.REF_ALLELE)
+			d['EFF_ALLELE']= np.where(len(d.REF_ALLELE)< len(d.EFF_ALLELE), 'I', d.EFF_ALLELE)
+			d['REF_ALLELE']= np.where(d.EFF_ALLELE== 'I', 'D', d.REF_ALLELE)
+			d['EFF_ALLELE']= np.where(d.REF_ALLELE== 'I', 'D', d.EFF_ALLELE)
+			d['CHR']= d.CHR.apply(str)
+			d['CHR']= np.where(d.CHR== '0X', 'X', d.CHR)
+			d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+			d['ID']= np.where(d.REF_ALLELE> d.EFF_ALLELE, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.EFF_ALLELE + ':' + d.REF_ALLELE, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.REF_ALLELE + ':' + d.EFF_ALLELE)
+			d= d[['ID', 'CHR', 'POS', 'EFF_ALLELE', 'REF_ALLELE', 'N', 'EAF_CONTR', 'BETA_ADD', 'P_VAL_DOM', 'P_VAL_REC', 'INFO']]
+			df= d[['ID', 'CHR', 'POS', 'EFF_ALLELE', 'REF_ALLELE', 'N', 'EAF_CONTR', 'BETA_ADD', 'P_VAL_REC', 'INFO']]
+			d= d[['ID', 'CHR', 'POS', 'EFF_ALLELE', 'REF_ALLELE', 'N', 'EAF_CONTR', 'BETA_ADD', 'P_VAL_DOM','INFO']]
+			d= d.loc[(d.P_VAL_DOM!= '.' ), :]
+			df= df.loc[(df.P_VAL_REC!= '.'), :]
+			d.dropna(axis= 0, inplace= True)
+			df.dropna(axis= 0, inplace= True)
+			d.columns= ['ID', 'CHR', 'POS', 'EFF', 'REF', 'N', 'EAF', 'BETA', 'P', 'INFO']
+			d.to_csv(output[i], sep= '\t', header= True, index= False)
+			df.columns= ['ID', 'CHR', 'POS', 'EFF', 'REF', 'N', 'EAF', 'BETA', 'P', 'INFO']
+			out= output[i].replace('dom', 'rec')
+			df.to_csv(out, sep= '\t', header= True, index= False)
+
+
+rule filter_GAraw_nonadditive:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/temp_{nonadd_cohort}_{model}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/HRC_1KG.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/{nonadd_cohort}_{model}.txt',
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/{nonadd_cohort}_{model}.log')
+	script:
+		'filter_SNPs.R'
+
+rule concat_GAraw_nonadditive_logs:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/{nonadd_cohort}_{{model}}.log', nonadd_cohort= nonadd_cohort_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/log/{nonadd_cohort}_{model}.log'
+	shell:
+		'cat {input} > {output[0]}'
+
+rule METAL_nonadditive:
+    'P-value meta-analysis. We have no data regarding betas for DECODE.'
+    input:
+        'scripts/nonadditive/metal_script_GAraw_{model}',
+        expand('/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/{nonadd_cohort}_{{model}}.txt', nonadd_cohort= nonadd_cohort_nms),
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/meta_GAraw_{model}_1.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/log/METAL_log_{model}.txt'
+    shell:
+        '''
+        /home/pol/software/generic-metal/metal {input[0]} >> {output[1]}
+        '''
+
+rule VEP_format_nonadditive:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/meta_GAraw_{model}_1.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/VEP/GAraw_to_VEP_{model}.txt')
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0)
+                d[['CHR', 'POS', 'REF', 'EFF']]= d['MarkerName'].str.split(':', expand= True)
+		d['CHR']= np.where(d['CHR']== '23', 'X', d['CHR'])
+                d['POS2']= d['POS']
+                d['POS']= d['POS'].astype(str).astype(int)
+                df_list= list()
+                d['Allele']= d['Allele1'].str.upper() + '/' + d['Allele2'].str.upper()
+                d['STRAND']= '+'
+                d.sort_values(by= ['CHR', 'POS'], inplace= True)
+                d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['CHR', 'POS', 'POS2', 'Allele', 'STRAND'])
+
+rule VEP_nonadditive:
+        'Variant annotation using VEP.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/VEP/GAraw_to_VEP_{model}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/VEP/GAraw_VEP_{model}.txt'
+        shell:
+                '/home/pol/software/ensembl-vep/vep -i {input[0]} --check_existing --symbol --biotype --cache -O {output[0]} --offline --force_overwrite'
+
+rule add_VEP_nonadditive:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/meta_GAraw_{model}_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/VEP/GAraw_VEP_{model}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/VEP/GAraw_annotated_{model}.txt'
+	
+	script:
+		'format_VEP.py'
+
+rule format_GWAS_bedtools_nonadditive:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/meta_GAraw_{model}_1.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/bed_GAraw_{model}.txt')
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['MarkerName', 'Allele1'])
+                d['CHR']= d.MarkerName.str.split(':').str[0]
+                d['end']= d.MarkerName.str.split(':').str[1]
+                d['CHR']= d.CHR.astype('str').astype('int')
+                d['end']= d.end.astype('str').astype('int')
+                d['start']= d.end - 1
+                d.sort_values(by= ['CHR', 'start'], inplace= True)
+                d= d[['CHR', 'start', 'end', 'MarkerName']]
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule bedtools_nearest_gene_nonadditive:
+        'Use bedtools to add nearest protein coding gene.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/bed_GAraw_{model}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/NearestGene_{model}_GAraw.txt')
+        shell:
+                'bedtools closest -t all -a {input[0]} -b {input[1]} > {output[0]}'
+
+
+rule add_missing_rsid_nearestGene_nonadditive:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/VEP/GAraw_annotated_{model}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/NearestGene_{model}_GAraw.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/Maternal_GWAMA_GAraw_{model}.txt.gz'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header=0)
+                rs= pd.read_csv(input[1], sep= '\t', header=0)
+                d= pd.merge(d, rs, on= 'ID', how= 'left')
+                d['RSID']= np.where(pd.isnull(d.RSID), d.name, d.RSID)
+                d['RSID']= np.where(d.RSID== '', d.name, d.RSID)
+                d['RSID']= np.where(d.RSID== '-', d.name, d.RSID)
+                d.drop('name', 1, inplace= True)
+                ne= pd.read_csv(input[2], sep= '\t', header= None, names= ['CHR', 'X', 'POS', 'ID', 'c1', 'p1', 'p2', 'nearestGene', 'Ensembl_gene'])
+                ne= ne[['ID', 'nearestGene']]
+                d= pd.merge(d, ne, on= 'ID', how= 'left')
+                d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
+
