@@ -1,0 +1,109 @@
+
+rule format_other_meta_sumstats:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAraw_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_GAraw_1.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAraw_1.txt'),
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAnrm_1.txt'),
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_allPTD_1.txt'),
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_GAraw_1.txt')
+	run:
+		for nfile in range(len(input)):
+			d= pd.read_csv(input[nfile], sep= '\t', header= 0)
+			d['Allele1']= d['Allele1'].str.upper()
+			d['Allele2']= d['Allele2'].str.upper()
+			d= d.loc[(d.TOTALSAMPLESIZE> (d['TOTALSAMPLESIZE'].max())/ 2), :]
+			d[['CHR', 'POS', 'REF','EFF', 'SNP']]= d['MarkerName'].str.split(':', expand= True)
+			d['CHR']= d['CHR'].astype(str).astype(int)
+			d['POS']= d['POS'].astype(str).astype(int)
+			d= d[['CHR', 'POS', 'Allele1', 'Allele2', 'TOTALSAMPLESIZE', 'Freq1', 'Effect', 'StdErr', 'P-value']]
+			d.columns= ['CHR', 'POS', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']
+			d['BETA']=np.where(d.REF > d.EFF, -1* d.BETA, d.BETA)
+			d['EAF']= np.where(d.REF > d.EFF, 1 - d.EAF, d.EAF)
+			d['CHR']= d['CHR'].astype(str).astype(int)
+			d['POS']= d['POS'].astype(str).astype(int)
+			d['pvalue']= d['pvalue'].astype(str).astype(float)
+			d.loc[d.REF > d.EFF, ['REF', 'EFF']] = d.loc[d.REF > d.EFF, ['EFF', 'REF']].values
+			d['ID']= d.CHR.astype(int).astype(str) + ':' + d.POS.astype(int).astype(str) + ':' + d.REF + ':' + d.EFF
+			d= d.loc[((d.pvalue>0) & (d.pvalue <1)), :]
+			d.to_csv(output[nfile], header=True, index= False, sep= '\t')
+
+
+rule format_GWAS_bedtools_other_meta:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAraw_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAnrm_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_allPTD_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_GAraw_1.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAraw_bed.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_bed.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_bed.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_GAraw_bed.txt')
+	run:
+		for fnumber in range(len(input)):
+	                d= pd.read_csv(input[fnumber], sep= '\t', header=0, usecols= ['CHR', 'POS', 'EFF', 'ID'])
+                	d['end']= d.POS
+	                d['CHR']= d.CHR.astype('str').astype('int')
+        	        d['end']= d.end.astype('str').astype('int')
+                	d['start']= d.end - 1
+                	d.sort_values(by= ['CHR', 'start'], inplace= True)
+	                d= d[['CHR', 'start', 'end', 'ID']]
+        	        d.to_csv(output[fnumber], sep= '\t', header= False, index= False)
+
+rule bedtools_nearest_gene_other_meta:
+	'Use bedtools to ad nearest protein coding gene.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAraw_bed.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_bed.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_bed.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_GAraw_bed.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_GAraw.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_GAnrm.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/nearest_gene/meta_allPTD.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/nearest_gene/meta_GAraw.txt')
+	run:
+		meta_files= [x for x in input if 'other_meta' in x]
+		for nfile in range(len(meta_files)):
+			meta= meta_files[nfile]
+			out= output[nfile]
+			shell('bedtools closest -t all -a {meta} -b {input[0]} > {out}')
+
+rule add_missing_rsid_nearestGene_other_metas:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_GAraw.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_GAnrm.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/nearest_gene/meta_allPTD.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/nearest_gene/meta_GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAraw_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAnrm_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_allPTD_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_GAraw_1.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_GAnrm.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_allPTD.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_GAraw.txt.gz'
+	run:
+		rs= pd.read_csv(input[0], sep= '\t', header=0)
+                gene_files= [x for x in input if 'nearest_gene' in x]
+		meta_files= [x for x in input if '_1.txt' in x]
+		for nfile in range(len(meta_files)):
+			d= pd.read_csv(meta_files[nfile], sep= '\t', header=0)
+	                d= pd.merge(d, rs, on= 'ID', how= 'left')
+        	        d['RSID']= d.name
+        	        d.drop('name', 1, inplace= True)
+                	ne= pd.read_csv(gene_files[nfile], sep= '\t', header= None, names= ['CHR', 'X', 'POS', 'ID', 'c1', 'p1', 'p2', 'nearestGene', 'Ensembl_gene'])
+	                ne= ne[['ID', 'nearestGene']]
+        	        d= pd.merge(d, ne, on= 'ID', how= 'left')
+                	d.to_csv(output[nfile], sep= '\t', header= True, index= False, compression= 'gzip')
+
