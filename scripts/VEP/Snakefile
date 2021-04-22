@@ -1,0 +1,181 @@
+import numpy as np
+import pandas as pd
+
+rule VEP_format:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/initial/VEP_{pheno}_file.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/VEP/to_VEP_{pheno}.txt')
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		x= pd.read_csv(input[1], sep= '\t', header= 0)
+		x['CHR']= np.where(x['CHR']== '23', 'X', x['CHR'])
+		d[['CHR', 'POS', 'REF', 'EFF', 'SNP']]= d['MarkerName'].str.split(':', expand= True)
+		d= d.loc[d.SNP== 'SNP', :]
+		d['POS2']= d['POS']
+		d['CHR']= np.where(d['CHR']== '23', 'X', d['CHR'])
+		d['POS']= d['POS'].astype(str).astype(int)
+		df_list= list()
+		for index, row in x.iterrows():
+			temp_df= d.loc[d.CHR== row['CHR'], :]
+			temp_df= temp_df.loc[((temp_df.POS >= int(row['pos1'])) & (temp_df.POS <= int(row['pos2']))), :]
+			df_list.append(temp_df)
+		d= pd.concat(df_list)
+		d['Allele']= d['Allele1'].str.upper() + '/' + d['Allele2'].str.upper()
+		d['STRAND']= '+'
+		d.sort_values(by= ['CHR', 'POS'], inplace= True)
+		d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['CHR', 'POS', 'POS2', 'Allele', 'STRAND'])
+
+rule VEP:
+	'Variant annotation using VEP.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/VEP/to_VEP_{pheno}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/VEP/VEP_{pheno}.txt'
+	shell:
+		'/home/pol/software/ensembl-vep/vep -i {input[0]} --check_existing --symbol --biotype --cache -O {output[0]} --offline --force_overwrite'
+
+
+rule format_sumstats:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/VEP/VEP_{pheno}.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt')
+	script:
+		'format_VEP.py'
+
+rule format_gene_map:
+        ''
+        input:
+                '/mnt/hdd/common/pol/references/UCSC_tx_cd_all_genes',
+                '/mnt/hdd/common/pol/references/Pseudogenes_UCSC.txt',
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0)
+                x= pd.read_csv(input[1], sep= '\t', header= 0)
+                d= d.loc[~d.geneSymbol.isin(x.name2), :]
+		d= d.loc[d.geneType== 'protein_coding', :]
+                d['chrom']= d.chrom.str.replace(' ', '')
+                d['chrom']= d.chrom.str.replace('chr', '')
+                d['chrom']= d.chrom.str.replace('X', '23')
+                d['chrom']= pd.to_numeric(d.chrom, errors= 'coerce')
+                d= d.loc[d.cdsStart != d.cdsEnd, :]
+                d.dropna(subset= ['chrom'], inplace= True)
+                d.loc[d.txStart>d.txEnd, ['txStart', 'txEnd']]= d.loc[d.txStart>d.txEnd, ['txEnd', 'txStart']].values
+                x= d.groupby(['chrom', 'geneSymbol', 'gene'])['txStart'].min().reset_index()
+                x1= d.groupby(['chrom', 'geneSymbol', 'gene'])['txEnd'].max().reset_index()
+                df= pd.merge(x, x1, on= ['chrom', 'geneSymbol', 'gene'])
+                df.columns= ['CHR', 'geneSymbol', 'gene', 'start', 'end']
+                df= df.loc[df.start != df.end, :]
+		df['start']= df.start - 1
+                df.sort_values(by= ['CHR', 'start'], inplace= True)
+                df= df[['CHR', 'start', 'end', 'geneSymbol', 'gene']]
+		df[['CHR', 'start', 'end']]= df[['CHR', 'start', 'end']].apply(np.int64)
+                df.to_csv(output[0], sep= '\t', header= False, index= False)
+
+
+rule format_GWAS_bedtools:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/bed_meta_{pheno}.txt')
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['MarkerName', 'Allele1'])
+		d['CHR']= d.MarkerName.str.split(':').str[0]
+		d['end']= d.MarkerName.str.split(':').str[1]
+		d['CHR']= d.CHR.astype('str').astype('int')
+		d['end']= d.end.astype('str').astype('int')
+		d['start']= d.end - 1 
+		d['MarkerName']= d.MarkerName.str.replace(':SNP', '')
+		d['MarkerName']= d.MarkerName.str.replace(':INDEL', '')
+		d.sort_values(by= ['CHR', 'start'], inplace= True)
+		d= d[['CHR', 'start', 'end', 'MarkerName']]
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule bedtools_nearest_gene:
+	'Use bedtools to ad nearest protein coding gene.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/bed_meta_{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/NearestGene_{pheno}.txt')
+	shell:
+		'bedtools closest -t all -a {input[0]} -b {input[1]} > {output[0]}'
+
+rule format_dbSNP:
+	'Format dbSNP for mapping RSIDs.'
+	input:
+		'/mnt/hdd/common/pol/references/dbSNP153.gz',
+		'/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt'
+	script:
+		'format_dbSNP.py'
+
+rule add_missing_rsid_nearestGene:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/NearestGene_{pheno}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header=0)
+		rs= pd.read_csv(input[1], sep= '\t', header=0)
+		d= pd.merge(d, rs, on= 'ID', how= 'left')
+		d['RSID']= np.where(pd.isnull(d.RSID), d.name, d.RSID)
+		d['RSID']= np.where(d.RSID== '', d.name, d.RSID)
+		d['RSID']= np.where(d.RSID== '-', d.name, d.RSID)
+		d.drop('name', 1, inplace= True)
+		ne= pd.read_csv(input[2], sep= '\t', header= None, names= ['CHR', 'X', 'POS', 'ID', 'c1', 'p1', 'p2', 'nearestGene', 'Ensembl_gene'])
+		ne= ne[['ID', 'nearestGene']]
+		d= pd.merge(d, ne, on= 'ID', how= 'left')
+		d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
+
+rule format_GWAS_bedtools_2nd_nearest:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/VEP/2ndnearest/bed_meta_{pheno}.txt')
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['ID', 'CHR', 'POS'])
+                d['end']= d.POS
+                d['start']= d.end - 1
+                d.sort_values(by= ['CHR', 'start'], inplace= True)
+                d= d[['CHR', 'start', 'end', 'ID']]
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule bedtools_2ndnearest_gene:
+        'Use bedtools to ad nearest protein coding gene.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/VEP/2ndnearest/bed_meta_{pheno}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/VEP/2ndnearest/Maternal_{pheno}.txt'
+        shell:
+                'bedtools closest -t all -k 2 -a {input[0]} -b {input[1]} > {output[0]}'
+
+rule add_2nd_nearest_Gene:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/VEP/2ndnearest/Maternal_{pheno}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/Maternal_2nd_nearest_{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['ID', 'nearestGene'])
+		ne= pd.read_csv(input[1], sep= '\t', header= None, names= ['CHR', 'X', 'POS', 'ID', 'c1', 'p1', 'p2', 'nearestGene2', 'Ensembl_gene'])
+                ne= ne[['ID', 'nearestGene2']]
+		d= pd.merge(d, ne, on= 'ID')
+		d= d.loc[d.nearestGene != d.nearestGene2, :]
+		d= d[['ID', 'nearestGene', 'nearestGene2']]
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
