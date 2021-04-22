@@ -1,0 +1,107 @@
+repr_pheno_nms= ['miscarriage', 'GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male']
+
+rule format_sumstats_repr_pheno:
+	''
+	input:
+		'/mnt/hdd/common/pol/references/sumstats/{repr_pheno}.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt'
+	script:
+		'format_sumstats.py'
+
+
+rule prepare_LDscore_repr_phenos:
+	'Prepare sumstats for LDSCORE regression for reproductive phenotypes.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt',
+		'/mnt/hdd/common/pol/references/longrange_LD.txt',
+		'/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/{repr_pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d.columns= ['ID', 'SNP', 'CHR', 'POS', 'EAF', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']
+		d.dropna(subset= ['pvalue'], axis= 0, inplace= True)
+		x= pd.read_csv(input[1], header= None, names= ['CHR', 'pos1', 'pos2', 'z'], sep= '\t')
+		x['CHR']= x.CHR.apply(str)
+		d['CHR']= d.CHR.apply(str)
+		d= pd.merge(d, x, on= 'CHR', how= 'left')
+		d= d.loc[((d.POS< d.pos1) | (d.POS>d.pos2)) | (d.pos1.isnull()), :]
+		d= d.loc[~((d.CHR==6) & (d.POS >28477797) & (d.POS< 33448354)), :]
+		d.drop_duplicates(['CHR', 'POS', 'A1', 'A2'], keep= 'first', inplace= True)
+		z= pd.read_csv(input[2], header= 0, sep= '\t', usecols= ['ID', '#CHROM', 'POS', 'REF', 'ALT'])[['ID', '#CHROM', 'POS', 'REF', 'ALT']]
+		z.columns= ['rsid', 'CHR', 'POS', 'REF', 'ALT']
+		z['CHR']= np.where(z.CHR=='X', '23', z.CHR)
+		z.loc[z['REF'] > z['ALT'], ['REF', 'ALT']] = z.loc[z['REF'] > z['ALT'], ['ALT', 'REF']].values
+		z['ID']= z['CHR'].apply(str) + ':' + z['POS'].apply(str) + ':' + z['REF'] + ':' + z['ALT']
+		d= pd.merge(d, z[['ID', 'rsid']], on= ['ID'])
+		d['SNP']= d.SNP.fillna('')
+		d['SNP']= np.where(d.SNP== '', d.rsid, d.SNP)
+		d['SNP']= np.where(d.SNP== np.nan, d.rsid, d.SNP)
+		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue'])
+
+rule munge_LDSC_repr_pheno:
+        'Format sumstats according to LDSC.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/{repr_pheno}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/{repr_pheno}.txt.sumstats.gz'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/{repr_pheno}.txt'
+        conda:
+                '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+		conda activate ldsc
+                python2 /home/pol/software/ldsc/munge_sumstats.py \
+                --out {params[0]} \
+		--merge-alleles /home/pol/software/ldsc/w_hm3.snplist \
+                --sumstats {input[0]} \
+                --chunksize 500000
+                conda deactivate
+                set -eu
+                """
+
+
+rule Genetic_correlation_repr_pheno:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/{pheno}.txt.sumstats.gz',
+                expand('/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/{repr_pheno}.txt.sumstats.gz', repr_pheno= repr_pheno_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/{pheno}_rg.log'
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/'
+	run:
+                allfiles= [infile for infile in input if wildcards.pheno not in infile]
+                allfiles= ','.join(allfiles)
+                outfile= params[0] + wildcards.pheno + '_rg'
+                infile= input[0]
+                shell("""
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/ldsc.py \
+                --rg {infile},{allfiles} \
+                --ref-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --w-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --out {outfile}
+                conda deactivate
+                set -eu
+                """)
+
+rule format_RG_repr_pheno:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/{pheno}_rg.log'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/{pheno}_rg_temp'
+        run:
+                with open(input[0], 'r') as f:
+                        x= f.readlines()
+                x= x[x.index('Summary of Genetic Correlation Results\n')+1:-3]
+                with open(output[0], 'w') as f:
+                        f.write(''.join(x))
+
