@@ -1,0 +1,378 @@
+---
+author: "Pol Sole-Navais"
+date: "`r paste('Analysis date:', format(Sys.time(), '%d %B, %Y'))`"
+output: tint::tintPdf
+link-citations: yes
+latex_engine: pandoc
+---
+
+```{r echo=F, include= F}
+library(tint)
+
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tint'))
+options(htmltools.dir.version = FALSE)
+pheno= snakemake@wildcards[['pheno']]
+pdf.options(useDingbats = TRUE)
+#knitr::opts_chunk$set(dpi=300)
+knitr::opts_chunk$set(dev = 'png', warning= FALSE, message= FALSE, dpi= 600)
+
+
+pheno= ifelse(pheno=='allPTD', 'Preterm Delivery', ifelse(pheno== 'postTerm', 'Post Term', ifelse(pheno=='GAraw', 'Gestational duration', 'Normalized Gestational Duration')))
+
+```
+
+---
+title: "`r paste('Shared genetic influences between ', pheno, ' and other reproductive traits.')`"
+---
+
+
+```{r include=FALSE, echo=F}
+library("ggplot2")
+library("dplyr")
+library("knitr")
+library("tidyr")
+library(cowplot)
+library("kableExtra")
+library(ggrepel)
+library("data.table")
+options(warn=-1)
+
+colorBlindBlack8= c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+d= fread(snakemake@input[[1]])
+
+d$p1= gsub('.txt.sumstats.gz', '', apply(d[, 'p1'], 1, function(x) unlist(strsplit(x, 'LDscore/'))[2]))
+d$p2= gsub('.txt.sumstats.gz', '', apply(d[, 'p2'], 1, function(x) unlist(strsplit(x, 'LDSC/'))[2]))
+
+d$trait= d$p2
+d$trait= with(d, ifelse(trait== 'miscarriage', 'Miscarriage',
+                ifelse(trait== 'GA_fetal', 'GA fetal effect',
+                ifelse(trait== 'BW_maternal', 'Birth weight maternal effect',
+                ifelse(trait== 'AFB', 'Age at first birth',
+                ifelse(trait== 'AMenarche', 'Age at menarche',
+                ifelse(trait== 'AMenopause', 'Age at menopause',
+                ifelse(trait== 'NLB', 'Number of live births',
+                ifelse(trait== 'Testosterone_fem', 'Testosterone (women)',
+                ifelse(trait== 'SHBG_fem', 'SHBG (women)',
+		ifelse(trait== 'SHBG_male', 'SHBG (men)',
+		ifelse(trait== 'CBAT_fem', 'CBAT (women)',
+		ifelse(trait== 'CBAT_male', 'CBAT (men)',
+                ifelse(trait== 'Oestradiol_fem', 'Oestradiol (women)',
+                ifelse(trait== 'POP', 'Pelvic Organ Prolapse',
+                ifelse(trait== 'Testosterone_male', 'Testosterone (men)',
+		ifelse(trait== 'leiomyoma_uterus', 'Leiomyoma uterus',
+		ifelse(trait== 'BW_fetal', 'Birth weight fetal effect',
+		ifelse(trait== 'BW_fetal_effect', 'Birth weight fetal effect (adjusted MG)',
+		ifelse(trait== 'Preeclampsia', 'Pre-eclampsia',
+		ifelse(trait== 'BW_maternal_effect', 'Birth weight maternal effect (adjusted FG)',
+                ifelse(trait== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
+
+```
+
+# Genetic correlations  
+
+First we investigated genetic correlation at the genome-wide scale using LD-score regression. We used LD scores pre-calculated using 1KG on genetic variants from HapMapIII. The MHC region was removed in this analysis.  
+
+We performed genetic correlations between `r pheno` and the following traits:  
+```{r, echo=F, results = 'asis'}
+cat(paste0('\n- ', factor(d$trait)), sep= "\n")
+```
+
+```{marginfigure}
+Testosterone in males was further included as a negative control, and only after a first round of genetic correlations.  
+```
+
+```{r echo= F, fig.align = "center", fig.width= 8, fig.fullwidth=F, fig.height= 4, dpi= 600}
+
+
+bw= filter(d, grepl('Birth weight ', d$trait))
+df= filter(d, !grepl('Birth weight ', d$trait))
+
+df$significant= ifelse(df$p< 0.05 / (nrow(df) - 7 ), '1', '0')
+
+bw$trait= with(bw, ifelse(trait== 'Birth weight fetal effect', 'Fetal effect', ifelse(
+			trait== 'Birth weight fetal effect (adjusted MG)', 'Fetal effect\n (adjusted MG)', ifelse(
+			trait=='Birth weight maternal effect (adjusted FG)', 'Maternal effect \n(adjusted FG)', ifelse(
+			trait== 'Birth weight maternal effect', 'Maternal effect', '')))))
+
+
+bw$trait= gsub('Birth weight', '', bw$trait)
+ggplot(bw, aes(trait, rg, colour= trait)) +
+geom_point() +
+geom_errorbar(aes(ymin= I(rg - 1.96*se) , ymax= (rg + 1.96 * se)), width=.1, position=position_dodge(.9)) +
+theme_cowplot() +
+scale_colour_manual(guide= F, values= colorBlindBlack8[c(1,2,4,8)]) +
+xlab('Birth weight') +
+ylab('Genetic correlation [95% CI]') +
+geom_hline(yintercept= 0) +
+ylim(-1, 1) +
+scale_y_continuous(breaks= seq(-1, 1, 0.2)) +
+geom_hline(yintercept= seq(-1, 1, 0.2), colour= 'grey', size= 0.3, linetype= 'dashed')
+
+```
+
+```{r echo= F, fig.align = "center", fig.width= 13, fig.fullwidth=T, fig.height= 6, dpi= 600}
+ggplot(df, aes(trait, rg, colour= significant)) +
+geom_point() +
+geom_errorbar(aes(ymin= I(rg - 1.96*se) , ymax= (rg + 1.96 * se)), width=.2, position=position_dodge(.9)) +
+theme_cowplot() +
+theme(axis.text.x= element_text(angle=45, vjust= 1, hjust= 1)) +
+scale_colour_manual(guide= F, values= c('#737373', colorBlindBlack8[2])) +
+xlab('Reproductive traits') +
+ylab('Genetic correlation [95% CI]') +
+geom_hline(yintercept= 0) +
+ylim(-1, 1) +
+scale_y_continuous(breaks= seq(-1, 1, 0.2)) +
+geom_hline(yintercept= seq(-1, 1, 0.2), colour= 'grey', size= 0.3, linetype= 'dashed')
+
+
+```
+
+```{marginfigure}
+We used a Bonferroni corrected threshold for significance (0.05/ 13). We exclude testosterone in males, as this test was performed a posteriori as a negative control for testosterone in women.   
+```
+
+\newpage  
+
+
+# Colocalization analysis  
+
+The observation that a genetic variant affects multiple phenotypes (often called “pleiotropy”) is informative in a number of applications. One such application is to learn about the molecular function of a gene. Another application is to learn about the causal relationships between traits. Here, we are interested in exploring the shared role of the different loci, and the genetic variants within.  
+
+
+We integrated our GWAS meta-analysis results with summary statistics for the above-mentioned reproductive traits, and tested for shared genetic effects using a Bayesian method, [coloc](https://journals.plos.org/plosgenetics/article?id=10.1371/journal.pgen.1004383). Basically, coloc tries to identify patterns of association^[[Coloc pattern](https://storage.googleapis.com/plos-corpus-prod/10.1371/journal.pgen.1004383/1/pgen.1004383.g001.PNG_L?X-Goog-Algorithm=GOOG4-RSA-SHA256&X-Goog-Credential=wombat-sa%40plos-prod.iam.gserviceaccount.com%2F20210210%2Fauto%2Fstorage%2Fgoog4_request&X-Goog-Date=20210210T195732Z&X-Goog-Expires=3600&X-Goog-SignedHeaders=host&X-Goog-Signature=4724e55060dca2c0207bdbfa817d6b9760b8fd40a16cc472083ce3d8eb29f6589bad1c996784ac0a5ea505ecf151bedd24615ff6dc630c20c203de640968076e6790120ff6de2d32dbd2aa52dc06d141c5f9d5562ae3f8cfaebde377258db7e7d7a3a37c74c59219400233d68250d8550e43a7baf757d15f24a935f458b5ae5d9e5c2d77491f30ef7076321e075fc00876764a233e88def283a8e0646e0f4b2c88df8f36cfeaa7d441a8ebc16364cd889f0ca9ac870e9d59fb5bbe9f6f9acfa79eb6b35fecdd74e99806276de55517ccc31eaf8684336799503afee89035712264e6f46f87b2c053a007644f675f3005fe0ee8223a04612130d86accaf640939)], and not whether one genetic variant is significant for two traits at a specific p-value threshold. One assumption is that LD is similar in the two samples from which the summary statistics are drawn.    
+
+The following five distinct hypotheses are tested:
+
+- H0: neither trait has a genetic association in the region  
+- H1: only trait 1 has a genetic association in the region  
+- H2: only trait 2 has a genetic association in the region  
+- H3: both traits are associated, but with different causal variants  
+- H4: both traits are associated and share a single causal variant  
+
+A posterior probability of H4 >=0.75 was considered a strong evidence for colocalization. Loci were defined as all genetic variants within a radius of 1.5Mb from the top genetic variants (p< 5*10**-8). No additional MAF filter (>0.05%).
+
+
+```{marginfigure}
+While coloc naiveley assumes one causal variant, it does not require an LD matrix that represents the summary statistics used. This is almost impossible to obtain without an LD matrix from each of the studies used in the meta-analysis.  
+```
+
+
+```{r echo= F, fig.align = "center", fig.width= 10, fig.fullwidth=TRUE, fig.height= 4, dpi= 600}
+
+inputs= snakemake@input[grep('pph', snakemake@input)]
+
+df_list= list()
+
+for (infile in inputs) {
+d_temp= fread(infile)
+#d_temp$trait= gsub('.txt', '', unlist(strsplit(infile, '_'))[2])
+df_list[[infile]]= d_temp
+}
+
+d= do.call('rbind', df_list)
+
+d$trait= with(d, ifelse(trait== 'miscarriage', 'Miscarriage',
+                ifelse(trait== 'GA_fetal', 'GA fetal effect',
+                ifelse(trait== 'BW_maternal', 'Birth weight maternal effect',
+                ifelse(trait== 'AFB', 'Age at first birth',
+                ifelse(trait== 'AMenarche', 'Age at menarche',
+                ifelse(trait== 'AMenopause', 'Age at menopause',
+                ifelse(trait== 'NLB', 'Number of live births',
+                ifelse(trait== 'Testosterone_fem', 'Testosterone (women)',
+                ifelse(trait== 'SHBG_fem', 'SHBG (women)',
+		ifelse(trait== 'SHBG_male', 'SHBG (men)',
+                ifelse(trait== 'CBAT_fem', 'CBAT (women)',
+                ifelse(trait== 'CBAT_male', 'CBAT (men)',
+                ifelse(trait== 'Oestradiol_fem', 'Oestradiol (women)',
+                ifelse(trait== 'POP', 'Pelvic Organ Prolapse',
+		ifelse(trait== 'Preeclampsia', 'Pre-eclampsia',
+                ifelse(trait== 'Testosterone_male', 'Testosterone (men)',
+		ifelse(trait== 'leiomyoma_uterus', 'Leiomyoma uterus',
+                ifelse(trait== 'BW_fetal', 'Birth weight fetal effect',
+                ifelse(trait== 'BW_fetal_effect', 'Birth weight fetal effect (adjusted MG)',
+                ifelse(trait== 'BW_maternal_effect', 'Birth weight maternal effect (adjusted FG)',
+                ifelse(trait== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
+
+d$locus= gsub('_', ' ', d$locus)
+d$locus= gsub('chr', 'Chr', d$locus)
+d$locus= gsub('23', 'X', d$locus)
+```
+
+```{marginfigure}
+We identify the different loci as the chromosome where the locus is located and the nearest protein coding gene to the top associated genetic variant (e.g., Chr5 EBF1).  
+```
+
+
+```{r echo=F, fig.align = "center", fig.width= 11, fig.fullwidth=TRUE, fig.height= 7, dpi= 600}
+
+x1= select(d, locus, PP.H3.abf, trait)
+x1$PP= 'Shared locus'
+
+x2= select(d, locus, PP.H4.abf, trait)
+x2$PP= 'Shared genetic variant'
+
+names(x1)= c('locus', 'coloc', 'trait', 'PP')
+names(x2)= c('locus', 'coloc', 'trait', 'PP')
+
+x= bind_rows(x1, x2)
+
+d$coloc= with(d, ifelse(PP.H4.abf< 0.5, 'No evidence', ifelse(PP.H4.abf>=  0.50 & PP.H4.abf< 0.75, 'Suggestive evidence', 'Strong evidence')))
+
+ggplot(d, aes(trait, locus, size= PP.H4.abf,  fill= coloc, color= coloc, shape= direction, alpha= coloc)) + 
+geom_point() + 
+theme_cowplot() + 
+theme(axis.text.x= element_text(angle=45, vjust= 1, hjust= 1)) +
+scale_size_binned('Posterior probability of colocalization', guide= FALSE) +
+scale_alpha_manual('Colocalization', values= c(1,0.55, 0.55)) +
+scale_shape_manual('Effect direction', values=c(25, 21, 24)) +
+scale_fill_manual('Colocalization', values=  c('#737373', colorBlindBlack8[2], colorBlindBlack8[4])) +
+scale_colour_manual('Colocalization', values=  c('#737373', colorBlindBlack8[2], colorBlindBlack8[4])) +
+xlab('') +
+ylab('')
+
+
+
+
+```
+
+\newpage
+
+
+While we are mainly interested in the colocalization of the causal genetic variant for each locus, below is a plot of shared locus (H3) or genetic variant (H4). 
+
+
+# Posterior probability of shared locus or genetic variant  
+
+```{r echo=F, fig.align = "center", fig.width= 14, fig.fullwidth=TRUE, fig.height= 8, dpi= 600}
+
+x3= select(d, locus, PP.H3.abf, trait)
+x3$PP= 'H3'
+
+x4= select(d, locus, PP.H4.abf, trait)
+x4$PP= 'H4'
+
+x0= select(d, locus, PP.H0.abf, trait)
+x0$PP= 'H0'
+
+x1= select(d, locus, PP.H1.abf, trait)
+x1$PP= 'H1'
+
+x2= select(d, locus, PP.H2.abf, trait)
+x2$PP= 'H2'
+
+names(x0)= c('locus', 'coloc', 'trait', 'PP')
+names(x1)= c('locus', 'coloc', 'trait', 'PP')
+names(x2)= c('locus', 'coloc', 'trait', 'PP')
+names(x3)= c('locus', 'coloc', 'trait', 'PP')
+names(x4)= c('locus', 'coloc', 'trait', 'PP')
+
+x= bind_rows(x0, x1, x2, x3, x4)
+
+
+x= x[order(x$PP, decreasing= T),]
+
+x$evidence= ifelse(x$coloc>= 0.75, '1', '0')
+
+ggplot(filter(x, PP== 'H3' | PP== 'H4'), aes(fill= factor(PP), y=coloc, x= locus, alpha= evidence)) + 
+geom_bar(position="stack", stat="identity") +
+scale_fill_manual('Posterior probability', values= c(colorBlindBlack8[2], colorBlindBlack8[4])) +
+scale_alpha_manual('Posterior probability', values= c(0.55, 0.8), guide=FALSE) +
+facet_wrap(vars(trait), ncol= 3) +
+theme_cowplot() +
+theme(axis.text.x= element_text(angle=45, vjust= 1, hjust= 1),
+strip.background= element_blank(),
+legend.position= 'bottom') +
+xlab('') +
+ylab('')
+
+```
+
+# Locus plots for each colocalized region  
+
+It is important to note that while two colocalized traits share a causal genetic variant, the highlighted genetic variant is usually the one with the highest posterior probability, given the genetic variants included in the analysis. Dense 
+genotyping matrix are used (after imputation), but not all genetic variants are included (missing in one of the two summary statistics files, or in the two). However, this does not affect the colocalization test, given that it looks for patterns, and not for specific genetic variants.  
+
+```{r echo= F, fig.align = "center", fig.width= 14, fig.fullwidth=TRUE, fig.height= 8, dpi= 100}
+z= filter(d, PP.H4.abf >= 0.75)
+
+
+res_inputs= snakemake@input[grep('results_', snakemake@input)]
+
+df_list= list()
+
+for (infile in res_inputs) {
+x= fread(infile, select= c('snp', 'z.df1', 'z.df2', 'SNP.PP.H4', 'locus', 'trait'))
+
+x= gather(x, pheno, zscore, c(z.df1, z.df2))
+x$pvalue=2 *  pnorm(-abs(x$zscore))
+x= separate(x, snp, into= c('CHR', 'POS', 'REF', 'EFF'), sep =':', remove= F)
+x$POS= as.numeric(x$POS)
+x$pheno= ifelse(x$pheno =='z.df1', pheno, x$trait)
+df_list[[infile]]= x
+}
+
+df= bind_rows(df_list)
+
+df$trait= with(df, ifelse(trait== 'miscarriage', 'Miscarriage',
+                ifelse(trait== 'GA_fetal', 'GA fetal effect',
+                ifelse(trait== 'BW_maternal', 'Birth weight maternal effect',
+                ifelse(trait== 'AFB', 'Age at first birth',
+                ifelse(trait== 'AMenarche', 'Age at menarche',
+                ifelse(trait== 'AMenopause', 'Age at menopause',
+                ifelse(trait== 'NLB', 'Number of live births',
+                ifelse(trait== 'Testosterone_fem', 'Testosterone (women)',
+                ifelse(trait== 'SHBG_fem', 'SHBG (women)',
+		ifelse(trait== 'SHBG_male', 'SHBG (men)',
+                ifelse(trait== 'CBAT_fem', 'CBAT (women)',
+                ifelse(trait== 'CBAT_male', 'CBAT (men)',
+                ifelse(trait== 'Oestradiol_fem', 'Oestradiol (women)',
+                ifelse(trait== 'POP', 'Pelvic Organ Prolapse',
+		ifelse(trait== 'Preeclampsia', 'Pre-eclampsia',
+                ifelse(trait== 'Testosterone_male', 'Testosterone (men)',
+                ifelse(trait== 'BW_fetal', 'Birth weight fetal effect',
+                ifelse(trait== 'BW_fetal_effect', 'Birth weight fetal effect (adjusted MG)',
+		ifelse(trait== 'leiomyoma_uterus', 'Leiomyoma uterus',
+                ifelse(trait== 'BW_maternal_effect', 'Birth weight maternal effect (adjusted FG)',
+                ifelse(trait== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
+
+df$locus= gsub('_', ' ', df$locus)
+df$locus= gsub('chr', 'Chr', df$locus)
+df$locus= gsub('23', 'X', df$locus)
+
+z$id= paste(z$trait, z$locus, sep= ':')
+df$id= paste(df$trait, df$locus, sep= ':')
+df= filter(df, id %in% z$id)
+
+df$pheno= ifelse(df$pheno== pheno, pheno, df$trait)
+
+for (i in unique(df$id)){
+
+
+PP= filter(z, id== i)$PP.H4.abf
+
+temp_df= filter(df, id== i)
+temp_df$pheno= temp_df$pheno
+temp_df$POS= temp_df$POS / 10**6
+high_df= filter(temp_df, id == i, SNP.PP.H4== max(SNP.PP.H4))
+
+(ggplot() + 
+geom_point(data= temp_df, aes(POS, -log10(pvalue), colour= pheno), size= 1, alpha = 0.5) +
+geom_point(data= high_df, aes(POS, -log10(pvalue)), colour= colorBlindBlack8[1], size= 2) + 
+facet_wrap(vars(pheno), nrow= 2, scales = "free_y") +
+theme_cowplot(font_size=14) +
+theme(strip.background= element_blank()) +
+scale_colour_manual(guide=FALSE, values= colorBlindBlack8[c(4,2)]) +
+ylab('-log10(pvalue)') +
+xlab('Position (Mbp)') +
+geom_text_repel(data=high_df, aes(x= POS, y= -log10(pvalue), label=snp), hjust= 0.5, size=3, vjust= 1) +
+ggtitle(paste('Locus: ', unique(temp_df$locus), '. Posterior probability for shared causal variant: ', round(PP, 3)))) %>% print()
+
+
+cat('  \n')
+
+
+}
+
+
+```
