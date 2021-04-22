@@ -1,0 +1,127 @@
+autosomes_nms= ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22']
+
+rule HapMap3_format:
+	'Format chr:pos for extracting with qctool.'
+	input:
+		'/mnt/work/pol/refdata/hapmap/hg19/hg19_hapmap3_consensus_qc.bim',
+		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/markerinfo/{autosomes}-markerinfo'
+	output:
+		'/mnt/work2/pol/metaGWAS/processed_data/hg19_hapmap3_{autosomes}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header=None, names= ['CHR', 'RSID', 'x1', 'POS', 'A1', 'A2'])
+		d= d[['CHR', 'POS']]
+		d.drop_duplicates(subset= ['CHR', 'POS'], keep= 'first', inplace= True)
+		df= pd.read_csv(input[1], sep='\t', header=0, usecols= ['# [1]CHROM', '[2]POS', '[7]INFO'])
+		df.columns= ['CHR', 'POS', 'INFO']
+		df= df.loc[df.INFO>= 0.9, :]
+		d= pd.merge(d, df, on= ['CHR', 'POS'], how= 'inner')
+		d['ID']= d.CHR.map(str) + ':' + d.POS.map(str)
+		with open(output[0], 'w') as f:
+			writer= csv.writer(f, delimiter= ' ')
+			writer.writerow(d['ID'])
+
+rule extract_HapMap3:
+	'Extract from MoBaGenetics all genetic variants matching HapMap3 and women.'
+	input:
+		'/mnt/work2/pol/metaGWAS/processed_data/chrX_IDS.txt',
+		'/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/bgen/{autosomes}.bgen',
+		'/mnt/work2/pol/metaGWAS/processed_data/hg19_hapmap3_{autosomes}.txt'
+	output:
+		temp('/mnt/work2/pol/metaGWAS/LDSCORE/data/{autosomes}.vcf.gz')
+	shell:
+		'/home/pol.sole.navais/soft/qctool_v2.0.8/qctool -g {input[1]} -incl-samples {input[0]} -incl-positions {input[2]} -og - | bgzip > {output[0]}'
+
+rule tabix_vcf_LDSCORE:
+	'Index vcf file.'
+	input:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/{autosomes}.vcf.gz'
+	output:
+		temp('/mnt/work2/pol/metaGWAS/LDSCORE/data/{autosomes}.vcf.gz.tbi')
+	shell:
+		'tabix -p vcf {input[0]}'
+
+rule cat_vcf_LDSCORE_filter:
+	'Merge vcfs using bcftools.'
+	input:
+		expand('/mnt/work2/pol/metaGWAS/LDSCORE/data/{autosomes}.vcf.gz', autosomes= autosomes_nms),
+		expand('/mnt/work2/pol/metaGWAS/LDSCORE/data/{autosomes}.vcf.gz.tbi', autosomes= autosomes_nms)
+	output:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.vcf.gz'
+	run:
+		vcf= [i for i in input if i.endswith('vcf.gz')]
+		shell('/home/pol.sole.navais/soft/bcftools-1.9/bcftools concat {vcf} | gzip > {output[0]}')
+
+rule MHC_region_file_LDSCORE:
+	'MHC region for exclusion.'
+	output:
+		temp('/mnt/work2/pol/metaGWAS/LDSCORE/data/MHC_region.txt')
+	shell:
+		'echo "6\t28477797\t33448354" > {output[0]}'
+
+rule genetic_map_LDSCORE:
+	'Genetic map formating.'
+	input:
+		'/mnt/work/pol/refdata/1KG/genetic_map_combined_b37.txt'
+	output:
+		expand('/mnt/work2/pol/metaGWAS/LDSCORE/data/1KG_geneticmap_{autosomes}.txt', autosomes= autosomes_nms)
+	params:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/1KG_geneticmap_'
+	run:
+		d= pd.read_csv(input[0], sep= ' ', header= 0)
+		d.columns= ['chr', 'pposition', 'rrate', 'gposition']
+		for chrom, data in d.groupby('chr'):
+			data.to_csv(params[0] + "{}.txt".format(chrom), index= False, header= True, sep= ' ', columns= ['pposition', 'rrate', 'gposition'])
+
+rule vcf_to_bed:
+	'VCF file to bed format and filter MAF.'
+	input:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.vcf.gz',
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MHC_region.txt',
+		expand('/mnt/work2/pol/metaGWAS/LDSCORE/data/1KG_geneticmap_{autosomes}.txt', autosomes= autosomes_nms)
+	output:
+		temp('/mnt/work2/pol/metaGWAS/LDSCORE/data/temp_MOBAGENETICS.bim'),
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.fam',
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.bed'
+	params:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS',
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.bim'
+	shell:
+		'''
+		/home/pol.sole.navais/soft/plink2 --vcf {input[0]} --maf 0.01 --exclude bed1 {input[1]} --make-bed --out {params[0]}
+		mv {params[1]} {output[0]}
+		'''
+
+rule add_cm_bim:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/temp_MOBAGENETICS.bim',
+		expand('/mnt/work2/pol/metaGWAS/LDSCORE/data/1KG_geneticmap_{autosomes}.txt', autosomes= autosomes_nms)
+	output:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.bim'
+	params:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/1KG_geneticmap_@.txt'
+	shell:
+		'/home/pol.sole.navais/soft/plink --bim {input[0]} --cm-map {params[0]} --make-just-bim --out {output[0]}'
+
+
+rule estimate_ldsc:
+	'Estimate LD score regression using MoBaGenetics.'
+	input:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.bim',
+                '/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.fam',
+                '/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.bed'
+	output:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/ldscores/MOBAGENETICS.log',
+		'/mnt/work2/pol/metaGWAS/LDSCORE/ldscores/MOBAGENETICS.l2.M',
+		'/mnt/work2/pol/metaGWAS/LDSCORE/ldscores/MOBAGENETICS.l2.M_5_50',
+		'/mnt/work2/pol/metaGWAS/LDSCORE/ldscores/MOBAGENETICS.l2.ldscore.gz'
+	params:
+		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.bim'
+	shell:
+		'''
+		python2 /home/pol.sole.navais/software/ldsc.py \
+		--bfile {params[0]}\
+		--l2\ 
+		--ld-wind-cm 1\ 
+		--out 22
+		'''

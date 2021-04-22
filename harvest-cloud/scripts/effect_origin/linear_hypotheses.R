@@ -25,7 +25,7 @@ h3= format_haps(h3)
 pheno= fread(snakemake@input[[5]])
 pheno= filter(pheno, spont== 1)
 
-write( paste('snp', 'beta_h1', 'se_h1', 'pvalue_h1', 'beta_h1', 'se_h1', 'pvalue_h1', 'beta_h1', 'se_h1', 'pvalue_h1', 'pval_maternal', 'pval_fetal', 'pval_poe', sep= '\t'), snakemake@output[[1]], append= T)
+write( paste('snp', 'n', 'freq_h1', 'freq_h2', 'freq_h3', 'beta_h1', 'se_h1', 'pvalue_h1', 'beta_h2', 'se_h2', 'pvalue_h2', 'beta_h3', 'se_h3', 'pvalue_h3', 'pval_maternal', 'pval_fetal', 'pval_poe', sep= '\t'), snakemake@output[[1]], append= T)
 
 results_list= lapply(names(h1)[1:(length(names(h1))-1)], function(snp) {
 h1_temp= h1[, c('PREG_ID', snp)]
@@ -58,11 +58,15 @@ pvalue_h3= coefs[3,4]
 #se_h4= coefs[4,2]
 #pvalue_h4= coefs[4,4]
 
+freq_h1= mean(d$h1, na.rm= T)
+freq_h2= mean(d$h2, na.rm= T)
+freq_h3= mean(d$h3, na.rm= T)
+
 pval_maternal= tryCatch(linearHypothesis(m1, 'h1 + h2 = h3')[['Pr(>F)']][2], warning= function(w){NA}, error= function(w) {NA})
 pval_fetal= tryCatch(linearHypothesis(m1, 'h1 + h3 = h2')[['Pr(>F)']][2], warning= function(w){NA}, error= function(w) {NA})
 pval_poe= tryCatch(linearHypothesis(m1, 'h1 - h2 = h3')[['Pr(>F)']][2], warning= function(w){NA}, error= function(w) {NA})
 
-results= paste(snp, beta_h1, se_h1, pvalue_h1, beta_h2, se_h2, pvalue_h2, beta_h3, se_h3, pvalue_h3, pval_maternal, pval_fetal, pval_poe, sep= '\t')
+results= paste(snp, n, freq_h1, freq_h2, freq_h3, beta_h1, se_h1, pvalue_h1, beta_h2, se_h2, pvalue_h2, beta_h3, se_h3, pvalue_h3, pval_maternal, pval_fetal, pval_poe, sep= '\t')
 write(results, file= snakemake@output[[1]], append=TRUE)
 }
 )
