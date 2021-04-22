@@ -1,0 +1,87 @@
+import pandas as pd
+import os
+import time
+
+rule format_locuszoom:
+	'Format locuszoom metal file.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['CHR', 'POS', 'pvalue', 'nearestGene'], compression= 'gzip')
+		d.sort_values(['pvalue'], ascending=True, inplace= True)
+		d.drop_duplicates(['CHR', 'POS'], inplace= True, keep= 'first')
+		d['ID']= 'chr' + d.CHR.apply(str) + ':' + d.POS.apply(str)
+		d.columns= ['CHR', 'POS', 'P-value', 'nearestGene', 'MarkerName']
+		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['MarkerName', 'P-value'])
+
+rule locuszoom_top_regions:
+	'Top regions for Locuszoom'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/{pheno}/top_regions.txt'
+	run:
+		df= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['CHR', 'POS', 'pvalue', 'nearestGene'], compression= 'gzip')
+		df= df.loc[df.pvalue< 5*10**-8, :]
+		df.sort_values(by= 'pvalue', ascending= True, inplace= True)
+		df.drop_duplicates(subset= ['CHR', 'POS'], keep= 'first', inplace= True)
+		df_list= list()
+		for chrom in set(df.CHR):
+			d_temp= df.loc[df.CHR== chrom, :]
+			positions= d_temp.POS.values
+			for pos in positions:
+				if pos in d_temp.POS.values:
+					df_list.append(d_temp.loc[d_temp.POS== pos, :])
+					d_temp= d_temp.loc[(d_temp.POS < pos - (1.5 * 10**6)) | (d_temp.POS> pos + (1.5 * 10**6)), :]
+				else:
+					continue
+		df= pd.concat(df_list)
+		df['CHR']= df.CHR.astype(str)
+                df['CHR']= np.where(df.CHR== '23', 'X', df.CHR)
+		df.columns= ['chr', 'POS', 'pvalue', 'nearestGene']
+		df['snp']= 'chr' + df.chr.apply(str) + ':' + df.POS.apply(str)
+		df.to_csv(output[0], sep= '\t', header= True, index= False)
+
+checkpoint locuszoom_plot:
+	'Plot locuszoom'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/{pheno}/top_regions.txt',
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/{pheno}.txt'
+	output:
+		directory('/mnt/hdd/common/pol/metaGWAS/locuszoom/{pheno}/plots')
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/{pheno}/plots/x',
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/{pheno}/plots/'
+	run:
+		if not os.path.exists(params[1]):
+			os.makedirs(params[1])
+		df= pd.read_csv(input[0], sep= '\t', header= 0)
+		for index, row in df.iterrows():
+			snp= row['snp']
+			title= '"' + row['nearestGene'] + '"'
+			shell('python2 /home/pol/software/locuszoom/bin/locuszoom --metal {input[1]} --refsnp {snp} --flank 250kb --plotonly --no-date --build hg19 --pop EUR --source 1000G_March2012 --prefix {params[0]} title={title} theme=publication')
+			outfile= params[1] + 'chr' + str(row['chr']) + '_' + row['nearestGene'] + '.pdf'
+			infile= params[0] + '_' + snp.replace(':', '_') + '.pdf'
+			shell('qpdf --empty --pages {infile} 1 -- {outfile}; rm {infile}')
+
+def aggregate_locuszoom(wildcards):
+        'Aggregate the files from locus_ID wildcard.'
+        checkpoint_output = checkpoints.locuszoom_plot.get(**wildcards).output[0]
+        return expand('/mnt/hdd/common/pol/metaGWAS/locuszoom/{pheno}/plots/{locus_ID}.pdf', pheno= wildcards.pheno, locus_ID= glob_wildcards(os.path.join(checkpoint_output, '{locus_ID}.pdf')).locus_ID)
+
+rule merge_locuszoom_outputs:
+        ''
+        input:
+                aggregate_locuszoom
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/locuszoom/plot_{pheno}.pdf'
+	run:
+		if len(input)== 1:
+			shell('cp {input[0]} {output[0]}')
+#		'gs -dBATCH -dNOPAUSE -q -sDEVICE=pdfwrite -sOutputFile={output[0]} {input}'
+		else:
+			shell('qpdf --empty --pages {input} -- {output[0]}')
+#                'pdftk {input} cat output {output[0]}'
+
