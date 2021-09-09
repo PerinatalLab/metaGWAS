@@ -71,12 +71,14 @@ myres= tryCatch({suppressWarnings(coloc.abf(data1, data2, p1= prior1, p2= prior2
         PPH= data.frame(t(myres[[1]]))
         PPH$preg_trait= trait
 	PPH$pheno_FINNGEN= phenotype
-        if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.8) {
+        if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.1) {
         fwrite(PPH, pph_outfile, sep= '\t', row.names=F, col.names= F, quote=F, append= T)
         res= myres[[2]]
         res$preg_trait= trait
         res$pheno_FINNGEN= phenotype
+	if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.1) {
         fwrite(res, results_outfile, sep= '\t', row.names=F, col.names= F, quote=F, append= T)
+	}
         } else {
         print('Not enough power')
         }
@@ -112,7 +114,7 @@ fin_map$ID= paste(fin_map$CHR, fin_map$POS, fin_map$ref, fin_map$eff, sep= ':')
 d= inner_join(d, fin_map[, c('ID', 'ID_hg38')], by= 'ID')
 bw= inner_join(bw, fin_map[, c('ID', 'ID_hg38')], by= 'ID')
 
-df_list= mclapply(split(mani, mani$phenocode), format_FINNGEN, mc.cores= 9)
+df_list= mclapply(split(mani, mani$phenocode), format_FINNGEN, mc.cores= 5)
 
 z= do.call('rbind', df_list)
 

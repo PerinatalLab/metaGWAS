@@ -85,12 +85,14 @@ myres= tryCatch({(coloc.abf(data1, data2, p1= prior1, p2= prior2, p12= prior12))
         PPH= data.frame(t(myres[[1]]))
         PPH$preg_trait= trait
 	PPH$pheno_PAN_UKBB= phenotype
-        if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.8) {
+        if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.1) {
         fwrite(PPH, pph_outfile, sep= '\t', row.names=F, col.names= F, quote=F, append= T)
         res= myres[[2]]
         res$preg_trait= trait
         res$pheno_PAN_UKBB= phenotype
+	if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.8) {
         fwrite(res, results_outfile, sep= '\t', row.names=F, col.names= F, quote=F, append= T)
+	}
         } else {
         print('Not enough power')
         }

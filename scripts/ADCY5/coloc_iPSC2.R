@@ -29,9 +29,9 @@ pph_outfile= snakemake@output[[1]]
 results_outfile= snakemake@output[[2]]
 
 
-cat('nsnps\tPP.H0.abf\tPP.H1.abf\tPP.H2.abf\tPP.H3.abf\tPP.H4.abf\tgene\n', file = snakemake@output[[1]])
+cat('nsnps\tPP.H0.abf\tPP.H1.abf\tPP.H2.abf\tPP.H3.abf\tPP.H4.abf\tpreg_trait\tgene\n', file = snakemake@output[[1]])
 
-cat('snp\tV.df\tz.df1\tr.df1\tlABF.df1\tV.df2\tz.df2\tr.df2\tlABF.df2\tinternal.sum.lABF\tSNP.PP.H4\tgene\n', file= snakemake@output[[2]])
+cat('snp\tV.df\tz.df1\tr.df1\tlABF.df1\tV.df2\tz.df2\tr.df2\tlABF.df2\tinternal.sum.lABF\tSNP.PP.H4\tpreg_trait\tgene\n', file= snakemake@output[[2]])
 
 prior1= 1 * 10**-4
 prior2= 1 * 10**-4
@@ -68,7 +68,7 @@ colocalization_eqtl= function(temp_df){
         PPH= data.frame(t(myres[[1]]))
 	PPH$trait= trait
         PPH$protein= protein
-        if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.8) {
+        if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.1) {
         fwrite(PPH, pph_outfile, sep= '\t', row.names=F, col.names= F, quote=F, append= T)
         res= myres[[2]]
 	res$trait= trait

@@ -11,8 +11,8 @@ rule ADCY5_coloc_FINNGEN:
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
 		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_fetal_effect.txt',
-		'/mnt/hdd/common/pol/references/FINNGEN/manifest_R4.txt',
-		'/mnt/hdd/common/pol/references/FINNGEN/finngen_R4_filter_annotations.gz'
+		'/mnt/hdd/common/pol/references/FINNGEN/manifest_R5.txt',
+		'/mnt/hdd/common/pol/references/FINNGEN/finngen_R5_filter_annotations.gz'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/pph_GAraw.txt',
 		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/results_GAraw.txt',
