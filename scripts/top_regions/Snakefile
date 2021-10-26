@@ -1,0 +1,166 @@
+rule top_regions_without_annotation:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/initial/{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d['Allele1']= d['Allele1'].str.upper()
+		d['Allele2']= d['Allele2'].str.upper()
+		d= d.loc[(d.TOTALSAMPLESIZE> (d['TOTALSAMPLESIZE'].max())/ 2), :]
+		d[['CHR', 'POS', 'REF','EFF', 'SNP']]= d['MarkerName'].str.split(':', expand= True)
+		d['CHR']= d['CHR'].astype(str).astype(int)
+		d['POS']= d['POS'].astype(str).astype(int)
+		d= d[['CHR', 'POS', 'Allele1', 'Allele2', 'TOTALSAMPLESIZE', 'Freq1', 'Effect', 'StdErr', 'P-value']]
+		d.columns= ['CHR', 'POS', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']
+		df= d.loc[d.pvalue< 5*10**-8, :]
+		df.sort_values(by= 'pvalue', ascending= True, inplace= True)
+		df.drop_duplicates(subset= ['CHR', 'POS'], keep= 'first', inplace= True)
+		df_list= list()
+		for chrom in set(df.CHR):
+			d_temp= df.loc[df.CHR== chrom, :]
+			positions= d_temp.POS.values
+			for pos in positions:
+				if pos in d_temp.POS.values:
+					df_list.append(d_temp.loc[d_temp.POS== pos, :])
+					d_temp= d_temp.loc[(d_temp.POS < pos - (1.5*10**6)) | (d_temp.POS> pos + (1.5 * 10**6)), :]
+			else:
+				continue
+		x= pd.concat(df_list)
+		x['pos1']= x.POS - 1.5*10**6
+		x['pos2']= x.POS + 1.5*10**6
+		x['CHR']= x.CHR.astype(str)
+		x['CHR']= np.where(x.CHR== '23', 'X', x.CHR)
+		x.to_csv(output[0], sep='\t', header= True, index= False, columns= ['CHR', 'pos1', 'pos2'])
+
+rule independent_GWAS_regions:
+        'Obtain a file with independent regions for top loci with a radius of 1.5 Mb.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/topregions/final/{pheno}.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', compression= 'gzip', usecols= ['CHR', 'POS', 'pvalue', 'nearestGene'])
+                df= d.loc[d.pvalue< 5*10**-8, :]
+                df.sort_values(by= 'pvalue', ascending= True, inplace= True)
+                df.drop_duplicates(subset= ['CHR', 'POS'], keep= 'first', inplace= True)
+                df_list= list()
+                for chrom in set(df.CHR):
+                        d_temp= df.loc[df.CHR== chrom, :]
+                        positions= d_temp.POS.values
+                        for pos in positions:
+                                if pos in d_temp.POS.values:
+                                        df_list.append(d_temp.loc[d_temp.POS== pos, :])
+                                        d_temp= d_temp.loc[(d_temp.POS < pos - (1.5*10**6)) | (d_temp.POS> pos + (1.5 * 10**6)), :]
+                                else:
+                                        continue
+                x= pd.concat(df_list)
+                x['pos1']= x.POS - 1.5*10**6
+                x['pos2']= x.POS + 1.5*10**6
+                x['CHR']= x.CHR.astype(str)
+                x['CHR']= np.where(x.CHR== '23', 'X', x.CHR)
+                x.to_csv(output[0], sep='\t', header= True, index= False, columns= ['CHR', 'pos1', 'pos2', 'nearestGene'])
+
+rule top_variants:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/final/{pheno}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'EAF', 'TOTALSAMPLESIZE', 'REF', 'EFF', 'RSID', 'ID', 'BETA', 'SE', 'pvalue'])
+		x= pd.read_csv(input[1], sep= '\t', header= 0)
+		x['CHR']= np.where(x.CHR== 'X', '23', x.CHR)
+		x['CHR']= x.CHR.apply(int)
+		d= pd.merge(d, x, on= 'CHR')
+		d= d.loc[((d.POS>= d.pos1) & (d.POS <= d.pos2)), ]
+		d.sort_values('pvalue', ascending= True, inplace= True)
+		d= d.groupby('nearestGene').head(1)
+		d= d[['CHR', 'POS', 'EAF', 'TOTALSAMPLESIZE', 'REF', 'EFF', 'RSID', 'nearestGene', 'ID', 'BETA', 'SE', 'pvalue']]
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+
+rule independent_GWAS_regions_non_additive:
+	'Obtain a file with independent regions for top loci with a radius of 1.5 Mb.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/Maternal_GWAMA_GAraw_dom.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/Maternal_GWAMA_GAraw_rec.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/non_additive/final/GAraw_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/non_additive/final/GAraw_rec.txt'
+	run:
+		for i in range(2):
+			d= pd.read_csv(input[i], sep= '\t', compression= 'gzip', usecols= ['CHR', 'POS', 'pvalue', 'nearestGene'])
+			df= d.loc[d.pvalue< 5*10**-8, :]
+			df.sort_values(by= 'pvalue', ascending= True, inplace= True)
+			df.drop_duplicates(subset= ['CHR', 'POS'], keep= 'first', inplace= True)
+			df_list= list()
+			for chrom in set(df.CHR):
+				d_temp= df.loc[df.CHR== chrom, :]
+				positions= d_temp.POS.values
+				for pos in positions:
+					if pos in d_temp.POS.values:
+						df_list.append(d_temp.loc[d_temp.POS== pos, :])
+						d_temp= d_temp.loc[(d_temp.POS < pos - (1.5*10**6)) | (d_temp.POS> pos + (1.5 * 10**6)), :]
+					else:
+						continue
+			x= pd.concat(df_list)
+			x['pos1']= x.POS - 1.5*10**6
+			x['pos2']= x.POS + 1.5*10**6
+			x['CHR']= x.CHR.astype(str)
+			x['CHR']= np.where(x.CHR== '23', 'X', x.CHR)
+			x.to_csv(output[i], sep='\t', header= True, index= False, columns= ['CHR', 'pos1', 'pos2', 'nearestGene'])
+
+rule top_variants_nonadditive:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/Maternal_GWAMA_GAraw_dom.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/Maternal_GWAMA_GAraw_rec.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/non_additive/final/GAraw_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/non_additive/final/GAraw_rec.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/non_additive/top_variants/GAraw_dom.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/non_additive/top_variants/GAraw_rec.txt'
+	run:
+		for i in range(2):
+			d= pd.read_csv(input[i], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'EAF', 'TOTALSAMPLESIZE', 'REF', 'EFF', 'RSID', 'ID', 'pvalue'])
+			x= pd.read_csv(input[i+2], sep= '\t', header= 0)
+			x['CHR']= np.where(x.CHR== 'X', '23', x.CHR)
+			x['CHR']= x.CHR.apply(int)
+			d= pd.merge(d, x, on= 'CHR')
+			d= d.loc[((d.POS>= d.pos1) & (d.POS <= d.pos2)), ]
+			d.sort_values('pvalue', ascending= True, inplace= True)
+			d= d.groupby('nearestGene').head(1)
+			d= d[['CHR', 'POS', 'EAF', 'TOTALSAMPLESIZE', 'REF', 'EFF', 'RSID', 'nearestGene', 'ID', 'pvalue']]
+			d.to_csv(output[i], sep= '\t', header= True, index= False)
+
+rule independent_GWAS_regions_BW_maternal_effect:
+        'Obtain a file with independent regions for top loci with a radius of 1.5 Mb.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_maternal.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/topregions/BW/final/BW_maternal_effect.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t',usecols= ['CHR', 'POS', 'pvalue'])
+                df= d.loc[d.pvalue< 5*10**-8, :]
+                df.sort_values(by= 'pvalue', ascending= True, inplace= True)
+                df.drop_duplicates(subset= ['CHR', 'POS'], keep= 'first', inplace= True)
+                df_list= list()
+                for chrom in set(df.CHR):
+                        d_temp= df.loc[df.CHR== chrom, :]
+                        positions= d_temp.POS.values
+                        for pos in positions:
+                                if pos in d_temp.POS.values:
+                                        df_list.append(d_temp.loc[d_temp.POS== pos, :])
+                                        d_temp= d_temp.loc[(d_temp.POS < pos - (1.5*10**6)) | (d_temp.POS> pos + (1.5 * 10**6)), :]
+                                else:
+                                        continue
+                x= pd.concat(df_list)
+                x['pos1']= x.POS - 1.5*10**6
+                x['pos2']= x.POS + 1.5*10**6
+                x['CHR']= x.CHR.astype(str)
+                x['CHR']= np.where(x.CHR== '23', 'X', x.CHR)
+                x.to_csv(output[0], sep='\t', header= True, index= False, columns= ['CHR', 'POS', 'pos1', 'pos2'])
+
