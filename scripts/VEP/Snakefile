@@ -178,4 +178,3 @@ rule add_2nd_nearest_Gene:
 		d= d.loc[d.nearestGene != d.nearestGene2, :]
 		d= d[['ID', 'nearestGene', 'nearestGene2']]
 		d.to_csv(output[0], sep= '\t', header= True, index= False)
-
