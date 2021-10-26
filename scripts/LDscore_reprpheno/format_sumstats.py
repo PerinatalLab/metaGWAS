@@ -35,12 +35,31 @@ def select_format(repr_pheno, row):
 		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= BW_fetal_adjusted_effect(row)
 	if repr_pheno== 'leiomyoma_uterus':
 		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= leiomyoma_uterus(row)
-	if repr_pheno in ['Oestradiol_fem', 'NLB', 'AFB', 'AMenarche', 'AMenopause', 'endometriosis']:
+	if repr_pheno== 'AMenopause':
+		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= AMenopause(row)
+	if repr_pheno in ['Oestradiol_fem', 'NLB', 'AFB', 'AMenarche', 'endometriosis']:
 		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= UKBB_traits(row)
 	if repr_pheno in ['SHBG_fem', 'Testosterone_fem', 'Testosterone_male', 'SHBG_male', 'CBAT_fem', 'CBAT_male']:
 		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= pritchard(row)
 	if repr_pheno == 'PCOS':
 		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= PCOS(row)
+	return [rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue]
+
+
+def AMenopause(row):
+	'REPROGEN Age at menopause.'
+	EAF= float(row['EAF'])
+	CHR= row['CHR']
+	if CHR== 'X': CHR= 23
+	CHR= int(CHR)
+	POS= int(row['POS'])
+	REF= row['Other_Allele'].upper()
+	EFF= row['Effect_Allele'].upper()
+	BETA= float(row['Effect'])
+	pvalue= float(row['Pval'])
+	SE= float(row['SE'])
+	N= int(row['N'])
+	rsid= ''
 	return [rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue]
 
 
