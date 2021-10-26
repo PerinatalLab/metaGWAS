@@ -48,7 +48,13 @@ colocalization_eqtl= function(temp_df){
 
         } else {
 	temp_df = filter(temp_df, SE>0, se> 0)
-        data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'quant', snp= temp_df$ID)
+
+	if (grepl('allPTD', snakemake@input[[1]])) {
+        data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'cc', snp= temp_df$ID,s= 0.067)
+        } else if (grepl('postTerm', snakemake@input[[1]])) {
+        data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'cc', snp= temp_df$ID, s= 0.122)
+        } else {data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'quant', snp= temp_df$ID) }
+
         data2= list(beta= temp_df$beta, varbeta= temp_df$se**2, N=temp_df$n, type= 'quant', snp= temp_df$ID)
         myres= tryCatch({suppressWarnings(coloc.abf(data1, data2, MAF=temp_df$MAF, p1= prior1, p2= prior2, p12= prior12))}, error= function(e) { return(0)}
 )
@@ -61,14 +67,10 @@ colocalization_eqtl= function(temp_df){
         } else {
         PPH= data.frame(t(myres[[1]]))
         PPH$protein= protein
-        if ((PPH$PP.H3.abf + PPH$PP.H4.abf) >= 0.8) {
         fwrite(PPH, pph_outfile, sep= '\t', row.names=F, col.names= F, quote=F, append= T)
         res= myres[[2]]
         res$protein= protein
         fwrite(res, results_outfile, sep= '\t', row.names=F, col.names= F, quote=F, append= T)
-        } else {
-        print('Not enough power')
-        }
 }
 }
 }
