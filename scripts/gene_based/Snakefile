@@ -26,7 +26,7 @@ rule select_samples_1KG:
 		pop= ['CEU', 'TSI', 'FIN', 'GBR', 'IBS']
 		d= d.loc[d.Population.isin(pop)]
 		d['IID']= d['Individual ID']
-		d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['IID', 'Individual ID'])
+		d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['IID'])
 
 rule concat_vcf:
 	'Concat vcfs using bcftools.'
@@ -50,7 +50,7 @@ rule vcf_to_bed_KG:
 	params:
 		'/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/temp/allchr'
 	shell:
-		'/home/pol/software/plink2 --vcf {input[0]} --keep {input[1]} --make-bed --out {params[0]}'
+		'/home/pol/software/plink2 --vcf {input[0]} --max-alleles 2 --keep {input[1]} --make-bed --out {params[0]}'
 
 rule format_bim_file:
 	'Change bim RS id to CHR:POS:REF:EFF.'
@@ -103,5 +103,5 @@ rule fastBAT:
 		'/mnt/hdd/common/pol/metaGWAS/gene_based/fastBAT_{pheno}.txt'
 	threads: 10
 	shell:
-		'/home/pol/software/gcta_1.93.2beta/gcta64 --bfile {params[0]} --maf 0.01 --fastBAT {input[1]} --fastBAT-gene-list {input[2]} --out {params[1]} --thread-num 10'
+		'/home/pol/software/gcta_1.93.2beta/gcta64 --bfile {params[0]} --maf 0.01 --fastBAT {input[1]} --fastBAT-gene-list {input[2]} --out {params[1]} --thread-num {threads}'
 
