@@ -3,12 +3,12 @@ rule format_other_meta_sumstats:
 	''
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAraw_1.txt',
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_allPTD_1.txt',
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_1.txt',
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_GAraw_1.txt'
 	output:
 		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAraw_1.txt'),
-                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAnrm_1.txt'),
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_allPTD_1.txt'),
                 temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_allPTD_1.txt'),
                 temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_GAraw_1.txt')
 	run:
@@ -37,12 +37,12 @@ rule format_GWAS_bedtools_other_meta:
 	''
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAraw_1.txt',
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAnrm_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_allPTD_1.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_allPTD_1.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_GAraw_1.txt'
 	output:
 		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAraw_bed.txt'),
-		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_bed.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_allPTD_bed.txt'),
 		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_bed.txt'),
 		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_GAraw_bed.txt')
 	run:
@@ -61,12 +61,12 @@ rule bedtools_nearest_gene_other_meta:
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAraw_bed.txt',
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_bed.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_allPTD_bed.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_bed.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_GAraw_bed.txt'
 	output:
 		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_GAraw.txt'),
-		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_GAnrm.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_allPTD.txt'),
 		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/nearest_gene/meta_allPTD.txt'),
 		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/nearest_gene/meta_GAraw.txt')
 	run:
@@ -81,16 +81,16 @@ rule add_missing_rsid_nearestGene_other_metas:
         input:
                 '/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_GAraw.txt',
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_GAnrm.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/nearest_gene/meta_allPTD.txt',
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/nearest_gene/meta_allPTD.txt',
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/nearest_gene/meta_GAraw.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAraw_1.txt',
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_GAnrm_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/temp/meta_allPTD_1.txt',
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_allPTD_1.txt',
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/temp/meta_GAraw_1.txt'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_GAraw.txt.gz',
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_GAnrm.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_allPTD.txt.gz',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_allPTD.txt.gz',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_GAraw.txt.gz'
 	run:
