@@ -1,0 +1,92 @@
+
+CCHMC_cohort_nms= ['ALSPAC', 'DNBC', 'FIN', 'GPN', 'HAPO'] 
+
+def flip_beta(df):
+        'Flip EFF and REF allele if REF> EFF. Flip beta direction with same condition. Assumed column names: beta, REF, EFF.'
+        df['BETA']= np.where(df.REF>df.EFF, -1 * df.BETA, df.BETA)
+        df['REF'], df['EFF']= np.where(df.REF> df.EFF, [df.EFF, df.REF], [df.REF, df.EFF])
+        return df
+
+def add_ID(x):
+        x['REF']= np.where(x.REF.str.len() > x.EFF.str.len(), 'I', x.REF)
+        x['EFF']= np.where(x.REF.str.len() < x.EFF.str.len(), 'I', x.EFF)
+        x['REF']= np.where(x.EFF== 'I', 'D', x.REF)
+        x['EFF']= np.where(x.REF== 'I', 'D', x.EFF)
+        x['ID']= np.where(x.REF> x.EFF, x.CHR.apply(str) + ':' + x.POS.apply(str) + ':' + x.EFF + ':' + x.REF, x.CHR.apply(str) + ':' + x.POS.apply(str) + ':' + x.REF + ':' + x.EFF)
+        x= flip_beta(x)
+        return x
+
+
+rule filter_haplotype_based:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/final/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/raw_data/{CCHMC_cohort}.gday.hap.gwas.result.csv'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h1_{CCHMC_cohort}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h2_{CCHMC_cohort}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h3_{CCHMC_cohort}.txt'
+	script:
+		'format_CCHMC_haplotype.py'
+
+rule format_MobaGenetics_haplotype:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/raw_data/trio_gene_MoBaGenetics.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h1_MoBaGenetics.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h2_MoBaGenetics.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h3_MoBaGenetics.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['contig', 'position', 'testedAllele', 'otherAllele', 'h.Bmnt', 'h.Bmnt.se', 'h.Bmnt.p', 'h.Bmt', 'h.Bmt.se', 'h.Bmt.p', 'h.Bft', 'h.Bft.se', 'h.Bft.p'])[['contig', 'position', 'testedAllele', 'otherAllele', 'h.Bmnt', 'h.Bmnt.se', 'h.Bmnt.p', 'h.Bmt', 'h.Bmt.se', 'h.Bmt.p', 'h.Bft', 'h.Bft.se', 'h.Bft.p']]
+		d.columns= ['CHR', 'POS', 'EFF', 'REF', 'h2_beta', 'h2_se', 'h2_pvalue', 'h1_beta', 'h1_se', 'h1_pvalue', 'h3_beta', 'h3_se', 'h3_pvalue']
+		h1= d.loc[:, ['CHR', 'POS', 'EFF', 'REF', 'h1_beta', 'h1_se', 'h1_pvalue']]
+		h1.columns= ['CHR', 'POS', 'EFF', 'REF', 'BETA', 'SE', 'pvalue']
+		h2= d.loc[:, ['CHR', 'POS', 'EFF', 'REF', 'h2_beta', 'h2_se', 'h2_pvalue']]
+		h2.columns= ['CHR', 'POS', 'EFF', 'REF', 'BETA', 'SE', 'pvalue']
+		h3= d.loc[:, ['CHR', 'POS', 'EFF', 'REF', 'h3_beta', 'h3_se', 'h3_pvalue']]
+		h3.columns= ['CHR', 'POS', 'EFF', 'REF', 'BETA', 'SE', 'pvalue']
+		h1= add_ID(h1)
+		h2= add_ID(h2)
+		h3= add_ID(h3)
+		h1.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['ID', 'CHR', 'POS', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
+		h2.to_csv(output[1], sep= '\t', header= True, index= False, columns= ['ID', 'CHR', 'POS', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
+		h3.to_csv(output[2], sep= '\t', header= True, index= False, columns= ['ID', 'CHR', 'POS', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
+
+rule meta_haplotype:
+	''
+	input:
+		'scripts/effect_origin/metal_script_{haplotype}',
+		expand('/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/{{haplotype}}_{CCHMC_cohort}.txt', CCHMC_cohort= CCHMC_cohort_nms),
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/{haplotype}_MoBaGenetics.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/meta_{haplotype}_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/meta_{haplotype}.log'
+	shell:
+		'/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+
+rule merge_haplotype_meta:
+	'Merge meta-analysis for h1, h2 and h3.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/meta_h1_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/meta_h2_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/meta_h3_1.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt'
+	run:
+		h1= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['MarkerName', 'Allele1', 'Allele2', 'Effect', 'StdErr', 'P-value', 'Direction', 'HetISq', 'HetPVal'])
+		h2= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['MarkerName', 'Allele1', 'Allele2', 'Effect', 'StdErr', 'P-value', 'HetISq', 'HetPVal'])
+		h3= pd.read_csv(input[2], sep= '\t', header= 0, usecols= ['MarkerName', 'Allele1', 'Allele2', 'Effect', 'StdErr', 'P-value', 'HetISq', 'HetPVal'])
+		h1['N_cohorts']= 6 - h1['Direction'].apply(lambda x: str.count(x, '?'))
+		h1.columns= ['MarkerName', 'Allele1', 'Allele2', 'beta_h1', 'se_h1', 'pvalue_h1', 'Direction_h1', 'HetISq_h1', 'HetPval_h1', 'n_cohorts']
+		h1['beta_h1']= np.where(h1.Allele2> h1.Allele1, -1 * h1.beta_h1, h1.beta_h1)
+		h2.columns= ['MarkerName', 'Allele1', 'Allele2', 'beta_h2', 'se_h2', 'pvalue_h2', 'HetISq_h2', 'HetPval_h2']
+		h2['beta_h2']= np.where(h2.Allele2> h2.Allele1, -1 * h2.beta_h2, h2.beta_h2)
+		h3.columns= ['MarkerName', 'Allele1', 'Allele2', 'beta_h3', 'se_h3', 'pvalue_h3', 'HetISq_h3', 'HetPval_h3']
+		h3['beta_h3']= np.where(h3.Allele2> h3.Allele1, -1 * h3.beta_h3, h3.beta_h3)
+		d= pd.merge(h1, h2[['MarkerName', 'beta_h2', 'se_h2', 'pvalue_h2', 'HetISq_h2', 'HetPval_h2']], on= ['MarkerName'], how= 'inner')
+		d= pd.merge(d, h3[['MarkerName', 'beta_h3', 'se_h3', 'pvalue_h3', 'HetISq_h3', 'HetPval_h3']], on= ['MarkerName'], how= 'inner')
+		d= d[['MarkerName', 'Allele1', 'Allele2', 'beta_h1', 'se_h1', 'pvalue_h1', 'Direction_h1', 'HetISq_h1', 'HetPval_h1', 'n_cohorts', 'beta_h2', 'se_h2', 'pvalue_h2', 'HetISq_h2', 'HetPval_h2', 'beta_h3', 'se_h3', 'pvalue_h3', 'HetISq_h3', 'HetPval_h3']]
+		d['Allele1'], d['Allele2']= np.where(d.Allele2> d.Allele1, [d.Allele2, d.Allele1], [d.Allele1, d.Allele2])
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+

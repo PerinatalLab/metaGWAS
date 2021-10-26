@@ -1,0 +1,18 @@
+SCHEME   STDERR
+
+MARKER ID
+ALLELE Allele1 Allele2 
+EFFECT BETA
+STDERR SE
+PVALUE pvalue 
+SEPARATOR TAB
+
+PROCESS /mnt/hdd/common/pol/metaGWAS/effect_origin/META/joint/temp/meta_h1.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/effect_origin/META/joint/temp/meta_h2.txt
+
+OUTFILE /mnt/hdd/common/pol/metaGWAS/effect_origin/META/joint/meta_maternal_effect_ .txt
+
+ANALYZE HETEROGENEITY
+
+QUIT
+
