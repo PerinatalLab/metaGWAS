@@ -4,15 +4,15 @@ import gzip
 import math
 from scipy import stats
 
-allPTD_coh_nms= ['23andme', 'ALSPAC', 'CHOP', 'DECODE', 'EGCUT', 'NFBC1966',  'MOBAGENETICS', 'DBDS', 'BIB', 'DNBCCASES', 'DNBCCONTROLS', 'DNBCPTD', 'HUNT', 'DILT1DGC', 'WTCCC58BC']
-
-postTerm_coh_nms= ['ALSPAC', 'EGCUT', 'DECODE', 'NFBC1966', 'MOBAGENETICS', 'DBDS', 'BIB', 'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DILT1DGC', 'WTCCC58BC']
-
-GAraw_coh_nms= ['23andme', 'ALSPAC', 'CHOP', 'DECODE',  'NFBC1966', 'STORK', 'STORKGROR', 'MOBAGENETICS', 'DBDS', 'BIB', 'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DNBCPTD', 'DILT1DGC', 'WTCCC58BC', 'CCHMC', 'GPN']
-
-GAnrm_coh_nms= ['ALSPAC', 'CHOP', 'DECODE',  'NFBC1966', 'STORK', 'STORKGROR', 'MOBAGENETICS', 'DBDS', 'BIB', 'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DNBCPTD', 'DILT1DGC', 'WTCCC58BC']
 
 
+init_allPTD_file_nms= ['23andme-allPTD-RESULTS-pol', 'ALSPAC-allPTD-RESULTS-23042018', 'CHOP-allPTD-RESULTS-19062018_PSN', 'DECODE-allPTD-RESULTS-05072018', 'EGCUT-allPTD-RESULTS-210818','NFBC1966-allPTD-RESULTS-20180418', 'HUNT-allPTD-RESULTS-23102020', 'MOBAGENETICS-allPTD-add-RESULTS-24082021', 'DBDS-allPTD-RESULTS-30032020', 'DNBCGOYACASES-allPTD-RESULTS-17052018', 'DNBCGOYACONTROLS-allPTD-RESULTS-17052018', 'DNBCPTD-allPTD-RESULTS-15052018', 'DILT1DGC-allPTD-RESULTS-28052018', 'WTCCC58BC-allPTD-RESULTS-28052018', 'FINNGEN-allPTD-RESULTS', 'PGPIII-PTD259-RESULTS-23092021', 'PGPII-PTD259-RESULTS-23092021']
+
+init_postTerm_file_nms= ['ALSPAC-postTerm-RESULTS-23042018', 'DECODE-postTerm-RESULTS-05072018', 'NFBC1966-postTerm-RESULTS-20180418', 'HUNT-postTerm-RESULTS-23102020', 'MOBAGENETICS-postTerm-add-RESULTS-24082021', 'DBDS-postTerm-RESULTS-30032020', 'EGCUT-postTerm-RESULTS-210818', 'DNBCGOYACASES-postTerm-RESULTS-17052018', 'DNBCGOYACONTROLS-postTerm-RESULTS-17052018', 'DILT1DGC-postTerm-RESULTS-28052018', 'WTCCC58BC-postTerm-RESULTS-28052018']
+
+init_GAraw_file_nms= ['23andme-GAraw-RESULTS-pol', 'ALSPAC-GAraw-RESULTS-23042018', 'CHOP-GAraw-RESULTS-19062018_PSN', 'DECODE-GAraw-RESULTS-05072018', 'NFBC1966-GAraw-RESULTS-20180418', 'STORK-GAraw-RESULTS-28052018', 'STORKGROR-GAraw-RESULTS-28052018', 'HUNT-GAraw-RESULTS-18122018', 'MOBAGENETICS-GAraw-add-RESULTS-25022020', 'DBDS-GAraw-RESULTS-30032020', 'DNBCGOYACASES-GAraw-RESULTS-17052018', 'DNBCGOYACONTROLS-GAraw-RESULTS-17052018', 'DNBCPTD-GAraw-RESULTS-15052018', 'DILT1DGC-GAraw-RESULTS-28052018', 'WTCCC58BC-GAraw-RESULTS-28052018', 'CCHMC-GAraw-RESULTS-21042020', 'GPN-GAraw-RESULTS-21042020', 'Gen3G-GAraw-RESULTS-14052018_PSN', 'Viva-GAraw-RESULTS-05142018', 'PGPII-GAraw-RESULTS-08092021', 'PGPIII-GAraw-RESULTS-08092021', 'BIB-GAraw-RESULTS-15072018', 'EFSOCH-GAraw-RESULTS-18012018', 'HAPO-GAraw-RESULTS-15082018']
+
+init_GAnrm_file_nms= ['ALSPAC-GAnrm-RESULTS-23042018', 'CHOP-GAnrm-RESULTS-19062018_PSN', 'DECODE-GAnrm-RESULTS-05072018', 'NFBC1966-GAnrm-RESULTS-20180418', 'STORK-GAnrm-RESULTS-28052018', 'STORKGROR-GAnrm-RESULTS-28052018', 'HUNT-GAnrm-RESULTS-18122018', 'MOBAGENETICS-GAnrm-add-RESULTS-25022020', 'DBDS-GAnrm-RESULTS-30032020', 'DNBCGOYACASES-GAnrm-RESULTS-17052018', 'DNBCGOYACONTROLS-GAnrm-RESULTS-17052018', 'DNBCPTD-GAnrm-RESULTS-15052018', 'DILT1DGC-GAnrm-RESULTS-28052018', 'WTCCC58BC-GAnrm-RESULTS-28052018', 'Gen3G-GAnrm-RESULTS-14052018_PSN', 'Viva-GAnrm-RESULTS-05142018', 'PGPII-GArn-RESULTS-08092021', 'PGPIII-GArn-RESULTS-08092021', 'BIB-GAnrm-RESULTS-15072018', 'EFSOCH-GAnrm-RESULTS-18012018',  'HAPO-GAnrm-RESULTS-15082018']
 
 def is_number(s):
     if s != None:
@@ -24,251 +24,157 @@ def is_number(s):
     else: 
         return False
 
-def format_list(input, output):
-        for i in range(len(input)):
-            with gzip.open(input[i], 'rt') as f:
-                print(input[i])
-                dialect = csv.Sniffer().sniff(f.readline(), delimiters= ' \t')
-                f.seek(0)
-                input_file= csv.DictReader(f, dialect= dialect)
-                df_list= list()
-                with open(output[i], 'w') as csvfile:
-                    writer = csv.writer(csvfile, delimiter= '\t')
-                    writer.writerow([g for g in ['ID', 'SNP','CHR', 'POS', 'EAF', 'N', 'REF', 'EFF', 'BETA', 'SE', 'pvalue', 'STRAND']])
-                for row in input_file:
-                    if ('HUNT' in input[i]) and ('GAraw' in input[i]): row['EAF_CONTR']= row['EAF']
-                    if ('Viva' in input[i]) and ('GA' in input[i]): row['EAF_CONTR']= row['EAF_ALL']
-                    if 'DECODE' in input[i]: row['EAF_CONTR'], row['CHR'], row['POS'], row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['N'], row['P_VAL_ADD'], row['RSID']= row['EAF_CASES'], row['BUILD'], row['CHR'], row['EFF_ALLELE'], row['POS'], row['EAF_CONTR'], row['BETA_ADD'], row['REF_ALLELE'], row['SE_ADD'], row['SNPID']
-                    if ((row['BETA_ADD'] == '.') | (row['BETA_ADD']== 'NA') | (row['SE_ADD']!= row['SE_ADD']) | (row['BETA_ADD'] != row['BETA_ADD']) | (row['EAF_CONTR'] != row['EAF_CONTR'])):
-                        continue
-                    if not is_number(row['BETA_ADD']):
-                        continue
-                    if not is_number(row['SE_ADD']):
-                        continue
-                    if not is_number(row['N']):
-                        continue
-                    if not is_number(row['P_VAL_ADD']):
-                        continue
-                    else:
-                        if (float(row['P_VAL_ADD'])== 1) | (float(row['P_VAL_ADD'])== 0):
-                            continue
-                    if is_number(row['EAF_CONTR']):
-                        maf= np.where(float(row['EAF_CONTR'])> 0.5, 1 - float(row['EAF_CONTR']), float(row['EAF_CONTR']))
-			eaf=  row['EAF_CONTR']
-                        if (maf< 0.005):
-                            continue
-                        if ((maf * 2 * float(row['N'])) <=6):
-                            continue
-                    else:
-                        eaf= ''
-                    if 'INFO' in row: 
-                        if is_number(row['INFO']):
-                            if float(row['INFO'])< 0.4:
-                                continue
-                    pvalue= stats.norm.sf(abs(float(row['BETA_ADD']) / float(row['SE_ADD'])))*2
-                    if ((((abs(float(row['P_VAL_ADD']) - pvalue)) / pvalue) * 100 ) > 10):
-                        continue
-                    row['CHR']= row['CHR'].replace('X', '23')
-                    row['CHR']= int(row['CHR'])
-                    if len(row['REF_ALLELE']) >1: row['REF_ALLELE']= 'I'
-                    if len(row['EFF_ALLELE']) >1: row['EFF_ALLELE']= 'I'
-                    if row['REF_ALLELE']== 'I': row['EFF_ALLELE']= 'D'
-                    if row['EFF_ALLELE']== 'I': row['REF_ALLELE']= 'D'
-                    if ('23andme' in input[i]) and ('GAraw' in input[i]): 
-                        row['BETA_ADD']= float(row['BETA_ADD']) * 7
-                        row['SE_ADD']= float(row['SE_ADD']) * 7
-                    if row['REF_ALLELE']> row['EFF_ALLELE']:
-                        ID= str(row['CHR']) + ':' + str(row['POS']) + ':' + row['EFF_ALLELE'] + ':' + row['REF_ALLELE']
-                    else:
-                        ID= str(row['CHR']) + ':' + str(row['POS']) + ':' + row['REF_ALLELE'] + ':' + row['EFF_ALLELE']
-                    if (row['REF_ALLELE']!= 'I') & (row['REF_ALLELE']!= 'D'):
-                        SNP= ID + ':' + 'SNP'
-                    else:
-                        SNP= ID + ':' + 'INDEL'
-                    if 'STRAND' not in row:
-                        STRAND= '+'
-                    else:
-                        STRAND= row['STRAND']
-                    df_list.append([ID, SNP, int(row['CHR']), int(row['POS']), eaf, int(row['N']), row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['P_VAL_ADD'], STRAND])
-                    if len(df_list)== 1000:
-                        with open(output[i], 'a', newline= '') as file_handler:
-                            writer1= csv.writer(file_handler, delimiter= '\t')
-                            for item in df_list:
-                                writer1.writerow(item)
-                        df_list= list()
-                with open(output[i], 'a', newline= '') as file_handler:
-                    writer1= csv.writer(file_handler, delimiter= '\t')
-                    for item in df_list:
-                        writer1.writerow(item)
-
+def format_list(infile, outfile):
+	with gzip.open(infile, 'rt') as f:
+		print(infile)
+		dialect = csv.Sniffer().sniff(f.readline(), delimiters= ' \t')
+		f.seek(0)
+		print(dialect.delimiter)
+		input_file= csv.DictReader(f, delimiter= dialect.delimiter)
+		df_list= list()
+		with open(outfile, 'w') as csvfile:
+			writer = csv.writer(csvfile, delimiter= '\t')
+			writer.writerow([g for g in ['CHR', 'POS', 'EAF', 'N', 'REF', 'EFF', 'BETA', 'SE', 'pvalue']])
+		for row in input_file:
+			if ('PGPII' in infile) and ('GAr' in infile): row['EAF_CONTR']= row['EAF_EFF_ALLELE']
+			if ('HUNT' in infile) and ('GAraw' in infile): row['EAF_CONTR']= row['EAF']
+			if ('NFBC' in infile):
+				if (is_number(row['EAF_CONTR'])): row['EAF_CONTR']= 1 - float(row['EAF_CONTR'])
+				if (is_number(row['BETA_ADD'])): row['BETA_ADD']= -1 * float(row['BETA_ADD'])
+			if ('Viva' in infile) and ('GA' in infile): row['EAF_CONTR']= row['EAF_ALL']
+			if ('PGP' in infile) and ('PTD' in infile): row['EAF_CONTR']= row['EAF_CASES'] 
+			if 'DECODE' in infile: row['EAF_CONTR'], row['CHR'], row['POS'], row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['N'], row['P_VAL_ADD'], row['RSID']= row['EAF_CASES'], row['BUILD'], row['CHR'], row['EFF_ALLELE'], row['POS'], row['EAF_CONTR'], row['BETA_ADD'], row['REF_ALLELE'], row['SE_ADD'], row['SNPID']
+			if ((row['BETA_ADD'] == '.') | (row['BETA_ADD']== 'NA') | (row['SE_ADD']!= row['SE_ADD']) | (row['BETA_ADD'] != row['BETA_ADD']) | (row['EAF_CONTR'] != row['EAF_CONTR'])): continue
+			if not is_number(row['BETA_ADD']):
+				continue
+			else:
+				row['BETA_ADD']= float(row['BETA_ADD'])
+			if not is_number(row['SE_ADD']):
+				continue
+			else:
+				row['SE_ADD']= float(row['SE_ADD'])
+			if not is_number(row['N']):
+				continue
+			if not is_number(row['P_VAL_ADD']):
+				continue
+			if is_number(row['EAF_CONTR']):
+				eaf=  row['EAF_CONTR']
+			else:
+				eaf= ''
+			if 'INFO' in row: 
+				if is_number(row['INFO']):
+					if float(row['INFO'])< 0.4:
+						continue
+			row['CHR']= row['CHR'].replace('X', '23')
+			if not is_number(row['CHR']):
+				continue
+			if len(row['REF_ALLELE']) > len(row['EFF_ALLELE']): row['REF_ALLELE']= 'I'
+			if len(row['EFF_ALLELE']) > len(row['REF_ALLELE']): row['EFF_ALLELE']= 'I'
+			if row['REF_ALLELE']== 'I': row['EFF_ALLELE']= 'D'
+			if row['EFF_ALLELE']== 'I': row['REF_ALLELE']= 'D'
+			if ('23andme' in infile) and ('GAraw' in infile): 
+				row['BETA_ADD']= row['BETA_ADD'] * 7
+				row['SE_ADD']= row['SE_ADD'] * 7
+			df_list.append([int(row['CHR']), int(row['POS']), eaf, int(row['N']), row['REF_ALLELE'], row['EFF_ALLELE'], row['BETA_ADD'], row['SE_ADD'], row['P_VAL_ADD']])
+			if len(df_list)== 10**6:
+				with open(outfile, 'a', newline= '') as file_handler:
+					writer1= csv.writer(file_handler, delimiter= '\t')
+					for item in df_list:
+						writer1.writerow(item)
+				df_list= list()
+		with open(outfile, 'a', newline= '') as file_handler:
+			writer1= csv.writer(file_handler, delimiter= '\t')
+			for item in df_list:
+				writer1.writerow(item)
 
 rule format_sumstats_allPTD:
     'Format sumstats preterm birth cohorts.'
     input:
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/23andme-allPTD-RESULTS-pol.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-allPTD-RESULTS-23042018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-allPTD-RESULTS-15072018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/CHOP-allPTD-RESULTS-19062018_PSN.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-allPTD-RESULTS-05072018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/EGCUT_PTD_RESULTS_210818.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-allPTD-RESULTS-20180418_sub1.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-allPTD-RESULTS-20180418.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-allPTD-RESULTS-23102020.txt.gz',
-	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-allPTD-add-RESULTS-25022020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-allPTD-RESULTS-30032020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCGOYACASES-allPTD-RESULTS-17052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCGOYACONTROLS-allPTD-RESULTS-17052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCPTD-allPTD-RESULTS-15052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DILT1DGC-allPTD-RESULTS-28052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/WTCCC58BC-allPTD-RESULTS-28052018.txt.gz'
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/{init_allPTD_file}.txt.gz'
     output:
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/23andme_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/ALSPAC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/BIB_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/CHOP_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DECODE_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/EGCUT_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/NFBC1966sub_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/NFBC1966_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/HUNT_temp.txt',
-	'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/MOBAGENETICS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DBDS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DNBCCASES_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DNBCCONTROLS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DNBCPTD_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DILT1DGC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/WTCCC58BC_temp.txt'
+        temp('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/temporal/{init_allPTD_file}_temp.txt')
     run:
-        format_list(input, output)
+        format_list(input[0], output[0])
+
+rule mv_formatted_sumstats_allPTD:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/temporal/{init_allPTD_file}_temp.txt', init_allPTD_file= init_allPTD_file_nms)
+	output:
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{allPTD_coh}_temp.txt', allPTD_coh= allPTD_coh_nms)
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/'
+	run:
+		for infile in input:
+			outfile= params[0] + infile.split('-')[0].split('/')[-1] + '_temp.txt'
+			shell('mv {infile} {outfile}')
 
 rule format_sumstats_postTerm:
-    'Format sumstats postterm.'
+    'Format sumstats postTerm birth cohorts.'
     input:
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-postTerm-RESULTS-23042018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-postTerm-RESULTS-15072018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-postTerm-RESULTS-05072018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-postTerm-RESULTS-20180418_sub1.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-postTerm-RESULTS-20180418.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-postTerm-RESULTS-23102020.txt.gz',
-	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-postTerm-add-RESULTS-25022020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-postTerm-RESULTS-30032020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/EGCUT_PostTD_RESULTS_210818.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCGOYACASES-postTerm-RESULTS-17052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCGOYACONTROLS-postTerm-RESULTS-17052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DILT1DGC-postTerm-RESULTS-28052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/WTCCC58BC-postTerm-RESULTS-28052018.txt.gz'
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/{init_postTerm_file}.txt.gz'
     output:
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/ALSPAC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/BIB_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DECODE_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/NFBC1966sub_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/NFBC1966_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/HUNT_temp.txt',
-	'/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/MOBAGENETICS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DBDS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/EGCUT_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DNBCCASES_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DNBCCONTROLS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DILT1DGC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/WTCCC58BC_temp.txt'
+        temp('/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/temporal/{init_postTerm_file}_temp.txt')
     run:
-        infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(input, output)
+        format_list(input[0], output[0])
 
+rule mv_formatted_sumstats_postTerm:
+        ''
+        input:
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/temporal/{init_postTerm_file}_temp.txt', init_postTerm_file= init_postTerm_file_nms)
+        output:
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{postTerm_coh}_temp.txt', postTerm_coh= postTerm_coh_nms)
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/'
+        run:
+                for infile in input:
+                        outfile= params[0] + infile.split('-')[0].split('/')[-1] + '_temp.txt'
+                        shell('mv {infile} {outfile}')
 
 rule format_sumstats_GAraw:
-    'Format sumstats GA raw (days).'
+    'Format sumstats GAraw cohorts.'
     input:
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/23andme-GAraw-RESULTS-pol.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-GAraw-RESULTS-23042018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-GAraw-RESULTS-15072018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/CHOP-GAraw-RESULTS-19062018_PSN.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-GAraw-RESULTS-05072018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/EFSOCH-GAraw-RESULTS-18012018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/HAPO-GAraw-RESULTS-15082018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAraw-RESULTS-20180418_sub1.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAraw-RESULTS-20180418.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/STORK-GAraw-RESULTS-28052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/STORKGROR-GAraw-RESULTS-28052018.txt.gz',
-	'/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-GAraw-RESULTS-18122018.txt.gz',
-	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-GAraw-add-RESULTS-25022020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-GAraw-RESULTS-30032020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCGOYACASES-GAraw-RESULTS-17052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCGOYACONTROLS-GAraw-RESULTS-17052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCPTD-GAraw-RESULTS-15052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DILT1DGC-GAraw-RESULTS-28052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/WTCCC58BC-GAraw-RESULTS-28052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/CCHMC-GAraw-RESULTS-21042020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/GPN-GAraw-RESULTS-21042020.txt.gz'
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/{init_GAraw_file}.txt.gz'
     output:
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/23andme_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/ALSPAC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/BIB_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/CHOP_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DECODE_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/EFSOCH_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/HAPO_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/NFBC1966sub_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/NFBC1966_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/STORK_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/STORKGROR_temp.txt',
-	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/HUNT_temp.txt',
-	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/MOBAGENETICS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DBDS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DNBCCASES_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DNBCCONTROLS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DNBCPTD_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DILT1DGC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/WTCCC58BC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/CCHMC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/GPN_temp.txt'
+        temp('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/temporal/{init_GAraw_file}_temp.txt')
     run:
-        infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(infiles, output)
+        format_list(input[0], output[0])
+
+rule mv_formatted_sumstats_GAraw:
+        ''
+        input:
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/temporal/{init_GAraw_file}_temp.txt', init_GAraw_file= init_GAraw_file_nms)
+        output:
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_temp.txt', GAraw_coh= GAraw_coh_nms)
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/'
+        run:
+                for infile in input:
+                        outfile= params[0] + infile.split('-')[0].split('/')[-1] + '_temp.txt'
+                        shell('mv {infile} {outfile}')
+
 
 rule format_sumstats_GAnrm:
-    'Format sumstats GA normalized.'
+    'Format sumstats GAnrm cohorts.'
     input:
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/ALSPAC-GAnrm-RESULTS-23042018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/BIB-GAnrm-RESULTS-15072018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/CHOP-GAnrm-RESULTS-19062018_PSN.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DECODE-GAnrm-RESULTS-05072018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/EFSOCH-GAnrm-RESULTS-18012018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/HAPO-GAnrm-RESULTS-15082018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAnrm-RESULTS-20180418_sub1.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/NFBC1966-GAnrm-RESULTS-20180418.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/STORK-GAnrm-RESULTS-28052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/STORKGROR-GAnrm-RESULTS-28052018.txt.gz',
-	'/mnt/hdd/data/sumstats/GAmetaGWAS/HUNT-GAnrm-RESULTS-18122018.txt.gz',
-	'/mnt/hdd/data/sumstats/GAmetaGWAS/MOBAGENETICS-GAnrm-add-RESULTS-25022020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DBDS-GAnrm-RESULTS-30032020.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCGOYACASES-GAnrm-RESULTS-17052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCGOYACONTROLS-GAnrm-RESULTS-17052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DNBCPTD-GAnrm-RESULTS-15052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/DILT1DGC-GAnrm-RESULTS-28052018.txt.gz',
-        '/mnt/hdd/data/sumstats/GAmetaGWAS/WTCCC58BC-GAnrm-RESULTS-28052018.txt.gz'
+        '/mnt/hdd/data/sumstats/GAmetaGWAS/{init_GAnrm_file}.txt.gz'
     output:
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/ALSPAC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/BIB_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/CHOP_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DECODE_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/EFSOCH_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/HAPO_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/NFBC1966sub_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/NFBC1966_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/STORK_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/STORKGROR_temp.txt',
-	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/HUNT_temp.txt',
-	'/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/MOBAGENETICS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DBDS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCCASES_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCCONTROLS_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCPTD_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DILT1DGC_temp.txt',
-        '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/WTCCC58BC_temp.txt'
+        temp('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/temporal/{init_GAnrm_file}_temp.txt')
     run:
-        infiles= [infile for infile in input if infile.endswith('txt.gz')]
-        format_list(infiles, output)
+        format_list(input[0], output[0])
+
+rule mv_formatted_sumstats_GAnrm:
+        ''
+        input:
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/temporal/{init_GAnrm_file}_temp.txt', init_GAnrm_file= init_GAnrm_file_nms)
+        output:
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_temp.txt', GAnrm_coh= GAnrm_coh_nms)
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/'
+        run:
+                for infile in input:
+                        outfile= params[0] + infile.split('-')[0].split('/')[-1] + '_temp.txt'
+                        shell('mv {infile} {outfile}')
 
 rule format_1KG_HRC:
 	'Format 1KG and HRC'
@@ -302,87 +208,24 @@ rule format_1KG_HRC:
 		KG= KG[['ID', 'eaf']]
 		KG= KG.loc[~(KG.ID.isin(d.ID)), :]
 		d= pd.concat([d, KG])
+		d= d.loc[((d.eaf>0.001) & (d.eaf<0.999)), :]
 		d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
 
-rule filter_PTD:
-	'Filter PTD variants.'
-	input:
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{allPTD_coh}_temp.txt',
-		'/mnt/hdd/common/pol/metaGWAS/processed_data/HRC_1KG.txt.gz'
-	output:
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{allPTD_coh}_allPTD.txt',
-		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{allPTD_coh}_allPTD.log')
-	script:
-		'filter_SNPs.R'
 
-rule filter_postTerm:
-        'Filter post term variants.'
+def pheno_cohorts(wildcards):
+	d = {"allPTD": allPTD_coh_nms, "postTerm": postTerm_coh_nms, "GAraw": GAraw_coh_nms, "GAnrm": GAnrm_coh_nms} 
+	wilds= d[wildcards.pheno]
+	infiles= expand('/mnt/hdd/common/pol/metaGWAS/sumstats/{pheno}/filtered/{coh}.txt', coh= wilds, pheno= [wildcards.pheno])
+	return infiles
+	
+rule filter:
+        'Filter variants accroding to HRC and 1KG allele frequency.'
         input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{postTerm_coh}_temp.txt',
-		'/mnt/hdd/common/pol/metaGWAS/processed_data/HRC_1KG.txt.gz'
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/HRC_1KG.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/{pheno}/{coh}_temp.txt'
         output:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{postTerm_coh}_postTerm.txt',
-                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{postTerm_coh}_postTerm.log')
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/{pheno}/filtered/{coh}.txt'
+        threads: 8
         script:
                 'filter_SNPs.R'
-
-rule filter_GAraw:
-        'Filter GA raw variants.'
-        input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_temp.txt',
-		'/mnt/hdd/common/pol/metaGWAS/processed_data/HRC_1KG.txt.gz'
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_GAraw.txt',
-                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_GAraw.log')
-        script:
-                'filter_SNPs.R'
-
-
-rule filter_GAnrm:
-        'Filter GA normalized variants.'
-        input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_temp.txt',
-		'/mnt/hdd/common/pol/metaGWAS/processed_data/HRC_1KG.txt.gz'
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_GAnrm.txt',
-                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_GAnrm.log')
-        script:
-                'filter_SNPs.R'
-
-
-rule concat_filtered_allPTD:
-	'Concat PTD filtered variants.'
-	input:
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{allPTD_coh}_allPTD.log', allPTD_coh= allPTD_coh_nms)
-	output:
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/allPTD.log'
-	shell:
-		'cat {input} > {output[0]}'
-
-rule concat_filtered_postTerm:
-        'Concat post term filtered variants.'
-        input:
-                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{postTerm_coh}_postTerm.log', postTerm_coh= postTerm_coh_nms)
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/postTerm.log'
-        shell:
-                'cat {input} > {output[0]}'
-
-rule concat_filtered_GAraw:
-        'Concat GA raw filtered variants.'
-        input:
-                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_GAraw.log', GAraw_coh= GAraw_coh_nms)
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/GAraw.log'
-        shell:
-                'cat {input} > {output[0]}'
-
-rule concat_filtered_GAnrm:
-        'Concat GA normalized filtered variants.'
-        input:
-                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_GAnrm.log', GAnrm_coh= GAnrm_coh_nms)
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/GAnrm.log'
-        shell:
-                'cat {input} > {output[0]}'
 
