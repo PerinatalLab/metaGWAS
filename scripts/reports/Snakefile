@@ -1,73 +1,70 @@
-all_allPTD_coh_nms= ['23andme', 'ALSPAC', 'CHOP', 'DECODE', 'EGCUT', 'NFBC1966',  'MOBAGENETICS', 'DBDS', 'DNBCCASES', 'DNBCCONTROLS', 'DNBCPTD', 'HUNT', 'DILT1DGC', 'WTCCC58BC']
-
-all_postTerm_coh_nms= ['ALSPAC', 'EGCUT', 'DECODE', 'NFBC1966', 'MOBAGENETICS', 'DBDS', 'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DILT1DGC', 'WTCCC58BC']
-
-all_GAraw_coh_nms= ['23andme', 'ALSPAC', 'CHOP', 'DECODE', 'EFSOCH', 'HAPO', 'NFBC1966', 'STORK', 'STORKGROR', 'MOBAGENETICS', 'DBDS', 'EFSOCH', 'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DNBCPTD', 'DILT1DGC', 'WTCCC58BC', 'CCHMC', 'GPN']
-
-all_GAnrm_coh_nms= ['ALSPAC', 'CHOP', 'DECODE', 'EFSOCH', 'HAPO', 'NFBC1966', 'STORK', 'STORKGROR', 'MOBAGENETICS', 'DBDS', 'EFSOCH', 'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DNBCPTD', 'DILT1DGC', 'WTCCC58BC']
 
 repr_pheno_nms= ['miscarriage', 'GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male']
 
-allPTD_coh_nms= ['23andme', 'ALSPAC', 'CHOP', 'DECODE', 'EGCUT', 'NFBC1966',  'MOBAGENETICS', 'DBDS',  'DNBCCASES', 'DNBCCONTROLS', 'DNBCPTD', 'HUNT', 'DILT1DGC', 'WTCCC58BC']
 
-
-postTerm_coh_nms= ['ALSPAC', 'EGCUT', 'DECODE', 'NFBC1966', 'MOBAGENETICS', 'DBDS', 'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DILT1DGC', 'WTCCC58BC']
-
-GAraw_coh_nms= ['23andme', 'ALSPAC', 'CHOP', 'DECODE',  'NFBC1966', 'STORK', 'STORKGROR', 'MOBAGENETICS', 'DBDS',  'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DNBCPTD', 'DILT1DGC', 'WTCCC58BC', 'CCHMC', 'GPN']
-
-GAnrm_coh_nms= ['ALSPAC', 'CHOP', 'DECODE', 'NFBC1966', 'STORK', 'STORKGROR', 'MOBAGENETICS', 'DBDS',  'DNBCCASES', 'DNBCCONTROLS', 'HUNT', 'DNBCPTD', 'DILT1DGC', 'WTCCC58BC']
-
-
+rule sample_HRC_sites:
+	''
+	input:
+		'/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['#CHROM', 'POS', 'REF', 'ALT', 'AF_EXCLUDING_1000G'])
+		d.columns= ['CHR', 'POS', 'oa', 'ea', 'eaf']
+		d= d.loc[((d.eaf> 0.05) & (d.eaf<0.95)), :]
+		d['eaf']= np.where(d.oa> d.ea, 1 - d.eaf, d.eaf)
+		d= d.sample(n= 1000000)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
 
 rule report_file_level_QC_allptd:
 	''
 	input:
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{all_allPTD_coh}_allPTD.txt',
-		'/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab',
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DECODE_temp.txt'
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{allPTD_coh}_temp.txt',
+		'/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/reports/QC/allPTD/file_lvl_{all_allPTD_coh}_allPTD.html'
+		'/mnt/hdd/common/pol/metaGWAS/reports/QC/allPTD/file_lvl_{allPTD_coh}_allPTD.html'
+	threads: 1
 	script:
 		'file_level_qc.Rmd'
 
 rule report_file_level_QC_postTerm:
         ''
         input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{all_postTerm_coh}_postTerm.txt',
-		'/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab',
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DECODE_temp.txt'
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{postTerm_coh}_temp.txt',
+		'/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
         output:
-                '/mnt/hdd/common/pol/metaGWAS/reports/QC/postTerm/file_lvl_{all_postTerm_coh}_postTerm.html'
-        script:
+                '/mnt/hdd/common/pol/metaGWAS/reports/QC/postTerm/file_lvl_{postTerm_coh}_postTerm.html'
+        threads: 1
+	script:
                 'file_level_qc.Rmd'
 
 rule report_file_level_QC_GAraw:
         ''
         input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{all_GAraw_coh}_GAraw.txt',
-                '/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab',
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DECODE_temp.txt'
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_temp.txt',
+                '/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
         output:
-                '/mnt/hdd/common/pol/metaGWAS/reports/QC/GAraw/file_lvl_{all_GAraw_coh}_GAraw.html'
-        script:
+                '/mnt/hdd/common/pol/metaGWAS/reports/QC/GAraw/file_lvl_{GAraw_coh}_GAraw.html'
+        threads: 1
+	script:
                 'file_level_qc.Rmd'
 
 rule report_file_level_QC_GAnrm:
         ''
         input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{all_GAnrm_coh}_GAnrm.txt',
-                '/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab',
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DECODE_temp.txt'
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_temp.txt',
+                '/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
         output:
-                '/mnt/hdd/common/pol/metaGWAS/reports/QC/GAnrm/file_lvl_{all_GAnrm_coh}_GAnrm.html'
-        script:
+                '/mnt/hdd/common/pol/metaGWAS/reports/QC/GAnrm/file_lvl_{GAnrm_coh}_GAnrm.html'
+        threads: 1
+	script:
                 'file_level_qc.Rmd'
 
 rule report_allfiles_QC_allptd:
 	''
 	input:
 		'/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab',
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{all_allPTD_coh}_allPTD.txt', all_allPTD_coh= all_allPTD_coh_nms)
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/{allPTD_coh}_allPTD.txt', allPTD_coh= allPTD_coh_nms)
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/reports/QC/allPTD/allfiles_allPTD.html'
 	script:
@@ -77,7 +74,7 @@ rule report_allfiles_QC_postTerm:
         ''
         input:
                 '/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab',
-                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{all_postTerm_coh}_postTerm.txt', all_postTerm_coh= all_postTerm_coh_nms)
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/{postTerm_coh}_postTerm.txt', postTerm_coh= postTerm_coh_nms)
         output:
                 '/mnt/hdd/common/pol/metaGWAS/reports/QC/postTerm/allfiles_postTerm.html'
         script:
@@ -88,7 +85,7 @@ rule report_allfiles_QC_GAraw:
 	''
 	input:
 		'/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab',
-                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{all_GAraw_coh}_GAraw.txt', all_GAraw_coh= all_GAraw_coh_nms)
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_GAraw.txt', GAraw_coh= GAraw_coh_nms)
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/reports/QC/GAraw/allfiles_GAraw.html'
 	script:
@@ -99,7 +96,7 @@ rule report_allfiles_QC_GAnrm:
         ''
         input:
                 '/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab',
-                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{all_GAnrm_coh}_GAnrm.txt', all_GAnrm_coh= all_GAnrm_coh_nms)
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_GAnrm.txt', GAnrm_coh= GAnrm_coh_nms)
         output:
                 '/mnt/hdd/common/pol/metaGWAS/reports/QC/GAnrm/allfiles_GAnrm.html'
         script:
@@ -306,14 +303,14 @@ rule report_other_meta_NOMOBA_GAraw:
 	script:
 		'other_meta.Rmd'
 
-rule report_other_meta_NOMOBA_GAnrm:
+rule report_other_meta_NOMOBA_allPTD:
         ''
         input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_GAnrm.txt.gz',
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_1.txt',
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAnrm.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_allPTD.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_allPTD_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_allPTD.txt.gz',
         output:
-                '/mnt/hdd/common/pol/metaGWAS/reports/other_meta/noMOBA_GAnrm.pdf'
+                '/mnt/hdd/common/pol/metaGWAS/reports/other_meta/noMOBA_allPTD.pdf'
         script:
                 'other_meta.Rmd'
 
@@ -339,4 +336,48 @@ rule report_nonadditive:
         threads: 6
         script:
                 'nonadditive_qc.Rmd'
+
+rule report_file_level_QC_allptd_filter:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/reports/QC/allPTD/filtered/file_lvl_{allPTD_coh}_allPTD.html'
+        threads: 1
+        script:
+                'file_level_qc.Rmd'
+
+rule report_file_level_QC_postTerm_filter:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/{postTerm_coh}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/reports/QC/postTerm/filtered/file_lvl_{postTerm_coh}_postTerm.html'
+        threads: 1
+        script:
+                'file_level_qc.Rmd'
+
+rule report_file_level_QC_GAraw_filter:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/{GAraw_coh}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/reports/QC/GAraw/filtered/file_lvl_{GAraw_coh}_GAraw.html'
+        threads: 1
+        script:
+                'file_level_qc.Rmd'
+
+rule report_file_level_QC_GAnrm_filter:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/{GAnrm_coh}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/references/HRC_filtered.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/reports/QC/GAnrm/filtered/file_lvl_{GAnrm_coh}_GAnrm.html'
+        threads: 1
+        script:
+                'file_level_qc.Rmd'
 

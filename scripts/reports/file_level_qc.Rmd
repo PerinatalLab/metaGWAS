@@ -1,0 +1,152 @@
+---
+author:
+    - "Pol Sole-Navais"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+    html_document:
+        theme: default
+        highlight: tango
+        number_sections: no
+        toc: yes
+        toc_depth: 3
+        toc_float:
+            collapsed: no
+            smooth_scroll: yes
+---
+
+```{r echo=F, include= F}
+cohort= unlist(strsplit(snakemake@input[[1]], '/'))[9]
+pheno= unlist(strsplit(snakemake@input[[1]], '/'))[8]
+```
+
+---
+title: "`r paste0('File-level QC: ', cohort, ' and phenotype: ', pheno)`"
+---
+
+
+
+```{r include=FALSE, echo=F}
+library("ggplot2")
+library("dplyr")
+library("knitr")
+library("tidyr")
+library(cowplot)
+library("kableExtra")
+library("data.table")
+options(warn=-1)
+#opts_chunk$set(dpi=300, out.width="300px")
+
+```
+
+# Summary stats  
+
+
+```{r echo=F}
+
+d= fread(snakemake@input[[1]], h=T)
+
+```
+
+This report contains a general and automated QC for `r cohort`, phenotype: `r pheno`. A total of `r nrow(d)` genetic variants have passed an initial QC.
+
+```{r echo=F}
+kable(summary(select(d, BETA, SE, pvalue, EAF, N)))
+
+```
+
+
+
+# Frequency plot against HRC 
+
+
+```{r echo=F}
+
+#dec= fread(snakemake@input[[3]],h=T, select= c('CHR', 'POS', 'BETA', 'SE', 'EFF', 'REF', 'EAF', 'pvalue'))
+
+#names(dec)= c('CHR', 'POS', 'BETA_dec', 'SE_dec', 'A1_dec', 'A2_dec', 'EAF_dec', 'pvalue_dec')
+
+#dec$BETA_dec= ifelse(dec$A1_dec> dec$A2_dec, dec$BETA_dec, -1* dec$BETA_dec)
+#dec$EAF_dec= ifelse(dec$A1_dec> dec$A2_dec, dec$EAF_dec, 1- dec$EAF_dec)
+
+x= fread(snakemake@input[[2]], h=T)
+
+
+df= d
+df$CHR= as.numeric(df$CHR)
+x$CHR= as.numeric(x$CHR)
+df$EAF= ifelse(df$EFF> df$REF, df$EAF, 1 - df$EAF)
+
+df= inner_join(df, x, on= c('CHR', 'POS'))
+
+df= filter(df, (EFF== ea & REF== oa) | (REF== ea & EFF== oa))
+
+if (nrow(df)>0){
+ggplot(df, aes(eaf, EAF)) +
+geom_point(alpha= 1/10) +
+theme_cowplot(12) +
+xlab('EAF HRC') +
+ylab('EAF Sample')
+} else{
+print('No match')
+}
+
+rm(df)
+rm(x)
+
+```
+
+# Against DECODE  
+
+```{r echo=F}
+
+
+
+d$BETA= ifelse(d$REF> d$EFF, d$BETA, -1* d$BETA)
+#dec= inner_join(d, dec, on= c('CHR', 'POS'))
+
+#dec= filter(dec, EFF== A1_dec, REF== A2_dec, pvalue_dec< 0.001)
+
+#dec= group_by(dec, CHR) %>% slice_sample(n= 1000, replace= T)
+
+#ggplot(dec, aes(BETA_dec/SE_dec, BETA/SE)) +
+#geom_point(alpha= 1/10) +
+#theme_cowplot(12) +
+#xlab('DECODE z-score') +
+#ylab('Observed z-score')
+
+#rm(dec)
+
+```
+
+# Z-Pvalue plot  
+
+
+```{r echo= F}
+d$exp_pvalue= pchisq((d$BETA/d$SE)^2, df=1, lower=F)
+
+ggplot(group_by(d, CHR) %>% sample_n(10000, replace=T ), aes(-log10(exp_pvalue), -log10(pvalue))) +
+geom_point(alpha= 1/10) +
+theme_cowplot() +
+xlab('Expected pvalue') +
+ylab('Observed pvalue')
+
+```
+
+Out of `r nrow(d)` genetic variants, `r sum(d$pvalue != d$exp_pvalue)` (`r sum(d$pvalue != d$exp_pvalue) /nrow(d) `) are not equal to the expected pvalue for the z-score.
+
+# QQplot  
+
+```{r echo=F}
+
+df= arrange(d, pvalue) %>% mutate(exp1= -log10(1:length (pvalue)/length (pvalue)))
+
+ggplot(filter(df, pvalue<0.05), aes(exp1, -log10(pvalue))) +
+  geom_point(size= 0.4) +
+  geom_abline(intercept = 0, slope = 1, alpha = .5) +
+theme_cowplot(12, font_size= 12) +
+xlab('Expected (-log10(p-value))') +
+ylab('Observed (-log10(p-value))')
+
+```
+
+

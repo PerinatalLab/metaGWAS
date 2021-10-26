@@ -1,0 +1,188 @@
+---
+author:
+    - "Pol Sole-Navais"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+    html_document:
+        theme: lumen
+        highlight: tango
+        number_sections: no
+#        toc: yes
+#        toc_depth: 3
+#        toc_float:
+#            collapsed: no
+#            smooth_scroll: yes
+---
+
+```{css, echo=FALSE}
+    body .main-container {
+      max-width: 1280px !important;
+      width: 1280px !important;
+    }
+    body {
+      max-width: 1280px !important;
+    }
+```
+
+```{r echo=F, include= F}
+
+pheno= unlist(strsplit(snakemake@input[[2]], '/'))[8]
+
+```
+
+---
+title: "`r paste0('File-level QC for phenotype: ', pheno)`"
+---
+
+
+
+```{r include=FALSE, echo=F}
+library("ggplot2")
+library("dplyr")
+library("knitr")
+library("tidyr")
+library(cowplot)
+library("kableExtra")
+library("data.table")
+library(moments)
+options(warn=-1)
+opts_chunk$set(fig.width = 12)
+
+```
+
+# Frequency plot against HRC  
+
+
+```{r echo=F}
+p1_list= list()
+p2_list= list()
+p3_list= list()
+df_list= list()
+df2_list= list()
+fl= length(snakemake@input)
+
+dec= fread(snakemake@input[[grep('DECODE', snakemake@input)]])
+dec$MAF= ifelse(dec$EAF>0.5, 1 - dec$EAF, dec$EAF)
+dec= select(dec, c(SNP, BETA))
+names(dec)= c('SNP', 'BETA_dec')
+for (i in 2:fl){
+
+df= fread(snakemake@input[[i]])
+df= select(df, -c(STRAND))
+
+cohort= unlist(strsplit(snakemake@input[[i]], '/'))[9]
+
+df$cohort= cohort
+df= filter(df, !is.na(EAF))
+
+p1= summarize(df, n_m= median(N, na.rm=T), se_m= mean(SE, na.rm=T))
+p1$cohort= cohort
+p2= summarize(df, N_max= sqrt(max(N)), EAF_m= median(1/sqrt(2*EAF*(1-EAF)), na.rm=T) / median(SE))
+p2$cohort= cohort
+
+d= filter(df, pvalue> median(pvalue, na.rm=T))
+
+p3= summarize(d,SK= skewness(BETA/SE), KU= kurtosis(BETA/SE))
+p3$cohort= cohort
+
+p1_list[[cohort]]= p1
+p2_list[[cohort]]= p2
+p3_list[[cohort]]= p3
+
+df_list[[cohort]]= group_by(df, CHR) %>% sample_n(5000, replace=T)
+
+df= inner_join(df, dec, by= 'SNP')
+df$beta_diff= df$BETA - df$BETA_dec
+
+df2_list[[cohort]]= group_by(df, CHR) %>% sample_n(5000, replace=T)
+
+}
+
+
+p1= do.call("rbind", p1_list)
+p2= do.call("rbind", p2_list)
+p3= do.call("rbind", p3_list)
+d= do.call("rbind", df_list)
+d2= do.call('rbind', df2_list)
+
+```
+
+# Median(N) and Mean(SE) plot  
+
+```{r echo= F}
+
+ggplot(p1, aes(n_m, se_m)) +
+geom_point() +
+geom_text(aes(label=cohort), hjust=0, vjust=0) +
+theme_cowplot() +
+xlab('Median(N)') +
+ylab('Mean(SE)')
+
+
+```
+
+# Phenotype quality plot  
+
+```{r echo=F}
+
+
+ggplot(p2, aes(N_max, EAF_m)) +
+geom_point() +
+geom_text(aes(label=cohort), hjust=0, vjust=0) +
+theme_cowplot() +
+xlab('SQRT(Max(N))') +
+ylab('median(1/sqrt(2*EAF*(1-EAF)), na.rm=T) / median(SE)')
+
+
+```
+
+
+# Skewness and kurtosis plot  
+
+To detect such problems, we provide, among other statistics, skewness (sk50) and kurtosis (ku50) of the distribution of z = b/SE(b) (b = effect size; SE = standard error) for the 50% SNPs with largest P-value. In brief, we can assume that these SNPs are not associated with the phenotype of interest and so the distribution of z should follow the null distribution of no association. The kusk_check() function makes a scatterplot of sk50 and ku50 from all studies. Points should cluster around the same point at (sk50 = 0, ku50 ≥slant 0): under the null, z should be symmetric and have the same dispersion across all studies. Departures from the cluster in terms of sk50 indicate asymmetric effect estimates and may reflect errors in the model fitting process, such as incorrect assumptions about the phenotype distribution. Departures in terms of ku50 may reflect incorrect phenotype tranformation (e.g. no tranformation when logarithm was required) or low genotype imputation quality. 
+
+```{r echo=F}
+
+ggplot(p3, aes(SK, KU)) +
+geom_point() +
+geom_text(aes(label=cohort), hjust=0, vjust=0) +
+theme_cowplot() +
+xlab('Skewness (Z-score)') +
+ylab('Kurtosis (Z-score)')
+
+
+```
+
+
+# Plot BETA against MAF  
+
+```{r echo=F}
+
+
+d$MAF= ifelse(d$EAF>0.5, 1 - d$EAF, d$EAF)
+
+ggplot(d, aes(MAF, BETA)) +
+geom_point() +
+facet_wrap(vars(cohort), scales= 'free_y', ncol= 3) +
+theme_cowplot() +
+xlab('MAF') +
+ylab('BETA')
+
+```
+
+# Plot BETA differences between cohort and DECODE against MAF  
+
+
+```{r echo=F}
+
+d2$MAF= ifelse(d2$EAF>0.5, 1 - d2$EAF, d2$EAF)
+
+ggplot(d2, aes(MAF, beta_diff)) +
+geom_point() +
+facet_wrap(vars(cohort), scales= 'free_y', ncol= 3) +
+theme_cowplot() +
+xlab('MAF') +
+ylab('BETA cohort - BETA DECODE')
+
+```
+
