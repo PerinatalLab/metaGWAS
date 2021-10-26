@@ -13,16 +13,13 @@ d= inner_join(d, hrc, by= 'ID')
 rm(hrc)
 d$EAF= ifelse(is.na(d$EAF), d$eaf, d$EAF)
 
-d$BETA= ifelse(d$REF> d$EFF, -1 * d$BETA, d$BETA)
-d$EAF= ifelse(d$REF> d$EFF, 1 - d$EAF, d$EAF)
-
 d[d$REF>d$EFF, c("REF", "EFF")]= d[d$REF > d$EFF, c("EFF", "REF")]
 
 d$MAF= ifelse(d$EAF>0.5, 1- d$EAF, d$EAF)
 
 d= filter(d, MAF>0.005)
 
-#d= filter(d, (MAF * 2 * N) > 6)
+d= filter(d, (MAF * 2 * N) > 6)
 
 d$maf= ifelse(d$eaf> 0.5, 1 - d$eaf, d$eaf)
 d$P= as.numeric(d$P)

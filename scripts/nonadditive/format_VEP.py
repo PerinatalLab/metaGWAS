@@ -57,6 +57,7 @@ d= pd.read_csv(snakemake.input[0], sep= '\t', header= 0)
 d['Allele1']= d['Allele1'].str.upper()
 d['Allele2']= d['Allele2'].str.upper()
 d= d.loc[(d.TOTALSAMPLESIZE> (d['TOTALSAMPLESIZE'].max())/ 2), :]
+d= d.loc[d.TOTALSAMPLESIZE> 66106, :]
 d[['CHR', 'POS', 'REF','EFF']]= d['MarkerName'].str.split(':', expand= True)
 d['CHR']= d['CHR'].astype(str).astype(int)
 d['POS']= d['POS'].astype(str).astype(int)
@@ -69,6 +70,7 @@ d['pvalue']= d['pvalue'].astype(str).astype(float)
 d.loc[d.REF > d.EFF, ['REF', 'EFF']] = d.loc[d.REF > d.EFF, ['EFF', 'REF']].values
 d['ID']= d.CHR.astype(int).astype(str) + ':' + d.POS.astype(int).astype(str) + ':' + d.REF + ':' + d.EFF
 d= d.loc[((d.pvalue>0) & (d.pvalue <1)), :]
+d['MAF']= np.where(d.EAF>0.5, 1 - d.EAF, d.EAF)
+d= d.loc[d.MAF>= 0.1, :]
 d= pd.merge(d, vep, on= ['ID'], how= 'left')
 d.to_csv(snakemake.output[0], header=True, index= False, sep= '\t')
-

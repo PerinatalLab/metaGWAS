@@ -141,6 +141,7 @@ rule filter_GAraw_nonadditive:
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/{nonadd_cohort}_{model}.txt',
 		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/{nonadd_cohort}_{model}.log')
+	threads: 5
 	script:
 		'filter_SNPs.R'
 
