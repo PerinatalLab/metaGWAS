@@ -6,21 +6,69 @@ from concurrent.futures import ThreadPoolExecutor
 import glob
 import os
 
+FINNGEN_pheno_nms= pd.read_csv('/mnt/hdd/common/pol/references/FINNGEN/manifest_R5.txt', header= 0, sep= '\t').phenocode.to_list()
+
+eqtl_catalog_nms= [i.replace('.all.tsv.gz', '') for i in os.listdir('/mnt/hdd/common/pol/references/eQTL_catalog/') if i.endswith('gz')]
+
+rule format_coloc_FINNGEN:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_fetal_effect.txt',
+		'/mnt/hdd/common/pol/references/FINNGEN/finngen_R5_filter_annotations.gz',
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/data/GA.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/data/BW.txt')
+	script:
+		'format_FINNGEN.R'
+
 rule ADCY5_coloc_FINNGEN:
 	'Colocalization of BW and GA haplotypes with other phenotypes from FINNGEN.'
 	input:
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
-		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_fetal_effect.txt',
-		'/mnt/hdd/common/pol/references/FINNGEN/manifest_R5.txt',
-		'/mnt/hdd/common/pol/references/FINNGEN/finngen_R5_filter_annotations.gz'
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/data/GA.txt',
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/data/BW.txt',
+		'/mnt/hdd/common/pol/references/FINNGEN/manifest_R5.txt'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/pph_GAraw.txt',
-		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/results_GAraw.txt',
-		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/individual_variant_GAraw.txt'
+		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/temp_results/{FINNGEN_pheno}/pph_GAraw.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/temp_results/{FINNGEN_pheno}/results_GAraw.txt'),
+		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/temp_results/{FINNGEN_pheno}/individual_variant_GAraw.txt')
 	conda:
 		'environments/coloc.yml'
 	script:
 		'FINNGEN_coloc.R'
+
+rule concat_ADCY5_coloc_FINNGEN:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/temp_results/{FINNGEN_pheno}/{{coloc_out_FIN}}_GAraw.txt', FINNGEN_pheno= FINNGEN_pheno_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/results/{coloc_out_FIN}_GAraw.txt'
+	shell:
+		'''
+		head -1 {input[0]} > {output[0]}
+		tail -n +2 -q {input} >> {output[0]}
+		'''
+
+rule format_trait_PAN_UKBB:
+        'Format gestational duration and birth weight summary statistics for speed.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_fetal_effect.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/traits/Maternal_GWAMA_GAraw.txt'),
+                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/traits/BW_fetal_effect.txt')
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'TOTALSAMPLESIZE'])
+                d= d.loc[((d.CHR== 3) & (d.POS>= 121612292) & (d.POS<= 124612292)), :]
+                d['MAF']= np.where(d.EAF> 0.5, 1 - d.EAF, d.EAF)
+                d= d[['ID', 'CHR', 'POS', 'MAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']]
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+                d= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'N'])[['ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'N']]
+                d.columns= ['ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']
+                d= d.loc[((d.CHR== 3) & (d.POS>= 121612292) & (d.POS<= 124612292)), :]
+                d['MAF']= np.where(d.EAF> 0.5, 1 - d.EAF, d.EAF)
+                d= d[['ID', 'CHR', 'POS', 'MAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']]
+                d.to_csv(output[1], sep= '\t', header= True, index= False)
 
 
 def download(url):
@@ -57,27 +105,6 @@ checkpoint dl_PAN_UKBB:
 		with ThreadPoolExecutor(max_workers=8) as executor:
 			executor.map(download, urls)
 
-rule format_trait_PAN_UKBB:
-	'Format gestational duration and birth weight summary statistics for speed.'
-	input:
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
-		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_fetal_effect.txt'
-	output:
-		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/traits/Maternal_GWAMA_GAraw.txt'),
-		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/traits/BW_fetal_effect.txt')
-	run:
-		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'TOTALSAMPLESIZE'])
-		d= d.loc[((d.CHR== 3) & (d.POS>= 121612292) & (d.POS<= 124612292)), :]
-		d['MAF']= np.where(d.EAF> 0.5, 1 - d.EAF, d.EAF)
-		d= d[['ID', 'CHR', 'POS', 'MAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']]
-		d.to_csv(output[0], sep= '\t', header= True, index= False)
-		d= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'N'])[['ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'N']]
-		d.columns= ['ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']
-		d= d.loc[((d.CHR== 3) & (d.POS>= 121612292) & (d.POS<= 124612292)), :]
-		d['MAF']= np.where(d.EAF> 0.5, 1 - d.EAF, d.EAF)
-                d= d[['ID', 'CHR', 'POS', 'MAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']]
-                d.to_csv(output[1], sep= '\t', header= True, index= False)
-
 rule ADCY5_coloc_PAN_UKBB:
         'Colocalization of BW and GA haplotypes with other phenotypes from PAN UK Biobank.'
         input:
@@ -86,65 +113,46 @@ rule ADCY5_coloc_PAN_UKBB:
                 '/mnt/hdd/common/pol/references/PAN_UKBB/PAN_UKBB_manifest.txt',
 		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/data/{PAN_UKBB_trait}.txt.gz'
         output:
-                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/{PAN_UKBB_trait}_pph_GAraw.txt'),
-                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/{PAN_UKBB_trait}_results_GAraw.txt'),
-                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/{PAN_UKBB_trait}_individual_variant_beta_GAraw.txt')
+                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/coloc_results/{PAN_UKBB_trait}/pph.txt'),
+                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/coloc_results/{PAN_UKBB_trait}/results.txt'),
+                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/coloc_results/{PAN_UKBB_trait}/individual_variant.txt')
         conda:
                 'environments/coloc.yml'
         script:
                 'PAN_UKBB_coloc.R'
 
 
-def aggregate_pph_PAN_UKBB(wildcards):
+def aggregate_output_coloc_PAN_UKBB(wildcards):
         'Aggregate the files from PAN_UKBB_trait wildcard.'
-        checkpoint_output = checkpoints.dl_PAN_UKBB.get(**wildcards).output[0]
-        return expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/{PAN_UKBB_trait}_pph_GAraw.txt', PAN_UKBB_trait= glob_wildcards(os.path.join(checkpoint_output, '{PAN_UKBB_trait}.txt.gz')).PAN_UKBB_trait)
+        checkpoint_output= checkpoints.dl_PAN_UKBB.get(**wildcards).output[0]
+	return expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/coloc_results/{PAN_UKBB_trait}/{coloc_out}.txt', coloc_out= wildcards.coloc_out, PAN_UKBB_trait= glob_wildcards(os.path.join(checkpoint_output, '{PAN_UKBB_trait}.txt.gz')).PAN_UKBB_trait)
 
-def aggregate_results_PAN_UKBB(wildcards):
-	'Aggregate the files from PAN_UKBB_trait wildcard.'
-	checkpoint_output = checkpoints.dl_PAN_UKBB.get(**wildcards).output[0]
-	return expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/{PAN_UKBB_trait}_results_GAraw.txt', PAN_UKBB_trait= glob_wildcards(os.path.join(checkpoint_output, '{PAN_UKBB_trait}.txt.gz')).PAN_UKBB_trait)
-
-def aggregate_individual_variant_PAN_UKBB(wildcards):
-        'Aggregate the files from PAN_UKBB_trait wildcard.'
-        checkpoint_output = checkpoints.dl_PAN_UKBB.get(**wildcards).output[0]
-        return expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/{PAN_UKBB_trait}_individual_variant_beta_GAraw.txt', PAN_UKBB_trait= glob_wildcards(os.path.join(checkpoint_output, '{PAN_UKBB_trait}.txt.gz')).PAN_UKBB_trait)
-
-rule cat_pph_PAN_UKBB:
+rule cat_coloc_PAN_UKBB:
 	'Concatenate posterior probabilities.'
 	input:
-		aggregate_pph_PAN_UKBB
+		aggregate_output_coloc_PAN_UKBB
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/pph_GAraw.txt'
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/final/{coloc_out}.txt'
 	shell:
 		'''
 		head -1 {input[0]} > {output[0]}
 		tail -n +2 -q {input} >> {output[0]}
-		''' 
-
-rule cat_results_PAN_UKBB:
-	'Concatenate variant posterior probabilities.'
-	input:
-		aggregate_results_PAN_UKBB
-	output:
-		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/results_GAraw.txt'
-	shell:
 		'''
-                head -1 {input[0]} > {output[0]}
-                tail -n +2 -q {input} >> {output[0]}
-                '''
 
-rule cat_indivual_variants_PAN_UKBB:
-	'Concatenate effect sizes for top variants.'
+
+rule clear_ADCY5_coloc_direct_UKBB:
+	'Clean temp directory from checkpoint'
 	input:
-		aggregate_individual_variant_PAN_UKBB
+		expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/final/{coloc_out}.txt', coloc_out= ['pph', 'results', 'individual_variant'])
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/individual_variant_GAraw.txt'
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/flag/cleaned_file.txt'
+	params:
+		tmp_dir= '/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/data/'
 	shell:
-		'''
-                head -1 {input[0]} > {output[0]}
-                tail -n +2 -q {input} >> {output[0]}
                 '''
+		rm -r {params.tmp_dir}
+		touch {output[0]}
+		'''
 
 rule extract_1KG_nonrelated:
 	'Extract non-related samples 1KG.'
@@ -160,7 +168,7 @@ rule extract_1KG_nonrelated:
 		d['IID']= d['Individual ID']
 		d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['IID', 'Individual ID'])
 
-rule ADCY_locus_plink:
+rule ADCY5_locus_plink:
 	'Regions to extract from ADCY5 locus.'
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/topregions/final/GAraw.txt'
@@ -214,145 +222,88 @@ def download_eQTL_ADCY5(url):
 		else:
 			break
 
-checkpoint dl_eQTL_Catalog_ADCY5:
+rule tabix_eQTL_Catalog_ADCY5:
 	'Download summary stats from eQTL Catalog using tabix.'
 	input:
-		'/mnt/hdd/common/pol/references/eQTL_Catalog/manifest.txt'
+		'/mnt/hdd/common/pol/references/eQTL_catalog/{eqtl_catalog}.all.tsv.gz'
 	output:
-		directory('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/temp/')
-	params:
-		'/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/temp/'
-	run:
-		if not os.path.exists(params[0]):
-			os.makedirs(params[0])
-		d= pd.read_csv(input[0], sep= '\t', header= 0)
-		d= d.loc[d.quant_method== 'ge', :]
-		urls= d.ftp_path.tolist()
-		[download_eQTL(url) for url in urls]
-		flist= glob.glob('*.tbi')
-		[os.remove(i) for i in flist]
-		
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/temp/{eqtl_catalog}.txt.gz' # :121893445-124893445
+	shell:
+		'''
+		tabix {input[0]} 3 | gzip > {output[0]}
+		'''
 
 rule eQTL_catalog_to_BED_ADCY5:
-	'Format eQTL Catalog data to BED file format for liftOver.'
-	input:
-		'/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/temp/{eqtl_catalog}.txt.gz'
-	output:
-		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/bed/{eqtl_catalog}.txt'),
-		temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/{eqtl_catalog}.txt.gz')
-	run:
-		cols= ['molecular_trait_id', 'chromosome', 'position', 'ref', 'alt', 'variant', 'ma_samples', 'maf', 'pvalue', 'beta', 'se', 'type', 'ac', 'an', 'r2', 'molecular_trait_object_id', 'gene_id', 'median_tpm', 'rsid']
-		d= pd.read_csv(input[0], sep= '\t', header= None, names= cols)
-		d['ref']= np.where(d.ref.str.len() > d.alt.str.len(), 'I', d.ref)
-		d['alt']= np.where(d.ref.str.len() < d.alt.str.len(), 'I', d.alt)
-		d['ref']= np.where(d.alt== 'I', 'D', d.ref)
-		d['alt']= np.where(d.ref== 'I', 'D', d.alt)
-		d['ID']= d.chromosome.apply(str) + ':' + d.position.apply(str) + ':' + d.ref + ':' + d.alt
-		d.drop_duplicates(subset= 'ID', inplace= True, keep= 'first')
-		d['start']= d['position'] - 1
-		df= d[['chromosome', 'start', 'position', 'ID']]
-		df['chromosome']= np.where(df.chromosome== 23, 'X', d.chromosome)
-		df['chromosome']= 'chr' + df.chromosome.apply(str)
-		df.to_csv(output[0], sep= '\t', header= False, index= False)
-		d['N']= d.an / 2
-		d= d[['gene_id', 'ID', 'maf', 'N', 'ref', 'alt', 'pvalue', 'beta', 'se']]
-		d.to_csv(output[1], sep= '\t', header= True, index= False, compression= 'gzip')
-
-rule liftOver_eQTL_Catalog_ADCY5:
-        'Liftover eQTL Catalog ADCY5 locus hg38 to hg19.'
+        'Format eQTL Catalog data to BED file format for liftOver.'
         input:
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/bed/{eqtl_catalog}.txt',
-                '/home/pol/software/liftover/hg38ToHg19.over.chain.gz'
+                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/temp/{eqtl_catalog}.txt.gz'
         output:
-                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/lifted/{eqtl_catalog}.txt'),
-                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/lifted/non_lifted_{eqtl_catalog}.txt')
-        shell:
-                '/home/pol/software/liftover/liftOver {input[0]} {input[1]} {output[0]} {output[1]}'
-
-rule format_eQTL_Catalog_hg19_ADCY5:
-        'Format summary statistics for the ADCY5 locus for colocalization.'
-        input:
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/lifted/{eqtl_catalog}.txt',
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/{eqtl_catalog}.txt.gz'
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg19/{eqtl_catalog}.txt.gz'
+                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/formatted/{eqtl_catalog}.txt.gz')
         run:
-                x= pd.read_csv(input[0], sep= '\t', header= None, names= ['CHR', 'start', 'POS', 'ID'])
-		x['CHR']= x.CHR.str.replace('chr', '')
-		x['CHR']= np.where(x.CHR== 'X', '23', x.CHR)
-                d= pd.read_csv(input[1], sep= '\t', header= 0)
-                d= pd.merge(d, x[['CHR', 'POS', 'ID']], on= 'ID')
-		d['beta']= np.where(d.ref > d.alt, -1 * d.beta, d.beta)
-                d['ID']= np.where(d.ref > d.alt, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.alt + ':' + d.ref, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.ref + ':' + d.alt)
-		d= d[['ID', 'POS', 'gene_id', 'maf', 'N', 'beta', 'se', 'pvalue']]
-		d.columns= ['ID', 'pos', 'gene', 'maf', 'N', 'beta', 'se', 'pvalue']
+                cols= ['molecular_trait_id', 'chromosome', 'position', 'ref', 'alt', 'variant', 'ma_samples', 'maf', 'pvalue', 'beta', 'se', 'type', 'ac', 'an', 'r2', 'molecular_trait_object_id', 'gene_id', 'median_tpm', 'rsid']
+                d= pd.read_csv(input[0], sep= '\t', header= None, names= cols)
+		genes= ['ENSG00000173175', 'ENSG00000065485', 'ENSG00000239523', 'ENSG00000121542']
+		d= d.loc[d.gene_id.isin(genes), :]
+                d['ref']= np.where(d.ref.str.len() > d.alt.str.len(), 'I', d.ref)
+                d['alt']= np.where(d.ref.str.len() < d.alt.str.len(), 'I', d.alt)
+                d['ref']= np.where(d.alt== 'I', 'D', d.ref)
+                d['alt']= np.where(d.ref== 'I', 'D', d.alt)
+		d['beta']= np.where(d.ref> d.alt, -1 * d.beta, d.beta)
+                d.drop_duplicates(subset= 'rsid', inplace= True, keep= 'first')
+                d['N']= d.an / 2
+                d= d[['gene_id', 'rsid', 'position', 'maf', 'N', 'ref', 'alt', 'pvalue', 'beta', 'se']]
+                d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
+
+rule format_data_coloc_eQTL_catalog:
+        'Format gestational duration and birth weight summary statistics for speed.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_fetal_effect.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/traits/Maternal_GWAMA_GAraw.txt',
+                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/traits/BW_fetal_effect.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['RSID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'TOTALSAMPLESIZE'])
+                d= d.loc[((d.CHR== 3)), :]
+                d['MAF']= np.where(d.EAF> 0.5, 1 - d.EAF, d.EAF)
+                d= d[['RSID', 'CHR', 'POS', 'MAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']]
+		d.columns= ['rsid', 'CHR', 'POS', 'MAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']
                 d.to_csv(output[0], sep= '\t', header= True, index= False)
+                d= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['rsid', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'N'])[['rsid', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'N']]
+                d.columns= ['rsid', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']
+                d= d.loc[((d.CHR== 3)), :]
+                d['MAF']= np.where(d.EAF> 0.5, 1 - d.EAF, d.EAF)
+                d= d[['rsid', 'CHR', 'POS', 'MAF', 'BETA', 'SE', 'TOTALSAMPLESIZE']]
+                d.to_csv(output[1], sep= '\t', header= True, index= False)
+
 
 rule ADCY5_coloc_eQTL_catalog:
         'Colocalization of BW and GA haplotypes with eQTL data form eQTL Catalog.'
         input:
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/traits/Maternal_GWAMA_GAraw.txt',
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/temp/traits/BW_fetal_effect.txt',
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg19/{eqtl_catalog}.txt.gz'
+                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/traits/Maternal_GWAMA_GAraw.txt',
+                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/traits/BW_fetal_effect.txt',
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/data/hg38/formatted/{eqtl_catalog}.txt.gz'
         output:
                 temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/temp/{eqtl_catalog}_pph_GAraw.txt'),
                 temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/temp/{eqtl_catalog}_results_GAraw.txt'),
-                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/temp/{eqtl_catalog}_individual_variant_beta_GAraw.txt')
+                temp('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/temp/{eqtl_catalog}_individual_variant_GAraw.txt')
         conda:
                 'environments/coloc.yml'
+	threads: 4
         script:
                 'coloc_eqtl_catalog.R'
 
-def aggregate_pph_eqtl_catalog_ADCY5(wildcards):
-        'Aggregate the files from eqtl_catalog wildcard.'
-        checkpoint_output = checkpoints.dl_eQTL_Catalog_ADCY5.get(**wildcards).output[0]
-        return expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/temp/{eqtl_catalog}_pph_GAraw.txt', eqtl_catalog= glob_wildcards(os.path.join(checkpoint_output, '{eqtl_catalog}.txt.gz')).eqtl_catalog)
-
-def aggregate_results_eqtl_catalog_ADCY5(wildcards):
-        'Aggregate the files from eqtl_catalog wildcard.'
-        checkpoint_output = checkpoints.dl_eQTL_Catalog_ADCY5.get(**wildcards).output[0]
-        return expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/temp/{eqtl_catalog}_results_GAraw.txt', eqtl_catalog= glob_wildcards(os.path.join(checkpoint_output, '{eqtl_catalog}.txt.gz')).eqtl_catalog)
-
-def aggregate_variant_eqtl_catalog_ADCY5(wildcards):
-        'Aggregate the files from eqtl_catalog wildcard.'
-        checkpoint_output = checkpoints.dl_eQTL_Catalog_ADCY5.get(**wildcards).output[0]
-        return expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/temp/{eqtl_catalog}_individual_variant_beta_GAraw.txt', eqtl_catalog= glob_wildcards(os.path.join(checkpoint_output, '{eqtl_catalog}.txt.gz')).eqtl_catalog)
-
-rule cat_pph_eqtl_catalog_ADCY5:
-        ''
-        input:
-                aggregate_pph_eqtl_catalog_ADCY5
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/pph_GAraw.txt'
-        shell:
-                '''
-                head -1 {input[0]} > {output[0]}
-                tail -n +2 -q {input} >> {output[0]}
-                '''
-
-rule cat_results_eqtl_catalog_ADCY5:
-        ''
-        input:
-                aggregate_results_eqtl_catalog_ADCY5
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/results_GAraw.txt'
-        shell:
-                '''
-                head -1 {input[0]} > {output[0]}
-                tail -n +2 -q {input} >> {output[0]}
-                '''
-
-rule cat_indivual_variants_eqtl_catalog_ADCY5:
-        ''
-        input:
-                aggregate_variant_eqtl_catalog_ADCY5
-        output:
-                '/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/individual_variant_GAraw.txt'
-        shell:
-                '''
-                head -1 {input[0]} > {output[0]}
-                tail -n +2 -q {input} >> {output[0]}
-                '''
+rule cat_output_coloc_eqtl_catalog_ADCY5:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/temp/{eqtl_catalog}_{{coloc_out_eqtl}}_GAraw.txt', eqtl_catalog= eqtl_catalog_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/results/{coloc_out_eqtl}_GAraw.txt'
+	shell:
+		'''
+		head -1 {input[0]} > {output[0]}
+		tail -n +2 -q {input} >> {output[0]}
+		'''
 
 rule iPSC2_eQTL_colocalization_ADCY5:
         'Use data from Identification of rare and common regulatory variants in pluripotent cells using population-scale transcriptomics'

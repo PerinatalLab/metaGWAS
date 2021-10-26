@@ -17,20 +17,25 @@ prior1= 1 * 10**-4
 prior2= 1 * 10**-4
 prior12= 5 * 10**-6
 
-
 format_FINNGEN= function(x){
-s_pheno= as.integer(x[, 'n_cases']) / (as.integer(x[, 'n_cases']) + as.integer(x[, 'n_controls']))
-pheno= as.character(unique(x[, 'phenocode']))
 
-N= (as.integer(x[, 'n_cases']) + as.integer(x[, 'n_controls']))
+temp_df= mani[mani$phenocode== x, ]
 
-df= fread(as.character(x[, 'path_https']), select= c('#chrom', 'pos', 'ref', 'alt', 'beta', 'sebeta', 'maf', 'pval'))
+s_pheno= as.integer(temp_df[, 'n_cases']) / (as.integer(temp_df[, 'n_cases']) + as.integer(temp_df[, 'n_controls']))
+pheno= as.character(unique(temp_df[, 'phenocode']))
+
+N= (as.integer(temp_df[, 'n_cases']) + as.integer(temp_df[, 'n_controls']))
+url= as.character(temp_df$path_https)
+
+df= fread(url, select= c('#chrom', 'pos', 'ref', 'alt', 'beta', 'sebeta', 'maf', 'pval'))
 
 names(df)= c('chr', 'pos', 'ref', 'alt', 'beta', 'se', 'maf', 'pvalue')
-df$N= N
 
 df= filter(df, pos %in% pos_hg38)
+
+df$N= N
 df$beta= ifelse(df$ref> df$alt, -1 * df$beta, df$beta)
+
 df$ID_hg38= ifelse(df$ref> df$alt, paste(df$chr, df$pos, df$alt, df$ref, sep= ':'), paste(df$chr, df$pos, df$ref, df$alt, sep= ':'))
 
 variants= data.frame(filter(df, pos== 123393445 | pos== 123346931))
@@ -45,7 +50,16 @@ variants$pheno= pheno
 z= coloc_FINNGEN(d, df, 'Gestational duration', pheno, s_pheno)
 z= coloc_FINNGEN(bw, df, 'Birth weight, fetal effect', pheno, s_pheno)
 
-return(variants)
+if (!file.exists(snakemake@output[[3]])){
+
+fwrite(variants, snakemake@output[[3]], sep= '\t', row.names=F, col.names= T)
+
+} else {
+fwrite(variants, snakemake@output[[3]], sep= '\t', row.names=FALSE, col.names= FALSE, append= TRUE)
+
+}
+
+
 }
 
 coloc_FINNGEN= function(trait1df, trait2df, trait, phenotype, prop_cases){
@@ -87,35 +101,16 @@ myres= tryCatch({suppressWarnings(coloc.abf(data1, data2, p1= prior1, p2= prior2
 
 }
 
-d= fread(snakemake@input[[1]], select= c('ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'TOTALSAMPLESIZE'))
-d= filter(d, CHR== 3, POS>= top_pos - dist_lim,  POS<= top_pos + dist_lim)
+d= fread(snakemake@input[[1]])
 
-d$MAF= ifelse(d$EAF> 0.5, 1 - d$EAF, d$EAF)
-bw= fread(snakemake@input[[2]], select= c('ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'N'))
-names(bw)= c('ID', 'CHR', 'POS', 'EAF', 'BETA', 'SE', 'TOTALSAMPLESIZE')
-bw= filter(bw, CHR== 3, POS>= top_pos - dist_lim,  POS<= top_pos + dist_lim)
+pos_hg38= as.numeric(separate(d, ID_hg38, into= c(NA, 'hg_pos38', NA, NA), sep= ':') %>% pull(hg_pos38))
 
-bw$MAF= ifelse(bw$EAF>0.5, 1 - bw$EAF, bw$EAF)
+bw= fread(snakemake@input[[2]])
 
 mani= fread(snakemake@input[[3]])
 
-fin_map= fread(snakemake@input[[4]], select= c('ID', 'CHR', 'POS'))
+format_FINNGEN(snakemake@wildcards[['FINNGEN_pheno']])
 
-names(fin_map)= c('ID_hg38', 'CHR', 'POS')
+#z= do.call('rbind', df_list)
 
-fin_map= filter(fin_map, CHR== 'chr3', POS>= top_pos - dist_lim,  POS<= top_pos + dist_lim)
-fin_map= separate(fin_map, ID_hg38, into= c('chr_hg38', 'pos_hg38', 'ref', 'eff'), sep= ':', remove= FALSE)
-
-pos_hg38= as.numeric(fin_map$pos_hg38)
-
-fin_map$CHR= gsub('chr', '', fin_map$CHR)
-fin_map$ID= paste(fin_map$CHR, fin_map$POS, fin_map$ref, fin_map$eff, sep= ':') 
-
-d= inner_join(d, fin_map[, c('ID', 'ID_hg38')], by= 'ID')
-bw= inner_join(bw, fin_map[, c('ID', 'ID_hg38')], by= 'ID')
-
-df_list= mclapply(split(mani, mani$phenocode), format_FINNGEN, mc.cores= 5)
-
-z= do.call('rbind', df_list)
-
-fwrite(z, snakemake@output[[3]], sep= '\t', row.names=F, col.names= T)
+#fwrite(z, snakemake@output[[3]], sep= '\t', row.names=F, col.names= T)
