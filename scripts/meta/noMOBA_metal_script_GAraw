@@ -16,23 +16,24 @@ PVALUE pvalue
 WEIGHT N
 SEPARATOR TAB
 
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/23andme_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/ALSPAC_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/CHOP_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DECODE_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/NFBC1966_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/STORK_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/STORKGROR_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/HUNT_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DBDS_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DNBCCASES_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DNBCCONTROLS_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DNBCPTD_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/DILT1DGC_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/WTCCC58BC_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/CCHMC_GAraw.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/GPN_GAraw.txt
-
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/23andme.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/ALSPAC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/CHOP.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/DECODE.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/NFBC1966.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/STORK.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/STORKGROR.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/HUNT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/DBDS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/DNBCGOYACASES.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/DNBCGOYACONTROLS.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/DNBCPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/DILT1DGC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/WTCCC58BC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/CCHMC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/GPN.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/Gen3G.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/HAPO.txt
 
 OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAraw_ .txt
 

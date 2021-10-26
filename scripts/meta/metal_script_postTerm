@@ -16,16 +16,16 @@ PVALUE pvalue
 WEIGHT N
 SEPARATOR TAB
 
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DECODE_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/HUNT_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/MOBAGENETICS_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DBDS_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/EGCUT_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/ALSPAC_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DNBCCASES_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DNBCCONTROLS_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/DILT1DGC_postTerm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/WTCCC58c_postTerm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DECODE.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/HUNT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/MOBAGENETICS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DBDS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/EGCUT.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/ALSPAC.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DNBCGOYACASES.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DNBCGOYACONTROLS.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DILT1DGC.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/WTCCC58c.txt
 
 
 

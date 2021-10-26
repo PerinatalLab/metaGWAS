@@ -16,17 +16,20 @@ PVALUE pvalue
 WEIGHT N
 SEPARATOR TAB
 
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/23andme_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DECODE_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/EGCUT_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/HUNT_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/MOBAGENETICS_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DBDS_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/ALSPAC_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/CHOP_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DNBCCASES_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/DILT1DGC_allPTD.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/WTCCC58BC_allPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/23andme.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DECODE.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/EGCUT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/HUNT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/MOBAGENETICS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DBDS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/FINNGEN.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/ALSPAC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/CHOP.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DNBCPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DILT1DGC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/WTCCC58BC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/PGPIII.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/PGPII.txt
 
 OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_allPTD_ .txt
 

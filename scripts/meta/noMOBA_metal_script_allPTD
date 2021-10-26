@@ -20,7 +20,6 @@ PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/23andme.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DECODE.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/EGCUT.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/HUNT.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/MOBAGENETICS.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DBDS.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/FINNGEN.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/ALSPAC.txt
@@ -29,8 +28,7 @@ PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DNBCPTD.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DILT1DGC.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/WTCCC58BC.txt
 
-
-OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_ .txt
+OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_allPTD_ .txt
 
 ANALYZE HETEROGENEITY
 

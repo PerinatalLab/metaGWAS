@@ -16,19 +16,19 @@ PVALUE pvalue
 WEIGHT N
 SEPARATOR TAB
 
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/ALSPAC_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/CHOP_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DECODE_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/NFBC1966sub_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/STORK_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/STORKGROR_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/HUNT_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DBDS_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCCASES_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCCONTROLS_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DNBCPTD_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/DILT1DGC_GAnrm.txt
-PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/WTCCC58BC_GAnrm.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/ALSPAC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/CHOP.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/DECODE.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/NFBC1966.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/STORK.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/STORKGROR.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/HUNT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/DBDS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/DNBCGOYACASES.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/DNBCGOYACONTROLS.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/DNBCPTD.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/DILT1DGC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/WTCCC58BC.txt
 
 OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_ .txt
 
