@@ -14,7 +14,7 @@ x= fread(snakemake@input[[2]])
 
 x$BETA= ifelse(x$REF > x$EFF, -1 * x$BETA, x$BETA)
 
-x= select(x, ID, N, BETA, SE, pvalue, EAF)
+x= select(x, ID, TOTALSAMPLESIZE, BETA, SE, pvalue, EAF)
 x$MAF= ifelse(x$EAF>0.5, 1- x$EAF, x$EAF)
 names(x)= c('ID', 'N', 'beta', 'se', 'p', 'eaf', 'maf')
 
@@ -27,6 +27,13 @@ d$maf= d$MAF
 z= fread(snakemake@input[[3]])
 z$CHR= ifelse(z$CHR== 'X', '23', z$CHR)
 z$CHR= as.integer(z$CHR)
+
+z1= fread(snakemake@input[[4]])
+z1$CHR= ifelse(z1$CHR== 'X', '23', z1$CHR)
+z1$CHR= as.integer(z1$CHR)
+z1= filter(z1, nearestGene== 'LRP5' | nearestGene== 'SCML4')
+
+z= rbind(z, z1)
 
 pph_list= list()
 res_list= list()
@@ -44,32 +51,9 @@ for(i in 1:nrow(z)) {
 	
 	} else {
 	temp_df= filter(temp_df, SE>0, se>0)
-        if (grepl('PCOS|miscarriage|POP|endometriosis|Preeclampsia|leiomyoma_uterus', snakemake@input[[2]])) {
-	if (grepl('PCOS', snakemake@input[[2]])) {s_pheno=  (1184 + 670 + 157 +658 +984 + 485 + 462 )/ (1184 + 670 + 157 +658 +984 + 485 + 462 + 5799 + 1379 +2807 +6774 +2963+ 407 + 96172)}
-	if (grepl('miscarriage', snakemake@input[[2]])) {s_pheno=   49996 / ( 174109 + 49996)}
-	if (grepl('POP', snakemake@input[[2]])) {s_pheno= 7053 / (57407 + 7053) }
-	if (grepl('endometriosis', snakemake@input[[2]])) {s_pheno= 1496 / (192678 + 1496 )}
-	if (grepl('Preeclampsia', snakemake@input[[2]])){ s_pheno= 4630/ (4630 + 373345)}
-	if (grepl('leiomyoma_uterus', snakemake@input[[2]])){ s_pheno= ( 14569) / (85792 + 14569)}
-	if (grepl('allPTD', snakemake@input[[1]])) {
-	data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'cc', snp= temp_df$ID, MAF= temp_df$MAF, s= 0.067)
-	} else if (grepl('postTerm', snakemake@input[[1]])) {
-	data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'cc', snp= temp_df$ID, MAF= temp_df$MAF, s= 0.122) 
-	} else {data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'quant', snp= temp_df$ID, MAF= temp_df$MAF) }
-
+	s_pheno= 0.067
+	data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'quant', snp= temp_df$ID, MAF= temp_df$MAF)
 	data2= list(beta= temp_df$beta, varbeta= temp_df$se**2, N=temp_df$N, type= 'cc', snp= temp_df$ID, s= s_pheno, MAF= temp_df$maf)
-
-	} else {
-
-        if (grepl('allPTD', snakemake@input[[1]])) {
-        data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'cc', snp= temp_df$ID, MAF= temp_df$MAF, s= 0.067) 
-        } else if (grepl('postTerm', snakemake@input[[1]])) {
-        data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'cc', snp= temp_df$ID, MAF= temp_df$MAF, s= 0.122) 
-        } else {data1= list(beta= temp_df$BETA, varbeta= temp_df$SE**2, N=temp_df$TOTALSAMPLESIZE, type= 'quant', snp= temp_df$ID, MAF= temp_df$MAF) }
-	
-	data2= list(beta= temp_df$beta, varbeta= temp_df$se**2, N=temp_df$N, type= 'quant', snp= temp_df$ID, MAF= temp_df$maf) 
-
-	}
 	myres= tryCatch({suppressWarnings(coloc.abf(data1, data2, p1= prior1, p2= prior2, p12= prior12))}, error= function(e) { return(0)}
 )
 	if (length(myres)==1 ) { 
