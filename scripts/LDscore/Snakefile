@@ -10,18 +10,19 @@ rule prepare_LD_score_meta:
         ''
         input:
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
-		'/mnt/hdd/common/pol/references/longrange_LD.txt'
+#		'/mnt/hdd/common/pol/references/longrange_LD.txt'
         output:
                 temp('/mnt/hdd/common/pol/metaGWAS/LDscore/ldsc_{pheno}.txt')
+	threads: 3
         run:
                 d= pd.read_csv(input[0], sep= '\t', header= 0, compression= 'gzip', usecols= ['RSID', 'CHR', 'POS', 'TOTALSAMPLESIZE', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
                 d.columns= ['CHR', 'POS', 'A1', 'A2', 'N', 'BETA', 'SE', 'pvalue', 'SNP']
                 d.dropna(axis= 0, inplace= True)
 		d['CHR']= d.CHR.apply(str)
-		x= pd.read_csv(input[1], header= None, names= ['CHR', 'pos1', 'pos2', 'z'], sep= '\t')
-		x['CHR']= x.CHR.apply(str)
-		d= pd.merge(d, x, on= 'CHR', how= 'left')
-		d= d.loc[((d.POS< d.pos1) | (d.POS>d.pos2)) | (d.pos1.isnull()), :]
+#		x= pd.read_csv(input[1], header= None, names= ['CHR', 'pos1', 'pos2', 'z'], sep= '\t')
+#		x['CHR']= x.CHR.apply(str)
+#		d= pd.merge(d, x, on= 'CHR', how= 'left')
+#		d= d.loc[((d.POS< d.pos1) | (d.POS>d.pos2)) | (d.pos1.isnull()), :]
 		d= d.loc[~((d.CHR==6) & (d.POS >28477797) & (d.POS< 33448354)), :]
 		d.drop_duplicates(['CHR', 'POS', 'A1', 'A2'], keep= 'first', inplace= True)
                 d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue'])
@@ -145,12 +146,14 @@ rule partitioned_heritability_cell_type:
 rule prepare_LD_score_individual_cohorts:
         ''
         input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{big5}_GAraw.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/{big5}.txt',
                 '/mnt/hdd/common/pol/references/longrange_LD.txt',
 		'/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt'
         output:
                 temp('/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/ldsc_{big5}.txt')
-        run:
+        
+	threads: 5
+	run:
                 d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['SNP', 'CHR', 'POS', 'N', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])[['SNP', 'CHR', 'POS', 'N', 'REF', 'EFF', 'BETA', 'SE', 'pvalue']]
 		d['SNP']= d.SNP.str.replace(':SNP', '')
 		d['SNP']= d.SNP.str.replace(':INDEL', '')
@@ -158,13 +161,13 @@ rule prepare_LD_score_individual_cohorts:
                 d.columns= ['ID', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']
                 d.dropna(axis= 0, inplace= True)
                 d['CHR']= d.CHR.apply(str)
-                x= pd.read_csv(input[1], header= None, names= ['CHR', 'pos1', 'pos2', 'z'], sep= '\t')
-                x['CHR']= x.CHR.apply(str)
+ #               x= pd.read_csv(input[1], header= None, names= ['CHR', 'pos1', 'pos2', 'z'], sep= '\t')
+ #               x['CHR']= x.CHR.apply(str)
 		z= pd.read_csv(input[2], header= 0, sep= '\t')
 		z.columns= ['ID', 'SNP']
 		d= pd.merge(d, z, on= 'ID')
-                d= pd.merge(d, x, on= 'CHR', how= 'left')
-                d= d.loc[((d.POS< d.pos1) | (d.POS>d.pos2)) | (d.pos1.isnull()), :]
+  #              d= pd.merge(d, x, on= 'CHR', how= 'left')
+  #              d= d.loc[((d.POS< d.pos1) | (d.POS>d.pos2)) | (d.pos1.isnull()), :]
                 d= d.loc[~((d.CHR==6) & (d.POS >28477797) & (d.POS< 33448354)), :]
                 d.drop_duplicates(['CHR', 'POS', 'A1', 'A2'], keep= 'first', inplace= True)
                 d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue'])
@@ -192,6 +195,7 @@ rule munge_LDSC_individual_cohorts:
                 conda deactivate
                 set -eu
                 """
+
 rule heritability_individual_cohorts:
 	''
 	input:
@@ -217,11 +221,106 @@ rule heritability_individual_cohorts:
                 """
 
 rule merge_h2_individual_cohorts:
+        ''
+        input:
+                expand('/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/{big5}_h2.log', big5= big5_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allcohorts.txt'
+        run:
+                df_list= list()
+                for infile in input:
+                        with open(infile, 'r') as f:
+                                lines= [line.strip() for line in f if line.startswith('Total Observed')]
+                                h2= float(lines[0].split(' ')[4])
+                                se= float(lines[0].split('(')[1].replace(')', ''))
+                                cohort= infile.split('/')[9].replace('_h2.log', '')
+                                d= pd.DataFrame({'cohort': cohort, 'h2': h2, 'se': se}, index= [0])
+                                df_list.append(d)
+                d= pd.concat(df_list)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+
+rule prepare_LD_score_individual_cohorts_allPTD:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{big5_allPTD}.txt',
+                '/mnt/hdd/common/pol/references/longrange_LD.txt',
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/allPTD/{big5_allPTD}_allPTD.txt')
+        threads: 5
+	run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['SNP', 'CHR', 'POS', 'N', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])[['SNP', 'CHR', 'POS', 'N', 'REF', 'EFF', 'BETA', 'SE', 'pvalue']]
+                d['SNP']= d.SNP.str.replace(':SNP', '')
+                d['SNP']= d.SNP.str.replace(':INDEL', '')
+                d['CHR']= d.CHR.apply(str)
+                d.columns= ['ID', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue']
+                d.dropna(axis= 0, inplace= True)
+                d['CHR']= d.CHR.apply(str)
+#                x= pd.read_csv(input[1], header= None, names= ['CHR', 'pos1', 'pos2', 'z'], sep= '\t')
+#                x['CHR']= x.CHR.apply(str)
+                z= pd.read_csv(input[2], header= 0, sep= '\t')
+                z.columns= ['ID', 'SNP']
+                d= pd.merge(d, z, on= 'ID')
+#                d= pd.merge(d, x, on= 'CHR', how= 'left')
+#                d= d.loc[((d.POS< d.pos1) | (d.POS>d.pos2)) | (d.pos1.isnull()), :]
+                d= d.loc[~((d.CHR==6) & (d.POS >28477797) & (d.POS< 33448354)), :]
+                d.drop_duplicates(['CHR', 'POS', 'A1', 'A2'], keep= 'first', inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue'])
+
+rule munge_LDSC_individual_cohorts_allPTD:
+        'Format sumstats according to LDSC.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/allPTD/{big5_allPTD}_allPTD.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/allPTD/{big5_allPTD}_allPTD.txt.sumstats.gz')
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/allPTD/{big5_allPTD}_allPTD.txt'
+        conda:
+                '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/munge_sumstats.py \
+                --merge-alleles /home/pol/software/ldsc/w_hm3.snplist \
+                --out {params[0]} \
+                --sumstats {input[0]} \
+                --chunksize 500000
+                conda deactivate
+                set -eu
+                """
+rule heritability_individual_cohorts_allPTD:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/allPTD/{big5_allPTD}_allPTD.txt.sumstats.gz'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allPTD/{big5_allPTD}_allPTD.log'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allPTD/{big5_allPTD}_allPTD'
+#       conda:
+#               '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/ldsc.py \
+                --h2 {input[0]} \
+                --ref-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --w-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --out {params[0]}
+                conda deactivate
+                set -eu
+                """
+
+rule merge_h2_individual_cohorts_allPTD:
 	''
 	input:
-		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/{big5}_h2.log', big5= big5_nms)
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allPTD/{big5_allPTD}_allPTD.log', big5_allPTD= big5_nms_allPTD)
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allcohorts.txt'
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allPTD/allcohorts.txt'
 	run:
 		df_list= list()
 		for infile in input:
@@ -229,8 +328,197 @@ rule merge_h2_individual_cohorts:
 				lines= [line.strip() for line in f if line.startswith('Total Observed')]
 				h2= float(lines[0].split(' ')[4])
 				se= float(lines[0].split('(')[1].replace(')', ''))
-				cohort= infile.split('/')[9].replace('_h2.log', '')
+				cohort= infile.split('/')[10].replace('_allPTD.log', '')
 				d= pd.DataFrame({'cohort': cohort, 'h2': h2, 'se': se}, index= [0])
 				df_list.append(d)
 		d= pd.concat(df_list)
 		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule heritability_META:
+        'LDSC partitioned heritability.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/{pheno}.txt.sumstats.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/h2/{pheno}_h2.log'
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/h2/{pheno}_h2'
+	shell:
+                """
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/ldsc.py \
+                --h2 {input[0]} \
+                --ref-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --w-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --out {params[0]}
+                conda deactivate
+                set -eu
+                """
+
+rule merge_h2_pheno:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/h2/{pheno}_h2.log', pheno= pheno_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/h2/h2_all_phenos.txt'
+	run:
+		df_list= list()
+                for infile in input:
+                        with open(infile, 'r') as f:
+                                lines= [line.strip() for line in f if line.startswith('Total Observed')]
+                                h2= float(lines[0].split(' ')[4])
+                                se= float(lines[0].split('(')[1].replace(')', ''))
+                                pheno= infile.split('/')[8].replace('_h2.log', '')
+                                d= pd.DataFrame({'pheno': pheno, 'h2': h2, 'se': se}, index= [0])
+                                df_list.append(d)
+		d= pd.concat(df_list)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+
+rule prepare_LD_score_meta_allPTD_NLB:
+	''
+	input:
+		'/home/pol/software/ldsc/allCHR_eur_w_ld_chr/all_chr_eur_w_ld.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/NLB/meta_allPTD_{PTD_metas}_1.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/LDscore/NLB/ldsc_{PTD_metas}.txt')
+	threads: 3
+	run:
+		x= pd.read_csv(input[0], sep= '\t', header= 0)
+		d= pd.read_csv(input[1], sep= '\t', header= 0)
+		d= d.loc[(d.TOTALSAMPLESIZE> (d['TOTALSAMPLESIZE'].max())/ 2), :]
+		d[['CHR', 'POS', 'REF', 'EFF', 'INDELS']]= d['MarkerName'].str.split(':', expand= True)
+                d['CHR']= np.where(d['CHR']== 'X', '23', d['CHR'])
+		d['POS']= d['POS'].astype(str).astype(int)
+		d['CHR']= d['CHR'].astype(str).astype(int)
+                d.dropna(axis= 0, inplace= True)
+                d= pd.merge(d, x[['CHR', 'SNP', 'BP']], left_on= ['CHR', 'POS'], right_on= ['CHR', 'BP'])
+		print(d.head())
+		d= d.loc[~((d.CHR==6) & (d.POS >28477797) & (d.POS< 33448354)), :]
+                d['Allele1']= d['Allele1'].str.upper()
+		d['Allele2']= d['Allele2'].str.upper()
+		d= d[['CHR', 'POS', 'SNP', 'Allele1', 'Allele2', 'TOTALSAMPLESIZE', 'Freq1', 'Effect', 'StdErr', 'P-value']]
+		d.columns= ['CHR', 'POS', 'SNP', 'A1', 'A2', 'N', 'EAF', 'BETA', 'SE', 'pvalue']
+		d.drop_duplicates(['CHR', 'POS', 'A1', 'A2'], keep= 'first', inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue'])
+
+rule munge_LDSC_meta_PTD_NLB:
+        'Format sumstats according to LDSC.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/NLB/ldsc_{PTD_metas}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/NLB/{PTD_metas}.txt.sumstats.gz'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/NLB/{PTD_metas}.txt'
+        conda:
+                '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/munge_sumstats.py \
+                --merge-alleles /home/pol/software/ldsc/w_hm3.snplist \
+                --out {params[0]} \
+                --sumstats {input[0]} \
+                --chunksize 500000
+                conda deactivate
+                set -eu
+                """
+
+
+rule Genetic_correlation_repr_pheno_PTD_NLB:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/NLB/{PTD_metas}.txt.sumstats.gz',
+                expand('/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/{repr_pheno}.txt.sumstats.gz', repr_pheno= repr_pheno_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/NLB/results/{PTD_metas}_rg.log'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/NLB/results/'
+        run:
+                allfiles= [infile for infile in input if wildcards.PTD_metas not in infile]
+                allfiles= ','.join(allfiles)
+                outfile= params[0] + wildcards.PTD_metas + '_rg'
+                infile= input[0]
+                shell("""
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/ldsc.py \
+                --rg {infile},{allfiles} \
+                --ref-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --w-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --out {outfile}
+                conda deactivate
+                set -eu
+                """)
+
+rule format_RG_repr_pheno_PTD_NLB:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/NLB/results/{PTD_metas}_rg.log', PTD_metas= ['single_pregnancy', 'all_pregnancies'])
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/NLB/results/rg_temp.txt'
+	run:
+		with open(input[0], 'r') as f:
+			x= f.readlines()
+		x= x[x.index('Summary of Genetic Correlation Results\n')+1:-3]
+		with open(output[0], 'w') as f:
+			f.write(''.join(x))
+		with open(input[1], 'r') as f:
+			x= f.readlines()
+		x= x[x.index('Summary of Genetic Correlation Results\n')+2:-3]
+		with open(output[0], 'a') as f:
+			f.write(''.join(x))
+
+
+rule Genetic_correlation_meta_big_cohorts:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/{big5}.txt.sumstats.gz',
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/allPTD/{big5_allPTD}_allPTD.txt.sumstats.gz', big5_allPTD= big5_nms_allPTD)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/{big5}_rg.log'
+#       conda:
+#               '/home/pol/software/ldsc/environment.yml'
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/{big5}_rg'
+	run:
+		allfiles= [infile for infile in input if 'individual_cohorts/' + wildcards.big5 not in infile]
+		allfiles= ','.join(allfiles)
+		print(allfiles)
+		outfile= input[0].replace('.txt.sumstats.gz', '_rg')
+		infile= input[0]
+		shell("""
+		set +eu
+		source /home/pol/miniconda3/etc/profile.d/conda.sh
+		conda activate ldsc
+		python2 /home/pol/software/ldsc/ldsc.py \
+		--rg {infile},{allfiles} \
+		--ref-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+		--w-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+		--out {params[0]}
+		conda deactivate
+		set -eu
+		""")
+
+rule format_RG_PTD_GA_big:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/{big5}_rg.log', big5= big5_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDScore/big5/RG/results/rp.txt'
+	run:
+		for i in range(len(input)):
+			with open(input[i], 'r') as f:
+				x= f.readlines()
+			if i== 0: 
+				x= x[x.index('Summary of Genetic Correlation Results\n')+1:-3]
+				with open(output[0], 'w') as f:
+					f.write(''.join(x))
+			else:
+				x= x[x.index('Summary of Genetic Correlation Results\n')+2:-3]
+				with open(output[0], 'a') as f:
+					f.write(''.join(x))
