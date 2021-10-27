@@ -44,22 +44,22 @@ d= left_join(d, z, by= c('protein'))
 
 d= separate(d, snp, into= c('CHR', 'POS', 'REF', 'EFF'), sep= ':', remove= FALSE)
 
-aa= fread(snakemake@input[[6]])
-names(aa)= c('CHR', 'POS', 'REF', 'ALT', 'AA')
-aa= filter(aa, AA!= '.')
-aa= filter(aa, POS %in% d$POS)
+#aa= fread(snakemake@input[[6]])
+#names(aa)= c('CHR', 'POS', 'REF', 'ALT', 'AA')
+#aa= filter(aa, AA!= '.')
+#aa= filter(aa, POS %in% d$POS)
 
-aa$ID= with(aa, ifelse(REF> ALT, paste(CHR, POS, ALT, REF, sep= ':'), paste(CHR, POS, REF, ALT, sep= ':')))
+#aa$ID= with(aa, ifelse(REF> ALT, paste(CHR, POS, ALT, REF, sep= ':'), paste(CHR, POS, REF, ALT, sep= ':')))
 
-d= left_join(d,aa[, c('ID', 'AA')], by= c('snp'= 'ID'))
+#d= left_join(d,aa[, c('ID', 'AA')], by= c('snp'= 'ID'))
 
-d$z.df1= with(d, ifelse(d$AA== d$EFF, -1 * d$z.df1, d$z.df1))
-d$z.df2= with(d, ifelse(d$AA== d$EFF, -1 * d$z.df2, d$z.df2))
+#d$z.df1= with(d, ifelse(d$AA== d$EFF, -1 * d$z.df1, d$z.df1))
+#d$z.df2= with(d, ifelse(d$AA== d$EFF, -1 * d$z.df2, d$z.df2))
 
-d$direction= with(d, ifelse(z.df1>0 & z.df2 > 0, 'Positive', ifelse(z.df1<0 & z.df2< 0, 'Negative', 'Opposite')))
-d$direction= with(d, ifelse(is.na(d$AA), 'Missing', d$direction))
+#d$direction= with(d, ifelse(z.df1>0 & z.df2 > 0, 'Positive', ifelse(z.df1<0 & z.df2< 0, 'Negative', 'Opposite')))
+#d$direction= with(d, ifelse(is.na(d$AA), 'Missing', d$direction))
 
-#d$direction= with(d, ifelse((z.df1 * z.df2)>0, 'Same direction', 'Opposite'))
+d$direction= with(d, ifelse((z.df1 * z.df2)>0, 'Same direction', 'Opposite'))
 
 d$gene_group= with(d, ifelse(PP.H4.abf> 0.9 & Pvalue< 0.05 / nrow(geneb), 'Colocalize and gene-based significant', ifelse(Pvalue< 0.05 / nrow(geneb) & PP.H4.abf<= 0.9, 'Gene based significant',
 	ifelse(PP.H4.abf> 0.9 & Pvalue> 0.05 / nrow(geneb), 'Colocalize', 'No colocalize and not significant'))))
@@ -68,12 +68,12 @@ ga= fread(snakemake@input[[4]], select= c('ID', 'BETA'))
 
 d= inner_join(d, ga, by= c('snp'= 'ID'))
 
-p1= ggplot(d, aes(-log10(Pvalue), PP.H4.abf, size= abs(BETA), fill= direction, alpha= (1 + PP.H4.abf) * -log10(Pvalue))) +
-geom_point(shape=21, colour= 'black') +
+p1= ggplot(d, aes(-log10(Pvalue), PP.H4.abf, fill= direction, alpha= (1 + PP.H4.abf) * -log10(Pvalue))) +
+geom_point(shape=21, colour= 'black', size= 4) +
 theme_cowplot(font_size= 10) +
 scale_alpha_continuous(guide= F) +
 scale_size_continuous(range = c(.001, 10), guide= F) +
-scale_fill_manual(values= c(colorBlindBlack8[c(1, 4, 8, 2)]), guide= F) +
+scale_fill_manual(values= c(colorBlindBlack8[c(2, 4)]), guide= F) +
 geom_text_repel(data= filter(d, PP.H4.abf> 0.9 | Pvalue< 0.05 / nrow(geneb)), aes(label= Gene), max.overlaps= 20, colour= 'black', size= 6/ .pt, max.time= 10, alpha= 1) +
 geom_hline(yintercept= 0.9, colour= colorBlindBlack8[8], linetype= 'dashed', size= 0.2, alpha= 0.6) +
 geom_vline(xintercept= -log10(0.05/nrow(geneb)), colour= colorBlindBlack8[8], linetype= 'dashed', size= 0.2, alpha= 0.6) +
@@ -87,12 +87,12 @@ d= select(d, Gene, BETA, direction, Pvalue, PP.H4.abf, Pvalue, z.df1, z.df2)
 
 fwrite(d, snakemake@output[[2]], sep= '\t')
 
-p1= ggplot(d, aes(-log10(Pvalue), PP.H4.abf, size= abs(BETA), fill= direction, alpha= (1 + PP.H4.abf) * -log10(Pvalue))) +
-geom_point(shape=21, colour= 'black') +
+p1= ggplot(d, aes(-log10(Pvalue), PP.H4.abf, fill= direction, alpha= (1 + PP.H4.abf) * -log10(Pvalue))) +
+geom_point(shape=21, colour= 'black', size= 4) +
 theme_cowplot(font_size= 10) +
 scale_alpha_continuous('Legend') +
 scale_size_continuous('Legend', range = c(.001, 10)) +
-scale_fill_manual('Legend', values= c(colorBlindBlack8[c(1, 4, 8, 2)])) +
+scale_fill_manual('Legend', values= c(colorBlindBlack8[c(2, 4)])) +
 geom_text_repel(data= filter(d, PP.H4.abf> 0.9 | Pvalue< 0.05 / nrow(geneb)), aes(label= Gene), max.overlaps= 20, colour= 'black', size= 6/ .pt, max.time= 10, alpha= 1) +
 geom_hline(yintercept= 0.9, colour= colorBlindBlack8[8], linetype= 'dashed', size= 0.2, alpha= 0.6) +
 geom_vline(xintercept= -log10(0.05/nrow(geneb)), colour= colorBlindBlack8[8], linetype= 'dashed', size= 0.2, alpha= 0.6) +

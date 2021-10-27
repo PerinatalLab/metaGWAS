@@ -43,8 +43,7 @@ rule gene_based_colocalization:
 		'/mnt/hdd/common/pol/metaGWAS/gene_based/fastBAT_GAraw.txt.gene.fastbat',
 		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
-		'/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/iPSC/results_GAraw.txt',
-		'/mnt/hdd/common/pol/references/1000G_AA/Ancestral_Allele_1KG.txt'
+		'/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/iPSC/results_GAraw.txt'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/figures/gene_based_coloc_eqtl.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/data_figures/gene_based_coloc_eqtl.txt',
