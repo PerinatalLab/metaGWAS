@@ -31,7 +31,7 @@ CCHMC_cohort_nms= ['ALSPAC', 'DNBC', 'FIN', 'GPN', 'HAPO']
 
 include: 'scripts/munge_stats/Snakefile'
 include: 'scripts/LDscore/Snakefile'
-include: 'scripts/annotation/Snakefile'
+
 include: 'scripts/independent/Snakefile'
 include: 'scripts/enrichment/Snakefile'
 include: 'scripts/meta/Snakefile'
@@ -40,7 +40,6 @@ include: 'scripts/gene_based/Snakefile'
 include: 'scripts/VEP/Snakefile'
 include: 'scripts/LocusZoom/Snakefile'
 include: 'scripts/LDscore_reprpheno/Snakefile'
-include: 'scripts/FINNGEN/Snakefile'
 include: 'scripts/top_regions/Snakefile'
 include: 'scripts/colocalization/Snakefile'
 include: 'scripts/iPSC/Snakefile'
