@@ -25,6 +25,7 @@ names(d2)= c('CHR', 'POS', 'FST_AFR_EAS')
 
 d= inner_join(d, d1, by= c('CHR', 'POS')) %>% inner_join(., d2, by= c('CHR', 'POS'))
 
+rm(d1); rm(d2)
 d$v_ids= paste(d$CHR, d$POS, sep= ':')
 
 z= fread(snakemake@input[[4]])
@@ -86,6 +87,7 @@ bw_fst= d[d$v_ids== '3:123065778', 'FST_EUR_AFR']
 ga_fst_pvalue= xp[xp$haplotype== 'Gestational duration' & xp$ancestries== 'FST_EUR_AFR', 'enrichment']
 bw_fst_pvalue= xp[xp$haplotype== 'Birth weight' & xp$ancestries== 'FST_EUR_AFR', 'enrichment']
 
+
 p1= ggplot(df1, aes(x=x) ) +
   geom_density( aes(x = FST_EUR_AFR, y = ..density..), fill= colorBlindBlack8[4], colour= colorBlindBlack8[4]) +
 annotate('text', x=0.6, y= 10, label="Gestational \nduration", color= colorBlindBlack8[4], size= as1/ .pt, fontface = 'bold') +
@@ -97,7 +99,7 @@ annotate('text', x=0.6, y= -10 - 0.5, label="Birth weight", color= colorBlindBla
   geom_density(aes(x = FST_EUR_AFR_bw, y = -..density..), fill= colorBlindBlack8[2], colour= colorBlindBlack8[2]) +
   theme_cowplot(font_size = 8) +
 scale_x_continuous(expand= c(0, 0)) +
-scale_y_continuous(limits= c(-11, 11), breaks= c(-10, -5, 0, 5, 10)) +
+scale_y_continuous(limits= c(-11, 11), breaks= c(-10, -5, 0, 5, 10), labels= c(10, 5, 0, 5, 10)) +
   xlab("Fst Africans - Europeans") +
 ylab('Density') +
 geom_segment(aes(x = ga_fst, y = 0, xend = ga_fst, yend = 5)) +
@@ -117,16 +119,16 @@ ga_fst_pvalue= xp[xp$haplotype== 'Gestational duration' & xp$ancestries== 'FST_E
 bw_fst_pvalue= xp[xp$haplotype== 'Birth weight' & xp$ancestries== 'FST_EUR_EAS', 'enrichment']
 
 p1= ggplot(df1, aes(x=x) ) +
-  geom_density( aes(x = FST_EUR_EAS, y = ..density..), fill= colorBlindBlack8[4], colour= 'grey') +
+  geom_density( aes(x = FST_EUR_EAS, y = ..density..), fill= colorBlindBlack8[4], colour= colorBlindBlack8[4]) +
 annotate('text', x=0.57, y= 9, label="Gestational \nduration", color= colorBlindBlack8[4], size= as1/ .pt, fontface = 'bold') +
 annotate('text', x=0.57, y= -10, label="Birth weight", color= colorBlindBlack8[2], size= as1/ .pt, fontface = 'bold') +
   annotate('text', x=ga_fst, y= 10 + 0.5, label="rs28654158", color= colorBlindBlack8[4], hjust= 0, size= as/ .pt) +
   annotate('text', x=bw_fst, y= -5 - 0.5, label="rs11708067", color= colorBlindBlack8[2], size= as/ .pt) +
   annotate('text', x= 0.6, y= 1, label= paste0('Enrichment x', round(ga_fst_pvalue, 1)), color= colorBlindBlack8[4], size= as/ .pt) +
   annotate('text', x= 0.6, y= -1, label= paste0('Enrichment x', round(bw_fst_pvalue, 1)), color= colorBlindBlack8[2], size= as/ .pt) +
-  geom_density( aes(x = FST_EUR_EAS_bw, y = -..density..), fill= colorBlindBlack8[2], colour= 'grey') +
+  geom_density( aes(x = FST_EUR_EAS_bw, y = -..density..), fill= colorBlindBlack8[2], colour= colorBlindBlack8[2]) +
 scale_x_continuous(expand= c(0, 0)) +
-scale_y_continuous(limits= c(-11, 11), breaks= c(-10, -5, 0, 5, 10)) +
+scale_y_continuous(limits= c(-11, 11), breaks= c(-10, -5, 0, 5, 10), labels= c(10, 5, 0, 5, 10)) +
   theme_cowplot(font_size = 8) +
   xlab("Fst East Asians - Europeans") +
 ylab('Density') +
@@ -146,18 +148,18 @@ ga_fst_pvalue= xp[xp$haplotype== 'Gestational duration' & xp$ancestries== 'FST_A
 bw_fst_pvalue= xp[xp$haplotype== 'Birth weight' & xp$ancestries== 'FST_AFR_EAS', 'enrichment']
 
 p1= ggplot(df1, aes(x=x) ) +
-geom_density( aes(x = FST_AFR_EAS, y = ..density..), fill= colorBlindBlack8[4], colour= 'grey') +
+geom_density( aes(x = FST_AFR_EAS, y = ..density..), fill= colorBlindBlack8[4], colour= colorBlindBlack8[4]) +
 annotate('text', x=0.72, y=7, label="Gestational \nduration", color= colorBlindBlack8[4], size= as1/ .pt, fontface = 'bold') + 
 annotate('text', x=0.72, y= -7, label="Birth weight", color= colorBlindBlack8[2], size= as1/ .pt, fontface = 'bold') +
 annotate('text', x=ga_fst, y=5 + 0.5, label="rs28654158", color= colorBlindBlack8[4], size= as/ .pt) +
 annotate('text', x=bw_fst, y= -5 - 0.5, label="rs11708067", color= colorBlindBlack8[2], hjust= 0, size= as/ .pt) +
 annotate('text', x= 0.75, y= 1, label= paste0('Enrichment x', round(ga_fst_pvalue, 1)), color= colorBlindBlack8[4], size= as/ .pt) +
 annotate('text', x= 0.75, y= -1, label= paste0('Enrichment x', round(bw_fst_pvalue, 1)), color= colorBlindBlack8[2], size= as/ .pt) +
-geom_density( aes(x = FST_AFR_EAS_bw, y = -..density..), fill= colorBlindBlack8[2], colour= 'grey') +
+geom_density( aes(x = FST_AFR_EAS_bw, y = -..density..), fill= colorBlindBlack8[2], colour= colorBlindBlack8[2]) +
 scale_x_continuous(expand= c(0, 0)) +
 theme_cowplot(font_size = 8) +
 xlab("Fst Africans - East Asians") +
-scale_y_continuous(limits= c(-11, 11), breaks= c(-10, -5, 0, 5, 10)) +
+scale_y_continuous(limits= c(-11, 11), breaks= c(-10, -5, 0, 5, 10), labels= c(10, 5, 0, 5, 10)) +
 ylab('Density') +
 geom_segment(aes(x = ga_fst, y = 0, xend = ga_fst, yend = 5)) +
 geom_segment(aes(x = bw_fst, y = 0, xend = bw_fst, yend = -5))+
