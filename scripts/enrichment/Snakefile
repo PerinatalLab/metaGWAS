@@ -54,27 +54,19 @@ rule enrichment_pLI:
 	run:
 		d= pd.read_csv(input[0], sep='\t', header= 0)
 		pli= pd.read_csv(input[1], header= 0, sep= '\t', usecols= ['gene_id', 'gene', 'chromosome', 'start_position', 'end_position', 'pLI'])[['gene_id', 'gene', 'chromosome', 'start_position', 'end_position', 'pLI']]
+		d= d.loc[d.nearestGene.isin(pli.gene.values), :]
 		pli.columns= ['EID', 'gene', 'CHR', 'start', 'end', 'pLI']
 		pli.dropna(subset= ['pLI'], inplace= True)
-		pli['CHR']= pd.to_numeric(np.where(pli.CHR== 'X', '23', pli.CHR), errors= 'coerce')
-		pli.dropna(subset= ['CHR'], inplace= True)
-		df= pd.merge(d, pli, on= 'CHR', how= 'inner')
-#		df['mPOS']= df.loc[:, ['start', 'end']].mean(axis=1)
-#		df['diff_mPOS']= abs(df.POS - df.mPOS)
-#		df.sort_values(['diff_mPOS'], inplace= True)
-#		df= df.groupby('ID').head(1)
-		dist= 250000
-		df= df.loc[((df.POS> df.start - dist) & (df.POS<= df.end + dist) & (df.pLI> 0.9)), :]
-		q= df.shape[0] # number of white balls drawn without replacement from an urn which contains both black and white balls
-		m= pli.loc[pli.pLI>= 0.9, :].shape[0] # the number of white balls in the urn
-		n=  pli.shape[0] - pli.loc[pli.pLI>= 0.9, :].shape[0] # the number of black balls in the urn.
-		k= d.loc[~d.ID.isin(df.ID), :].shape[0] + df.shape[0] #d.shape[0] # the number of balls drawn from the urn, hence must be in 0,1,..., m+n.
-		oddsratio, pvalue = st.fisher_exact([[q, m - q ],[k - q, n - m - k + q]], alternative= 'greater')
-		z= ['pli', q / (m -q), (k - q ) / (n - m - k + q), oddsratio, pvalue]
+		pli_genes= pli.loc[pli.pLI>= 0.9, 'gene'].values.tolist()
+		df= d.loc[d.nearestGene.isin(pli_genes), :]
+		b= len(pli_genes) - df.shape[0]
+		c= d.shape[0] - df.shape[0]
+		d= df.shape[0]
+		a= pli.shape[0] - b - d - c
+		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+		z= ['pli', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
 		with open(output[0], 'w') as file_handler:
 			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
-
-
 
 rule enrichment_RNA:
 	''
@@ -109,68 +101,49 @@ rule enrichment_dominant_recessive:
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/enrichment/MacArthur/diseases_{pheno}.txt'
 	run:
-		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID'])
+		pheno= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID', 'nearestGene'])
 		x= pd.read_csv(input[1], sep= '\t', header= None, names= ['CHR', 'start', 'end', 'gene', 'EnsembleID'])
-		df= pd.merge(d, x, on= 'CHR')
-		dist= 250000
-		df= df.loc[((df.POS> df.start - dist) & (df.POS<= df.end + dist)), :]
 		add= [line.strip() for line in open(input[2], 'r')]
-		q= df.loc[df.gene.isin(add), :].shape[0] # number of white balls drawn without replacement from an urn which contains both black and white balls
-                m= len(add) # the number of white balls in the urn
-                n= x.shape[0] - m # the number of black balls in the urn.
-                k= d.loc[~d.ID.isin(df.ID), :].shape[0] + df.shape[0] #d.shape[0] # the number of balls drawn from the urn, hence must be in 0,1,..., m+n.
-                oddsratio, pvalue = st.fisher_exact([[q, m - q ],[k - q, n - m - k + q]], alternative= 'greater')
-                z= ['additive', q / (m -q), (k - q ) / (n - m - k + q), oddsratio, pvalue]
+		df= pheno.loc[pheno.nearestGene.isin(add), :]
+		b= len(add) - df.shape[0]
+		c= pheno.shape[0] - df.shape[0]
+		d= df.shape[0]
+		a= x.shape[0] - b - d - c
+		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+		z= ['dominant', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
 		with open(output[0], 'w') as file_handler:
-                        file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
 		rec= [line.strip() for line in open(input[3], 'r')]
-		q= df.loc[df.gene.isin(rec), :].shape[0] # number of white balls drawn without replacement from an urn which contains both black and white balls
-                m= len(add) # the number of white balls in the urn
-                n= x.shape[0] - len(add)  # the number of black balls in the urn.
-                k= d.loc[~d.ID.isin(df.ID), :].shape[0] + df.shape[0] #d.shape[0] # the number of balls drawn from the urn, hence must be in 0,1,..., m+n.
-                oddsratio, pvalue = st.fisher_exact([[q, m - q ],[k - q, n - m - k + q]], alternative= 'greater')
-                z= ['recessive', q / (m -q), (k - q ) / (n - m - k + q), oddsratio, pvalue]
+		df= pheno.loc[pheno.nearestGene.isin(rec), :]
+		b= len(rec) - df.shape[0]
+		c= pheno.shape[0] - df.shape[0]
+		d= df.shape[0]
+		a= x.shape[0] - b - d - c
+		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+		z= ['recessive', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
 		with open(output[0], 'a') as file_handler:
-                        file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
 
 rule enrichment_RNA_decidualization:
 	'Enrichment in intolerance to heterozygous pLoF variation (pLI).'
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt',
-		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt',
 		'/mnt/hdd/common/pol/metaGWAS/stromal_cells/rna-seq/diff_expression.txt'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/enrichment/stromalRNA_{pheno}.txt'
 	run:
 		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID', 'nearestGene'])
-		x= pd.read_csv(input[1], sep= '\t', header= None, names= ['CHR', 'start', 'end', 'gene', 'EnsembleID'])
-		df= pd.merge(d, x, on= 'CHR')
-		stc= pd.read_csv(input[2], header= 0, sep= '\t', usecols= ['geneid', 'log2FoldChange', 'pvalue'])[['geneid', 'log2FoldChange', 'pvalue']]
+		stc= pd.read_csv(input[1], header= 0, sep= '\t', usecols= ['geneid', 'log2FoldChange', 'pvalue'])[['geneid', 'log2FoldChange', 'pvalue']]
                 stc.columns= ['gene', 'log2FoldChange', 'pvalue']
-		df= df.loc[df.gene.isin(stc.gene.values), :]
-		dist= 250000
-		df= df.loc[((df.POS> df.start - dist) & (df.POS<= df.end + dist)), :]
 		stc.dropna(subset= ['pvalue'], inplace= True)
-		df.drop_duplicates('gene', inplace= True)
-		stc= stc.loc[stc.gene.isin(x.gene.values), :]
-		stc1= stc.copy()
-		stc= stc.loc[stc.pvalue< 0.05/ stc.shape[0], :]
-		q= df.loc[df.gene.isin(stc.gene.values), :].shape[0] # number of white balls drawn without replacement from an urn which contains both black and white balls
-		m= len(stc.gene) # the number of white balls in the urn
-		n= stc1.shape[0] - m # the number of black balls in the urn.
-		k= d.loc[~d.ID.isin(df.ID.values), :].shape[0] + df.shape[0] # the number of balls drawn from the urn, hence must be in 0,1,..., m+n.
-		oddsratio, pvalue = st.fisher_exact([[q, m - q ],[k - q, n - m - k + q]], alternative= 'greater')
-		z= ['non_biased', q / (m -q), (k - q ) / (n - m - k + q), oddsratio, pvalue]
+		diff_genes= stc.loc[stc.pvalue< 0.05/ stc.shape[0], 'gene'].values.tolist()
+		df= d.loc[d.nearestGene.isin(diff_genes), :]
+                b= len(diff_genes) - df.shape[0]
+                c= d.shape[0] - df.shape[0]
+                d= df.shape[0]
+                a= stc.shape[0] - b - d - c
+                oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+                z= ['non_biased', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
 		print(z)
 		with open(output[0], 'w') as file_handler:
 			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
-		glist= d.nearestGene.values.tolist()
-		glist.extend(['DGUOK-AS1', 'WNT4', 'EDN2'])
-		q= len([i for i in glist if i in stc.gene.values]) # number of white balls drawn without replacement from an urn which contains both black and white balls
-                m= len(stc.gene) # the number of white balls in the urn
-                n= stc1.shape[0] - m # the number of black balls in the urn.
-                k= len(glist) #d.loc[~d.ID.isin(df.ID), :].shape[0] + df.shape[0] #d.shape[0] # the number of balls drawn from the urn, hence must be in 0,1,..., m+n.
-                oddsratio, pvalue = st.fisher_exact([[q, m - q ],[k - q, n - m - k + q]], alternative= 'greater')
-                z= ['candidate_list', q / (m -q), (k - q ) / (n - m - k + q), oddsratio, pvalue]
-                with open(output[0], 'a') as file_handler:
-                        file_handler.write('\t'.join([str(item) for item in z]) + '\n')
