@@ -1,0 +1,30 @@
+SCHEME   STDERR
+
+AVERAGEFREQ ON
+MINMAXFREQ ON
+FREQLABEL EAF 
+
+CUSTOMVARIABLE TOTALSAMPLESIZE
+
+LABEL TOTALSAMPLESIZE AS N
+
+MARKER SNP
+ALLELE EFF REF
+EFFECT BETA
+STDERR SE
+PVALUE pvalue 
+WEIGHT N
+SEPARATOR TAB
+
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/23andme.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/DECODE.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/HUNT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/MOBAGENETICS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/DBDS.txt
+
+OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/big5/meta_GAraw_ .txt
+
+ANALYZE HETEROGENEITY
+
+QUIT
+

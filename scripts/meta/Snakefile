@@ -80,3 +80,26 @@ rule METAL_allPTD_allpregnancies:
         shell:
                 '/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
 
+rule METAL_big5_allPTD:
+        ''
+        input:
+                'scripts/meta/metal_script_allPTD_big5',
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/big5/meta_allPTD_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/log/big5/METAL_allPTD_log.txt'
+        shell:
+                '/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+
+
+rule METAL_big5_GAraw:
+        ''
+        input:
+                'scripts/meta/metal_script_GAraw_big5',
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/big5/meta_GAraw_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/log/big5/METAL_GAraw_log.txt'
+        shell:
+                '/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+

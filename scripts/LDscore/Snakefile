@@ -522,3 +522,103 @@ rule format_RG_PTD_GA_big:
 				x= x[x.index('Summary of Genetic Correlation Results\n')+2:-3]
 				with open(output[0], 'a') as f:
 					f.write(''.join(x))
+
+rule format_meta_big5:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/big5/meta_{two_pheno}_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/big5/final/big5_{two_pheno}.txt.gz'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d['Allele1']= d['Allele1'].str.upper()
+		d['Allele2']= d['Allele2'].str.upper()
+		d= d.loc[(d.TOTALSAMPLESIZE> (d['TOTALSAMPLESIZE'].max())/ 2), :]
+		d[['CHR', 'POS', 'REF','EFF', 'SNP']]= d['MarkerName'].str.split(':', expand= True)
+		d['CHR']= d['CHR'].astype(str).astype(int)
+		d['POS']= d['POS'].astype(str).astype(int)
+		d= d[['CHR', 'POS', 'Allele1', 'Allele2', 'TOTALSAMPLESIZE', 'Freq1', 'Effect', 'StdErr', 'P-value']]
+		d.columns= ['CHR', 'POS', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']
+		d['BETA']=np.where(d.REF > d.EFF, -1* d.BETA, d.BETA)
+		d['EAF']= np.where(d.REF > d.EFF, 1 - d.EAF, d.EAF)
+		d['CHR']= d['CHR'].astype(str).astype(int)
+		d['POS']= d['POS'].astype(str).astype(int)
+		d['pvalue']= d['pvalue'].astype(str).astype(float)
+		d.loc[d.REF > d.EFF, ['REF', 'EFF']] = d.loc[d.REF > d.EFF, ['EFF', 'REF']].values
+		d['ID']= d.CHR.astype(int).astype(str) + ':' + d.POS.astype(int).astype(str) + ':' + d.REF + ':' + d.EFF
+		d= d.loc[((d.pvalue>0) & (d.pvalue <1)), :]
+		rs= pd.read_csv(input[1], sep= '\t', header=0)
+		rs.columns= ['ID', 'RSID']
+                d= pd.merge(d, rs, on= 'ID', how= 'left')
+		d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
+
+rule prepare_LD_score_meta_big5:
+        ''
+        input:
+                '/home/pol/software/ldsc/allCHR_eur_w_ld_chr/all_chr_eur_w_ld.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/big5/final/big5_{two_pheno}.txt.gz'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/LDscore/big5/two_pheno/ldsc_{two_pheno}.txt')
+        threads: 3
+        run:
+                x= pd.read_csv(input[0], sep= '\t', header= 0)
+                d= pd.read_csv(input[1], sep= '\t', header= 0)
+                d['CHR']= np.where(d['CHR']== 'X', '23', d['CHR'])
+                d['POS']= d['POS'].astype(str).astype(int)
+                d['CHR']= d['CHR'].astype(str).astype(int)
+                d.dropna(axis= 0, inplace= True)
+                d= pd.merge(d, x[['CHR', 'SNP', 'BP']], left_on= ['CHR', 'POS'], right_on= ['CHR', 'BP'])
+                d= d.loc[~((d.CHR==6) & (d.POS >28477797) & (d.POS< 33448354)), :]
+                d= d[['CHR', 'POS', 'RSID', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']]
+                d.columns= ['CHR', 'POS', 'SNP', 'A1', 'A2', 'N', 'EAF', 'BETA', 'SE', 'pvalue']
+                d.drop_duplicates(['CHR', 'POS', 'A1', 'A2'], keep= 'first', inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['SNP', 'CHR', 'POS', 'N', 'A2', 'A1', 'BETA', 'SE', 'pvalue'])
+
+rule munge_LDSC_meta_big5:
+        'Format sumstats according to LDSC.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/big5/two_pheno/ldsc_{two_pheno}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/big5/two_pheno/munged/{two_pheno}.txt.sumstats.gz'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/big5/two_pheno/munged/{two_pheno}.txt'
+        conda:
+                '/home/pol/software/ldsc/environment.yml'
+        shell:
+                """
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/munge_sumstats.py \
+                --merge-alleles /home/pol/software/ldsc/w_hm3.snplist \
+                --out {params[0]} \
+                --sumstats {input[0]} \
+                --chunksize 500000
+                conda deactivate
+                set -eu
+                """
+
+rule Genetic_correlation_two_pheno_big5:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/big5/two_pheno/munged/GAraw.txt.sumstats.gz',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/big5/two_pheno/munged/allPTD.txt.sumstats.gz',
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/meta/GAraw_allPTD_rg.log'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/meta/GAraw_allPTD_rg'
+        run:
+                shell("""
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/ldsc.py \
+                --rg {input[0]},{input[1]} \
+                --ref-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --w-ld-chr /home/pol/software/ldsc/eur_w_ld_chr/ \
+                --out {params[0]}
+                conda deactivate
+                set -eu
+                """)
+
