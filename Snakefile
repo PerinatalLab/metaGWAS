@@ -156,4 +156,5 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/Tables/ADCY5_eQTL.txt',
 		expand('/mnt/hdd/common/pol/metaGWAS/Tables/sample_size_{pheno}.txt', pheno= pheno_nms),
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAnrm_manhattan.png',
-		'/mnt/hdd/common/pol/metaGWAS/LDScore/big5/RG/results/rp.txt'
+		'/mnt/hdd/common/pol/metaGWAS/LDScore/big5/RG/results/rp.txt',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/meta/GAraw_allPTD_rg.log'
