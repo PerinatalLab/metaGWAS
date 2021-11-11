@@ -138,11 +138,11 @@ ctree= gheatmap(p1, df1, offset= 0, width= 0.7,
     geom_tiplab(align = FALSE, linesize= 0, offset= -0.9, size= 8/.pt, hjust= 1) +
     scale_fill_gradient2(low= colorBlindBlack8[2], high= colorBlindBlack8[4], mid= 'white', guide= F, limits= c(-max_beta, max_beta)) +
 coord_cartesian(clip = 'off') +
-  theme(plot.margin=margin(0, 0, 0, 0.5, unit= 'cm')) +
+  theme(plot.margin=margin(0, 0, 0.6, 0.5, unit= 'cm')) +
   scale_x_reverse(limits= c(2.5, 0))+ 
 coord_flip(clip= 'off')
   
-ggsave(snakemake@output[[1]], plot= ctree, width= 185, height= 120, units= 'mm', dpi= 300)
+ggsave(snakemake@output[[1]], plot= ctree, width= 185, height= 100, units= 'mm', dpi= 300)
 
 
 fwrite(d, snakemake@output[[2]], sep= '\t')
