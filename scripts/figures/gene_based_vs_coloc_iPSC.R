@@ -21,7 +21,7 @@ showtext_auto(enable = TRUE)
 
 
 pph= fread(snakemake@input[[1]])
-
+supp_table= pph
 geneb= fread(snakemake@input[[2]])
 
 gene_dict= fread(snakemake@input[[3]])
@@ -32,7 +32,7 @@ gene_dict$EID= with(gene_dict, unlist(lapply(strsplit(as.character(EnsembleID), 
 
 d= inner_join(pph, gene_dict, by= c('protein'= 'EID')) %>% inner_join(., geneb, by= 'Gene')
 
-supp_table= full_join(pph, gene_dict, by= c('protein'= 'EID')) %>% full_join(., geneb, by= 'Gene') %>% filter(Pvalue< 0.05/ nrow(geneb) | PP.H4.abf>= 0.9)
+#supp_table= full_join(pph, gene_dict, by= c('protein'= 'EID')) %>% full_join(., geneb, by= 'Gene') %>% filter(Pvalue< 0.05/ nrow(geneb) | PP.H4.abf>= 0.9)
 
 
 z= fread(snakemake@input[[5]], select= c('z.df1', 'z.df2', 'SNP.PP.H4', 'protein', 'snp'))
