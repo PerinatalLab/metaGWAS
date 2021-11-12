@@ -4,28 +4,67 @@ cohort_nms= ['harvestm12', 'harvestm24', 'rotterdam1', 'rotterdam2', 'normentfeb
 
 pheno_nms= ['allPTD', 'GAraw', 'GAnrm', 'postTerm']
 
-include: 'scripts/effect_origin/Snakefile'
-include: 'scripts/FINEMAP/Snakefile'
-include: 'scripts/HLA/Snakefile'
-include: 'scripts/LDSCORE/Snakefile'
+allchrs_nms= ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X']
 
+BW_pheno_nms= ['BW_maternal', 'BW_maternal_effect', 'BW_fetal', 'BW_fetal_effect']
+
+repr_trait_nms= ['GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male', 'Testosterone_only_fem', 'CBAT_only_fem']
+
+
+
+include: 'scripts/effect_origin/Snakefile'
+#include: 'scripts/LDSCORE/Snakefile'
+include: 'scripts/PGS/Snakefile'
+include: 'scripts/reports/Snakefile'
+include: 'scripts/COJO/Snakefile'
+include: 'scripts/mtCOJO/Snakefile'
+include: 'scripts/GREML/Snakefile'
+include: 'scripts/LDAK/Snakefile'
+include: 'scripts/BW_PGS/Snakefile'
+include: 'scripts/GxG/Snakefile'
+include: 'scripts/ADCY5/Snakefile'
+include: 'scripts/figures/Snakefile'
+include: 'scripts/MR_repr_phenos/Snakefile'
+include: 'scripts/growth_PGS/Snakefile'
 rule all:
 	'Collect all result files.'
 	input:
-		expand('/mnt/work2/pol/metaGWAS/FINEMAP/results/{pheno}.snp', pheno= pheno_nms),
-		'/mnt/work2/pol/metaGWAS/processed_data/ids/autosomes_IDS.txt',
-		expand('/mnt/work2/pol/metaGWAS/HLA/data/{cohort}.bgl.phased.vcf.gz', cohort= cohort_nms),
-                '/mnt/work2/pol/metaGWAS/pheno/pheno_all.txt',
-		expand('/mnt/work2/pol/metaGWAS/HLA/results/{pheno}.txt', pheno= pheno_nms),
-		expand('/mnt/work2/pol/metaGWAS/HLA/plots/manhattan_{pheno}.pdf', pheno= pheno_nms),
+		'/mnt/work2/pol/metaGWAS/pheno/pheno_trio.txt',
+#		expand('/mnt/work2/pol/metaGWAS/PGS/GA/GRS/GA_GRS_{sample}.txt', sample= sample_nms),
+#		expand('/mnt/work2/pol/metaGWAS/PGS/GA/GRS/GA_{haplo}.txt', haplo= ['h1', 'h2', 'h3', 'h4']),
+#		'/mnt/work2/pol/metaGWAS/processed_data/ids/autosomes_IDS.txt',
 #		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.bed',
 #		'/mnt/work2/pol/metaGWAS/LDSCORE/ldscores/MOBAGENETICS.l2.ldscore.gz'
-#		expand('/mnt/work2/pol/metaGWAS/processed_data/haplotypes/{haplo}_PREG_ID', haplo= ['h1', 'h2', 'h3', 'h4']),
-#		'/mnt/work2/pol/metaGWAS/results/effect_origin.txt'
+#		expand('/mnt/work2/pol/metaGWAS/effect_origin/single_variant/processed_data/haplotypes/{haplo}_PREG_ID', haplo= ['h1', 'h2', 'h3', 'h4']),
+#		'/mnt/work2/pol/metaGWAS/effect_origin/results/MoBaGENETICS.txt',
+		expand('/mnt/work2/pol/metaGWAS/cojo/results/{pheno}.jma', pheno= ['GAraw', 'allPTD', 'postTerm']),
+#		'/mnt/work2/pol/metaGWAS/GREML/data/GREML/GAraw_h2_REML.txt',
+#		'/mnt/work2/pol/metaGWAS/LDAK/h2/results_allchrs.txt',
+		expand('/mnt/work2/pol/metaGWAS/mtCOJO/results/{BW_pheno}_GA.mtcojo.cma', BW_pheno= BW_pheno_nms),
+		expand('/mnt/work2/pol/metaGWAS/mtCOJO/results/GA_{BW_pheno}.mtcojo.cma', BW_pheno= BW_pheno_nms),
+		expand('/mnt/work2/pol/metaGWAS/PGS/BW/independent/MOBA_{sample}_BW_fetal_effect.clumped', sample= sample_nms),
+		expand('/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_fetal_effect_GRS_{sample}.txt', sample= sample_nms),
+		'/mnt/work2/pol/metaGWAS/GxE_BW/results/GAraw.txt',
+		expand('/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_{haplo}.txt', haplo= ['h1', 'h2', 'h3', 'h4']),
+		expand('/mnt/work2/pol/metaGWAS/mtCOJO/results/{BW_pheno}_GA_fetal.mtcojo.cma', BW_pheno= BW_pheno_nms),
+		'/mnt/work2/pol/metaGWAS/ADCY5/processed_data/haplotypes/h1_PREG_ID',
+		expand('/mnt/work2/pol/metaGWAS/ADCY5/processed_data/dosages/{sample}_DS3', sample= sample_nms),
+#		'/mnt/work2/pol/metaGWAS/figures/data/ADCY5_individual_level.txt',
+		'/mnt/work2/pol/metaGWAS/figures/data/MR_repr_phenos.txt',
+		'/mnt/work2/pol/metaGWAS/figures/data/MR_BW.txt',
+		expand('/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_{haplo}.txt', haplo= ['h1', 'h2', 'h3', 'h4'], repr_trait= repr_trait_nms),
+		expand('/mnt/work2/pol/metaGWAS/MR/GRS/final/{repr_trait}_GRS_{sample}.txt', sample= sample_nms, repr_trait= repr_trait_nms),
+		'/mnt/work2/pol/metaGWAS/figures/data/MR_repr_phenos_GA_fetal.txt',
+		'/mnt/work2/pol/metaGWAS/figures/data/MR_repr_phenos_individual_level.txt',
+		'/mnt/work2/pol/metaGWAS/MR/MVMR/data/corr_matrix/norsid_rho.ld',
+		'/mnt/work2/pol/metaGWAS/haplotype_analysis/pheno/spont_GA.txt',
+		'/mnt/work2/pol/metaGWAS/haplotype_analysis/rsids/GAraw.txt',
+		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_GRS_{sample}_{haplotype}.txt', sample= sample_nms, haplotype= ['MT', 'MnT', 'PT']),
+		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_{haplotype}_{haplo}.txt', haplotype= ['MT', 'MnT', 'PT'], haplo= ['h1', 'h2', 'h3', 'h4'])
 
 def selectUnrelated(input_kin, df, x):
 	kin= pd.read_csv(input_kin, header= 0, sep= '\t')
-	kin= kin.loc[kin.Kinship > 0.0884, :]
+	kin= kin.loc[kin.Kinship > 0.125, :]
 	kin= kin.loc[kin.ID1.isin(x.values)]
 	kin= kin.loc[kin.ID2.isin(x.values)]
 	kin= kin.loc[:, ['ID1','ID2','Kinship']]
@@ -47,60 +86,84 @@ def selectUnrelated(input_kin, df, x):
 	remove['IID']= remove.FID
 	return remove
 
-rule FID_IID:
-	'Extract FID and IID from .fam file.'
-	input:
-                '/mnt/archive/HARVEST/delivery-fhi/data/genotyped/m12/m12-genotyped.fam',
-                '/mnt/archive/HARVEST/delivery-fhi/data/genotyped/m24/m24-genotyped.fam',
-                '/mnt/archive/ROTTERDAM1/delivery-fhi/data/genotyped/genotyped.fam',
-                '/mnt/archive/ROTTERDAM2/delivery-fhi/data/genotyped/genotyped.fam',
-                '/mnt/archive/NORMENT1/delivery-fhi/data/genotyped/feb18/genotyped.fam',
-                '/mnt/archive/NORMENT1/delivery-fhi/data/genotyped/may16/genotyped.fam'
-	output:
-		temp('/mnt/work2/pol/metaGWAS/pheno/{cohort}_all_ids.txt')
-	run:
-		if 'harvestm12' == wildcards.cohort: parameter= {input[0]}
-                if 'harvestm24' == wildcards.cohort: parameter= {input[1]}
-                if 'rotterdam1' == wildcards.cohort: parameter= {input[2]}
-                if 'rotterdam2' == wildcards.cohort: parameter= {input[3]}
-                if 'normentfeb' == wildcards.cohort: parameter= {input[4]}
-                if 'normentmay' == wildcards.cohort: parameter= {input[5]}
-		shell('cut -f1,2 -d" " {parameter} > {output[0]}')
-
 rule phenofile:
         'Merge all data necessary to create a phenotype file for spontaneous delivery and PROM.'
         input:
-                '/mnt/work/pol/{cohort}/pheno/{cohort}_mfr.csv',
-                '/mnt/work/pol/{cohort}/pheno/{cohort}_linkage.csv',
-                '/mnt/work/pol/{cohort}/pheno/flag_list.txt',
-                '/mnt/work/pol/{cohort}/pca/pca_exclude.txt',
-		'/mnt/work2/pol/metaGWAS/pheno/{cohort}_all_ids.txt'
+                '/mnt/work/pol/rotterdam2/pheno/rotterdam2_mfr.csv',
+		'/mnt/work/pol/MOBAGENETICS/PREG_ID_to_IID.txt',
+		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/flaglist-merged/mobagen-flaglist-n99259.txt',
+		'/mnt/work/pol/MOBAGENETICS/pca_out.txt'
         output:
-                temp('/mnt/work2/pol/metaGWAS/pheno/{cohort}/temp_pheno.txt'),
-		'/mnt/work2/pol/metaGWAS/pheno/maternal_{cohort}_ids.txt'
+                temp('/mnt/work2/pol/metaGWAS/pheno/temp_pheno.txt')
         script:
                 'scripts/pheno_file.R'
 
-rule concat_phenos_PCA:
-	'Concat pheno files, and add PCA.'
+rule add_PCA_remove_related:
+	'Remove related and add PCA.'
 	input:
 		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/pca/mobagen-total/mobagen-total-proj-pc',
 		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/pedigree/mobagen-ethnic-core-samples.kin0',
-		expand('/mnt/work2/pol/metaGWAS/pheno/{cohort}/temp_pheno.txt', cohort= cohort_nms)
+		'/mnt/work2/pol/metaGWAS/pheno/temp_pheno.txt'
 	output:
-		'/mnt/work2/pol/metaGWAS/pheno/pheno_all.txt',
-		'/mnt/work2/pol/metaGWAS/pheno/covars_all.txt'
+		'/mnt/work2/pol/metaGWAS/pheno/pheno_trio.txt',
+		'/mnt/work2/pol/metaGWAS/pheno/pheno_moms.txt',
+		'/mnt/work2/pol/metaGWAS/pheno/pheno_fets.txt',
+		'/mnt/work2/pol/metaGWAS/pheno/pheno_dads.txt'
 	run:
-		df_list= list()
-		flist= [infile for infile in input if 'pheno' in infile]
-		for infile in flist:
-			x= pd.read_csv(infile, sep= '\t', header= 0)
-			df_list.append(x)
-		d= pd.concat(df_list)
+		d= pd.read_csv(input[2], header= 0, sep= '\t')
 		pca= pd.read_csv(input[0], header= 0, sep= '\t')
-                remove= selectUnrelated(input[1], d, d.IID)
-                d= d[~d.IID.isin(remove)]
-                d= pd.merge(d, pca, how= 'left', on= 'IID')
-                d.fillna('NA', inplace= True)
-                d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['IID', 'allPTD', 'earlyPTD', 'postTerm', 'GAraw', 'GAnrm'])
-                d.to_csv(output[1], sep= '\t', header= True, index= False, columns= ['IID', 'PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8', 'PC9', 'PC10', 'cohort'])
+		remove= selectUnrelated(input[1], d, d.Mother)
+		d['Mother']= np.where(d.Mother.isin(remove), np.nan, d.Mother)
+		remove= selectUnrelated(input[1], d, d.Child)
+		d['Child']= np.where(d.Child.isin(remove), np.nan, d.Child)
+		remove= selectUnrelated(input[1], d, d.Father)
+		d['Father']= np.where(d.Father.isin(remove), np.nan, d.Father)
+		moms= pd.merge(d, pca, how= 'left', left_on= 'Mother', right_on= 'IID')
+		fets= pd.merge(d, pca, how= 'left', left_on= 'Child', right_on= 'IID')
+		dads= pd.merge(d, pca, how= 'left', left_on= 'Father', right_on= 'IID')
+		d= pd.merge(d, pca, how= 'left', left_on= 'Child', right_on= 'IID')
+		d.dropna(subset= ['Child', 'Mother'], inplace= True)
+		d.fillna('NA', inplace= True)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+		moms.to_csv(output[1], sep= '\t', header= True, index= False)
+		fets.to_csv(output[2], sep= '\t', header= True, index= False)
+		dads.to_csv(output[3], sep= '\t', header= True, index= False)
+
+rule phenofile_full_cohort:
+	''
+	input:
+		'/mnt/work/pol/rotterdam2/pheno/rotterdam2_mfr.csv',
+                '/mnt/work/pol/MOBAGENETICS/PREG_ID_to_IID.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/flaglist-merged/mobagen-flaglist-n99259.txt',
+                '/mnt/work/pol/MOBAGENETICS/pca_out.txt'
+	output:
+		temp('/mnt/work2/pol/metaGWAS/haplotype_analysis/pheno/temp_pheno.txt')
+	script:
+		'scripts/pheno_file.R'
+
+rule add_PCA_full_cohort:
+	''
+	input:
+		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/pca/mobagen-total/mobagen-total-proj-pc',
+                '/mnt/work2/pol/metaGWAS/haplotype_analysis/pheno/temp_pheno.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/haplotype_analysis/pheno/spont_GA.txt'
+	run:
+		d= pd.read_csv(input[1], header= 0, sep= '\t')
+		pca= pd.read_csv(input[0], header= 0, sep= '\t')
+		fets= pd.merge(d, pca, how= 'left', left_on= 'Child', right_on= 'IID')
+		fets= fets[['Child', 'SVLEN_UL_DG', 'PARITY', 'cohort', 'PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8', 'PC9', 'PC10']]
+		fets.dropna(inplace= True)
+		fets.columns= ['IID', 'SVLEN_UL_DG', 'PARITY', 'cohort', 'PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'PC7', 'PC8', 'PC9', 'PC10']
+		fets.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule rsids_haplotype:
+	'Extract list of top rsids for haplotype based analysis.'
+	input:
+		'/mnt/work2/pol/metaGWAS/topregions/top_variants/GAraw.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/haplotype_analysis/rsids/GAraw.txt'
+	shell:
+		'cut -f7 {input[0]} > {output[0]}'
+
+	
