@@ -1,0 +1,36 @@
+SCHEME   SAMPLESIZE
+
+AVERAGEFREQ ON
+MINMAXFREQ ON
+FREQLABEL EAF 
+
+CUSTOMVARIABLE TOTALSAMPLESIZE
+
+LABEL TOTALSAMPLESIZE AS N
+
+MARKER ID
+ALLELE EFF REF
+EFFECT BETA
+STDERR SE
+PVALUE P
+WEIGHT N
+SEPARATOR TAB
+
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/DECODE_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/MOBAGENETICS_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/HUNT_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/ALSPAC_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/CHOP_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/NFBC1966_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/STORK_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/STORKGROR_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/DNBCPTD_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/DILT1DGC_rec.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/GAraw/final/WTCCC58BCWTCCC58BC_rec.txt
+
+OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/meta_GAraw_rec_ .txt
+
+ANALYZE HETEROGENEITY
+
+QUIT
+

@@ -1,0 +1,292 @@
+---
+author: "Pol Sole-Navais"
+date: "`r paste('Report date:', format(Sys.time(), '%d %B, %Y'))`"
+output: tint::tintPdf
+link-citations: yes
+latex_engine: xelatex
+---
+
+```{r echo=F, include= F}
+library(tint)
+
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tint'))
+options(htmltools.dir.version = FALSE)
+pdf.options(useDingbats = TRUE)
+#knitr::opts_chunk$set(dpi=300)
+knitr::opts_chunk$set(dev = 'png', warning= FALSE, message= FALSE, dpi= 600)
+cohort= ifelse(grepl('MOBA', snakemake@input[[1]]), 'MoBa', '23andMe')
+pheno= ifelse(grepl('GAraw', snakemake@input[[1]]), 'GA days', 'GA normalized')
+```
+
+
+
+---
+title: "`r paste('Meta-analysis of', pheno, 'using maternal genome without',cohort, '.')`"
+---
+
+
+
+```{r include=FALSE, echo=F}
+library("ggplot2")
+library("dplyr")
+library("knitr")
+library("tidyr")
+library(cowplot)
+library("kableExtra")
+library(ggrepel)
+library("data.table")
+options(warn=-1)
+
+```
+
+# Gestational duration in days
+
+```{r echo=F, fig.margin = TRUE, fig.cap = 'Density plot of minor allele frequency.'}
+
+d= fread(snakemake@input[[1]], h= T)
+d$MAF= ifelse(d$EAF>0.5,  1 - d$EAF, d$EAF)
+
+colorBlindBlack8= c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(d, aes(MAF)) +
+  geom_density(fill= colorBlindBlack8[4]) +
+theme_cowplot(font_size= 12) +
+xlab('MAF')
+
+#d= select(d, -MAF)
+
+```
+
+```{r echo=F, fig.margin = TRUE, fig.cap = 'Density plot of sample size per genetic variant.'}
+
+
+ggplot(d, aes(TOTALSAMPLESIZE)) +
+  geom_density(fill= colorBlindBlack8[3]) +
+theme_cowplot(font_size= 12) +
+xlab('Sample size')
+
+
+```
+
+```{r echo=F, fig.margin = TRUE, fig.cap = 'Density plot of beta estimates.'}
+
+
+ggplot(d, aes(BETA)) +
+  geom_density(fill= colorBlindBlack8[2]) +
+theme_cowplot(font_size= 12) +
+xlab('Beta')
+
+
+```
+
+
+# Summary  
+
+We conducted fixed effect inverse-variance weighted meta-analysis of `r pheno` on `r max(d$TOTALSAMPLESIZE)` women using METAL and excluding `r cohort`. This report contains the results obtained after QC. A total of `r nrow(d)` genetic variants are described in this report.  
+
+For binary traits, we only included cohorts with an effective sample size> 100.  
+```{marginfigure}
+**Effective sample size** for binary phenotypes was calculated as:  
+$$\frac{2}{(\frac{1}{Ncases} + \frac{1}{Ncontrols})}$$  
+
+```
+
+Per-study genetic variants were included if:  
+- MAF> 0.5%  
+- MAC> 6  
+- Allele matching with HRC or 1KG (restricted to white Europeans)  
+- Imputation score> 0.4  
+- 0 < P-value < 1  
+- Expected pvalue (calculated from z-score) and reported pvalue do not differ more than 10%  
+- Effect allele frequency differs less than 0.2 compared to HRC or 1KG (restricted to white Europeans)  
+
+
+```{r, echo=F}
+ge= data.frame(CHR= c(5, 3, 1, 23, 1), pos_ge= c(157895049, 127881613, 22470407, 115164770, 22470407))
+
+
+if (grepl('GAraw', snakemake@input[[1]])){
+topids= c('1:22462111:A:G', '3:128038373:A:C', '5:157896786:C:T', '23:115184372:A:C', '1:228216997:A:C', '3:123112292:C:T', '3:141147414:C:T', '3:155859113:A:G', '23:131268226:C:T', '2:74207357:A:G', '4:174734471:A:G', '6:32589937:A:G', '6:49559793:G:T', '9:16408826:A:G', '20:62692060:A:C')
+
+} else {
+topids= c('1:22414785:G:T', '5:157895049:C:T', '23:115129904:C:T', '1:41955090:A:G', '1:50959262:A:C', '3:14293832:A:G', '3:139004333:A:G', '3:141147414:C:T', '3:155862524:A:G', '3:156697097:A:G', '2:74253326:A:G', '4:55895282:C:T', '4:174739258:A:G', '6:32604898:A:G', '8:75315146:C:G', '9:116935764:C:G')
+}
+fullmeta= fread(snakemake@input[[3]])
+fullmeta= filter(fullmeta, ID %in% topids) %>% select(ID, POS, CHR, BETA, SE, pvalue)
+names(fullmeta)= c('ID_f', 'POS_f', 'CHR_f', 'BETA_f', 'SE_f', 'pvalue_f')
+ 
+```
+
+\newpage  
+
+
+# Manhattan plot  
+
+
+We identified independent loci as genetic variants within a radius of 250kb from the lead SNP (p-value< 5x10^-8^). Previous discoveries for either gestational duration or preterm delivery were obtained from the previous largest [GWAS](https://www-nejm-org.ezproxy.ub.gu.se/doi/full/10.1056/nejmoa1612665) on the outcome.  
+```{marginfigure}
+The same number of loci is obtained when using a larger radius (1.5Mb).
+```
+
+```{marginfigure}
+We note that we used a naive approach to identify independent loci. This should be interpreted cautiously.
+
+```
+
+
+```{r, echo=F, fig.align = "center", fig.width= 10, fig.fullwidth=TRUE, fig.height= 4, dpi= 600, fig.cap= 'Manhattan plot'}
+
+df= arrange(d, pvalue)
+
+df= df[!duplicated(df[, c('CHR', 'POS')]), ]
+
+dg= df %>% arrange(CHR, POS) %>% filter(pvalue< 5*10**-8) %>% group_by(CHR) %>%
+		mutate(d=POS-lag(POS, default=-Inf), clumpid=cumsum(d>250000)) %>%
+		group_by(CHR, clumpid) %>%
+		filter(rank(pvalue, ties.method = "random")==1) %>%
+		mutate(GENE= nearestGene) %>%
+		ungroup()
+
+dg= group_by(dg, CHR, POS) %>% filter(row_number()== 1)
+
+
+  don <- df %>%
+    group_by(CHR)      %>%
+    summarise(chr_len= max(POS)) %>%
+    mutate(tot= cumsum(as.numeric(chr_len))-chr_len) %>% # Calculate cumulative position of each chromosome
+    select(-chr_len) %>%
+    left_join(df, ., by= 'CHR') %>%
+    arrange(CHR, POS) %>% # Add a cumulative position of each SNP
+    mutate( BPcum=POS+tot) %>%
+	 ungroup()
+
+  axisdf = don %>% group_by(CHR) %>% summarize(center=( max(BPcum) + min(BPcum) ) / 2 )
+  names(axisdf)= c('CHR', 'center')
+HC= -log10(5*10**-8)
+dg= dg %>% ungroup() %>% select(ID, GENE, CHR, POS, MAF, BETA)
+don= left_join(don, select(dg, ID, GENE), by= 'ID')
+names(dg)= c('ID', 'GENE', 'CHR', 'POS_new', 'MAF', 'BETA')
+don= left_join(don, fullmeta, by= c('CHR'= 'CHR_f'))
+
+lims= 250000
+
+don$disc= ifelse((don$POS> don$POS_f - lims) & (don$POS < don$POS_f + lims), 2, 0)
+don= don[order(don$disc, decreasing= T, na.last= T), ]
+don= group_by(don, ID) %>% filter(row_number() == 1)
+don$disc= ifelse(is.na(don$disc), 0, don$disc)
+
+don= left_join(don, select(dg, CHR, POS_new), by= 'CHR')
+
+don$disc= ifelse(don$disc== 2, 2, ifelse((don$POS> (don$POS_new - lims)) & (don$POS < (don$POS_new + lims)), 1, 0))
+don$disc= ifelse(is.na(don$disc), 0, don$disc)
+don= don[order(don$disc, decreasing= T, na.last= T), ]
+don= group_by(don, ID) %>% filter(row_number() == 1)
+
+don$disc= ifelse(is.na(don$disc), 0, ifelse(don$disc== 1, 2, ifelse(don$disc== 2, 1, 0)))
+don= don[order(don$disc, decreasing= F, na.last= T), ]
+
+don$disc= factor(don$disc, levels=c(0, 1, 2), labels=c('Not significant', 'Full meta discovery', 'New discovery'))
+
+cols <- c('Not significant'= 'grey', 'Full meta discovery'= colorBlindBlack8[4], 'New discovery'= colorBlindBlack8[2])
+
+
+
+ggplot(don) +
+    geom_point(data= don, aes(x=BPcum, y= -log10(pvalue), colour= disc), size=0.3) +   # Show all points
+theme_cowplot(font_size= 12) + #theme_minimal_hgrid(12, rel_small = -1) + 
+#scale_alpha_manual(values= rep(c(1/10, 1/2), 23)) +
+scale_colour_manual(values= cols) +
+    scale_x_continuous(label = axisdf$CHR, breaks= axisdf$center, expand=c(0,0) ) + # custom X axis
+scale_y_continuous(expand= c(0,0)) +
+         xlab('Chromosome') +
+    ylab('-log10(pvalue)') +
+labs(colour= '') +
+geom_hline(yintercept= 0, size= 0.5, colour= 'black') +
+geom_hline(yintercept= HC, size= 0.5, linetype= 2, colour= '#878787') +
+geom_text_repel(data= don, aes(x= BPcum, y= -log10(pvalue), label= GENE), size= 3, hjust= 1, force= 1, vjust= 1, colour= 'black') +
+theme(legend.position= 'bottom') +
+guides(colour = guide_legend(override.aes = list(size=3)))
+```
+
+# QQplot by minor allele frequency  
+
+```{r, echo=F, fig.align = "center", fig.width= 5, dpi= 600, fig.cap= 'QQ-plot by MAF tertiles'}
+
+d= mutate(d, maf_tertiles = ntile(MAF, 3))
+m1= round(max(d[d$maf_tertiles== 1, 'MAF']), 3)
+m2= round(max(d[d$maf_tertiles== 2, 'MAF']), 3)
+
+
+d$maf_tertiles= factor(d$maf_tertiles, levels=c("1", "2", "3"), labels=c(paste('MAF<', m1), paste(m1,'< MAF >', m2), paste('MAF>', m2)))
+
+df= arrange(d, pvalue) %>% group_by(maf_tertiles) %>% mutate(exp1= -log10(1:length(pvalue)/length(pvalue)))
+
+ggplot(filter(df, pvalue<0.05), aes(exp1, -log10(pvalue), color= maf_tertiles)) +
+  geom_point(size= 0.4) +
+scale_color_manual(values= colorBlindBlack8[2:4])+ 
+  geom_abline(intercept = 0, slope = 1, alpha = .5) +
+labs(colour="") +
+theme_cowplot(font_size= 12) +
+xlab('Expected (-log10(p-value))') +
+ylab('Observed (-log10(p-value))') +
+theme(legend.position= 'bottom') +
+guides(colour = guide_legend(override.aes = list(size=3)))
+
+```
+
+
+\pagebreak
+
+# Top genetic variants from each locus  
+
+```{r echo=F}
+don= filter(don, pvalue< 1*10**-4)
+d1= filter(don, pvalue<5*10**-8)
+d1$pvalue= format(d1$pvalue, digits= 3)
+don$pvalue= format(don$pvalue, digits= 3)
+kable(filter(d1, GENE!= '') %>% select(ID, RSID, GENE, TOTALSAMPLESIZE, EAF, BETA, SE, pvalue), col.names= c('CHR:POS:REF:EFF', 'RSID', 'Gene', 'N', 'EAF', 'Beta', 'SE', 'P-value'), digits= 3)
+caption= 'As expected, beta increases with decreasing minor allele frequency.'
+
+
+```
+
+# Effect full meta vs Effect without MoBa  
+
+
+
+```{r, echo=F, fig.cap= "Effect size comparison.", fig.align = "center", fig.width= 8, fig.height= 7, dpi= 600}
+
+x= inner_join(fullmeta, d, by= c('ID_f'= 'ID'))
+
+
+(ggplot(x, aes(BETA_f, BETA, size= abs(BETA)),  alpha= 0.7) +
+geom_point(colour= colorBlindBlack8[4]) +
+theme_cowplot(font_size= 12) +
+scale_size_continuous(name= 'Absolute Beta', guide= F) +
+geom_text_repel(data= x, aes(label= RSID), guide= F) +
+xlab('Effect size full meta-analysis') +
+ylab(paste('Effect size without', cohort))+ 
+geom_abline(intercept= 0, slope= 1, linetype= 'dashed', colour= 'grey')) %>% print()
+
+
+```
+
+# P-value full meta vs P-value without MoBa  
+
+
+
+```{r, echo=F, fig.cap= "Pvalue comparison.", fig.align = "center", fig.width= 8, fig.height= 7, dpi= 600}
+
+
+(ggplot(x, aes(-log10(pvalue_f), -log10(pvalue)),  alpha= 0.7) +
+geom_point(colour= colorBlindBlack8[4]) +
+theme_cowplot(font_size= 12) +
+geom_text_repel(data= x, aes(label= RSID), guide= F) +
+xlab('-log10(pvalue) full meta-analysis') +
+ylab(paste('-log10(pvalue) without', cohort))+ 
+geom_abline(intercept= 0, slope= 1, linetype= 'dashed', colour= 'grey')) %>% print()
+
+
+```
+
+

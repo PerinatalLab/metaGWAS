@@ -1,0 +1,37 @@
+SCHEME   STDERR
+
+AVERAGEFREQ ON
+MINMAXFREQ ON
+FREQLABEL EAF 
+
+CUSTOMVARIABLE TOTALSAMPLESIZE
+
+LABEL TOTALSAMPLESIZE AS N
+
+MARKER SNP
+ALLELE EFF REF
+EFFECT BETA
+STDERR SE
+PVALUE pvalue 
+WEIGHT N
+SEPARATOR TAB
+
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DECODE.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/HUNT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/MOBAGENETICS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DBDS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/EGCUT.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/ALSPAC.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DNBCGOYACASES.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DNBCGOYACONTROLS.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/DILT1DGC.txt
+#PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/postTerm/filtered/WTCCC58c.txt
+
+
+
+OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_postTerm_ .txt
+
+ANALYZE HETEROGENEITY
+
+QUIT
+

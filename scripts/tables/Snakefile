@@ -1,0 +1,135 @@
+rule Table1:
+	'Supplementary table with index SNPs.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/allPTD.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/postTerm.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/Table1.txt'
+	run:
+		d= pd.read_csv(input[0], sep='\t', header= 0)
+		x= pd.read_csv(input[1], sep= '\t', header= 0)
+		x['pheno']= 'Gestational duration'
+		ptd= pd.read_csv(input[2], sep= '\t', header= 0)
+		ptd['pheno']= 'Preterm delivery'
+		postterm= pd.read_csv(input[3], sep= '\t', header= 0)
+		postterm['pheno']= 'Post term delivery'
+		gID= ['3:156697097:A:G', '5:158058432:G:T']
+		d= d.loc[d.ID.isin(gID), :]
+		d= pd.concat([x, d])
+		d= pd.concat([d, ptd])
+		d= pd.concat([d, postterm])
+		d.sort_values('ID', inplace= True)
+		d.to_csv(output[0], header= True, index= False, sep= '\t')
+
+
+rule extra_table1:
+	'Supplementary table with effects for index SNPs on other phenotypes.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/Table1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/Table1_extra_{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		x= pd.read_csv(input[1], sep= '\t', header= 0)
+		d= pd.merge(d[['ID', 'pheno']], x, on= 'ID', how= 'inner')
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule dominance_effects:
+	'Supplementary table with dominance effects for index SNPs.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/Table1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/Maternal_GWAMA_GAraw_dom.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/nonadditive/META/Maternal_GWAMA_GAraw_rec.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/Table1_dominant.txt',
+		'/mnt/hdd/common/pol/metaGWAS/Tables/Table1_recessive.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+                x= pd.read_csv(input[1], sep= '\t', header= 0)
+                d= pd.merge(d[['ID', 'pheno']], x, on= 'ID', how= 'left')
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+                x= pd.read_csv(input[2], sep= '\t', header= 0)
+                d= pd.merge(d[['ID', 'pheno']], x, on= 'ID', how= 'left')
+                d.to_csv(output[1], sep= '\t', header= True, index= False)
+
+rule Supp_table_maternal_fetal_effects:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/GAraw/pph_GA_fetal.txt',
+                '/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt',
+                '/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/Tables/Maternal_fetal_effects.txt'
+        run:
+                d= pd.read_csv(input[1], sep= '\t', header= 0)
+                d= d.rename(columns = {'MarkerName':'ID'})
+                coloc= pd.read_csv(input[0], sep= '\t', header= 0)
+                top= pd.read_csv(input[2], sep= '\t', header= 0, usecols= ['ID', 'nearestGene', 'RSID'])
+                top= top.append({'ID': '5:158058432:G:T', 'nearestGene': 'EBF1', 'RSID': 'rs6780427'}, ignore_index= True)
+                top= top.append({'ID': '3:156697097:A:G', 'nearestGene': 'KCNAB1', 'RSID': 'rs6879092'}, ignore_index= True)
+                d= pd.merge(d, top, on= 'ID')
+		coloc[['CHR', 'locus']]= coloc['locus'].str.split('_', expand= True)
+		d= pd.merge(d, coloc, left_on= 'nearestGene', right_on= 'locus', how= 'left')
+		d[['CHR', 'POS', 'REF', 'EFF']]= d['ID'].str.split(':', expand= True)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule table_ADCY5_phewas:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/ADCY5_PheWas.txt',
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/ADCY5_PheWas.txt'
+	shell:
+		'''
+		cp {input[0]} {output[0]}
+		'''
+
+rule table_ADCY5_eqtl_catalog:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/results/pph_GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/iPSC2/pph_GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/ADCY5_eQTL.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		x= pd.read_csv(input[1], sep= '\t', header= 0)
+		x['eqtl_data']= 'iPSC'
+		d= pd.concat([d, x,])
+		df= pd.read_csv(input[2], sep= '\t', header= None, names= ['chr', 'pos1', 'pos2', 'Gene_symbol', 'EID'], usecols= ['Gene_symbol', 'EID'])
+		df['EID']= df['EID'].str.split('.').str[0]
+		d= pd.merge(d, df, left_on= 'gene', right_on= 'EID')
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+		
+
+rule table_rg_males:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/GAraw_rg_temp',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/allPTD_rg_temp'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/Genetic_correlations_males.txt'
+	script:
+		'genetic_correlations_males.R'
+
+rule table_sample_size:
+	''
+	input:
+		pheno_cohorts
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/sample_size_{pheno}.txt'
+	run:
+		df_list= list()
+		for i in input:
+			d= pd.read_csv(i, sep= '\t', header= 0, usecols= ['CHR', 'N'])
+			coh= i.split('filtered/')[1].replace('.txt', '')
+			df_dict= pd.DataFrame({'cohort': coh, 'N': d.N.max()}, index= [0])
+			df_list.append(df_dict)
+		d= pd.concat(df_list)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+

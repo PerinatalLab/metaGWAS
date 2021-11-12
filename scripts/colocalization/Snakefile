@@ -1,0 +1,90 @@
+
+
+rule colocalization:
+	'Run coloc using reproductive traits.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/final/{pheno}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/colocalization/{pheno}/pph_{repr_pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/colocalization/{pheno}/results_{repr_pheno}.txt'
+	conda:
+		'environments/coloc.yml'
+	script:
+		'coloc.R'
+
+rule concat_coloc_pph:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/colocalization/{{pheno}}/pph_{repr_pheno}.txt', repr_pheno= repr_pheno_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/colocalization/{pheno}/pph_allpheno.txt'
+	run:
+		df_list= list()
+		for i in input:
+			d= pd.read_csv(i, sep= '\t', header= 0)
+			x= i.split('pph_')[1].replace('.txt', '')
+			d['trait']= x
+			df_list.append(d)
+		d= pd.concat(df_list)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule concat_coloc:
+        ''
+        input:
+                expand('/mnt/hdd/common/pol/metaGWAS/colocalization/{{pheno}}/results_{repr_pheno}.txt', repr_pheno= repr_pheno_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/{pheno}/results_allpheno.txt'
+        run:
+                df_list= list()
+                for i in input:
+                        d= pd.read_csv(i, sep= '\t', header= 0)
+                        x= i.split('results_')[1].replace('.txt', '')
+                        d['trait']= x
+                        df_list.append(d)
+                d= pd.concat(df_list)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule coloc_PTD:
+        'Run coloc using PTD.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_allPTD.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/topregions/final/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/final/allPTD.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/GA/pph_GAraw_allPTD.txt',
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/GA/results_GAraw_allPTD.txt'
+        conda:
+                'environments/coloc.yml'
+        script:
+                'coloc_GA_vs_PTD.R'
+
+rule coloc_GW_PTD_GA:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_allPTD.txt.gz',
+		'/mnt/hdd/common/pol/references/approx_LD_blocks.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/colocalization/GA/GW/pph_GAraw_allPTD.txt',
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/GA/GW/results_GAraw_allPTD.txt'
+	conda:
+		'environments/coloc.yml'
+	script:
+		'coloc_GA_vs_PTD_GW.R'
+
+rule coloc_GW_BW_GA:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_maternal_effect.txt',
+                '/mnt/hdd/common/pol/references/approx_LD_blocks.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/BW/GW/pph_GAraw_BW.txt',
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/BW/GW/results_GAraw_BW.txt'
+        conda:
+                'environments/coloc.yml'
+        script:
+                'coloc_BW_GA_GW.R'

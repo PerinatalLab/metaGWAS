@@ -1,0 +1,26 @@
+
+rule LCV:
+	'Perform Latent Causal Variable analysis for correlated traits.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/{pheno}.txt.sumstats.gz',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/{repr_pheno}.txt.sumstats.gz',
+		'/home/pol/software/ldsc/allCHR_eur_w_ld_chr/all_chr_eur_w_ld.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LCV/results/{pheno}/{repr_pheno}_LCV.txt'
+	params:
+		'/home/pol/software/LCV/R/RunLCV.R',
+		'/home/pol/software/LCV/R/'
+	script:
+		'LCV.R'
+
+rule concat_LCV:
+	'Concat results from Latent Causal Variable analysis.'
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/LCV/results/{{pheno}}/{repr_pheno}_LCV.txt', repr_pheno= repr_pheno_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LCV/results/repr_pheno/{pheno}_LCV.txt'
+	shell:
+		'''
+		head -1 {input[0]} > {output[0]}
+                tail -n +2 -q {input} >> {output[0]}
+		'''

@@ -1,0 +1,64 @@
+import scipy.stats as st
+import pandas as pd
+import numpy as np
+
+
+rule expression_differences_stromal_cells:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/references/stromal_cell_maps/rna-seq-pooled/CL{sample}-{condition}.txt', sample= [1, 2, 3], condition= ['dec', 'unt'])
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/stromal_cells/rna-seq/diff_expression.txt'
+	params:
+		'/mnt/hdd/common/pol/references/stromal_cell_maps/rna-seq-pooled/'
+	conda:
+		'environments/deseq2_environment.yml'
+	script:
+		'rna_seq_dif.R'
+
+
+rule enrichment_RNA_differentiation:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt',
+		'/mnt/hdd/common/pol/metaGWAS/stromal_cells/rna-seq/diff_expression.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/stromal_cells/RNA_decidualization_{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID'])
+                x= pd.read_csv(input[1], sep= '\t', header= None, names= ['CHR', 'start', 'end', 'gene', 'EnsembleID'])
+		stromal= pd.read_csv(input[2], sep= '\t', header= 0)
+		stromal.dropna(subset= ['pvalue'], inplace= True)
+		x= x.loc[x.gene.isin(stromal.geneid.values), :]
+		stromal= stromal.loc[stromal.geneid.isin(x.gene.values), :]
+                df= pd.merge(d, x, on= 'CHR')
+                dist= 250000
+		df= df.loc[((df.POS> df.start - dist) & (df.POS>= df.end + dist)), :]
+		down= stromal.loc[((stromal.pvalue<= 0.05 / stromal.shape[0]) & (stromal.log2FoldChange< 1.2)), :]
+		up= stromal.loc[((stromal.pvalue<= 0.05/ stromal.shape[0]) & (stromal.log2FoldChange>= 1.2)), :]
+		strom= stromal.loc[(stromal.pvalue<= 0.05/stromal.shape[0]), :]
+		q= df.loc[df.gene.isin(down.geneid.values), :].shape[0] # number of white balls drawn without replacement from an urn which contains both black and white balls
+                m= down.shape[0] # the number of white balls in the urn
+                n= x.shape[0] - df.loc[df.gene.isin(down.geneid.values), :].shape[0] # the number of black balls in the urn.
+                k= d.loc[~d.ID.isin(df.ID), :].shape[0] + df.shape[0] #d.shape[0] # the number of balls drawn from the urn, hence must be in 0,1,..., m+n.
+                oddsratio, pvalue = st.fisher_exact([[q, m - q ],[k - q, n - m - k + q]], alternative= 'greater')
+                z= ['down_RNA_decidualization', q / (m -q), (k - q ) / (n - m - k + q), oddsratio, pvalue]
+		with open(output[0], 'w') as file_handler:
+                        file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+		q= df.loc[df.gene.isin(up.geneid.values), :].shape[0] # number of white balls drawn without replacement from an urn which contains both black and white balls
+                m= up.shape[0] # the number of white balls in the urn
+                n= x.shape[0] - m # the number of black balls in the urn.
+                k= d.loc[~d.ID.isin(df.ID), :].shape[0] + df.shape[0] #d.shape[0] # the number of balls drawn from the urn, hence must be in 0,1,..., m+n.
+                oddsratio, pvalue = st.fisher_exact([[q, m - q ],[k - q, n - m - k + q]], alternative= 'greater')
+                z= ['up_RNA_decidualization', q / (m -q), (k - q ) / (n - m - k + q), oddsratio, pvalue]
+                with open(output[0], 'a') as file_handler:
+                        file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+		q= df.loc[df.gene.isin(strom.geneid.values), :].shape[0] # number of white balls drawn without replacement from an urn which contains both black and white balls
+                m= strom.shape[0] # the number of white balls in the urn
+                n= x.shape[0] - m # the number of black balls in the urn.
+                k= d.loc[~d.ID.isin(df.ID), :].shape[0] + df.shape[0] #d.shape[0] # the number of balls drawn from the urn, hence must be in 0,1,..., m+n.
+                oddsratio, pvalue = st.fisher_exact([[q, m - q ],[k - q, n - m - k + q]], alternative= 'greater')
+                z= ['down_reg_decidualization', q / (m -q), (k - q ) / (n - m - k + q), oddsratio, pvalue]
+                with open(output[0], 'a') as file_handler:
+                        file_handler.write('\t'.join([str(item) for item in z]) + '\n')

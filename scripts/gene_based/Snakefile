@@ -1,0 +1,107 @@
+import pandas as pd
+import numpy as np
+
+
+rule format_gene_UCSC_FASTBAT:
+	'Include only protein-coding genes.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/gene_based_UCSC_gene_cds.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['CHR', 'start', 'end', 'geneSymbol', 'Ensembl_gene'])
+		d= d.loc[~d.geneSymbol.str.contains(' '), :]
+		d= d[['CHR', 'start', 'end', 'geneSymbol']]
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+
+rule select_samples_1KG:
+	'Select non-related samples 1KG.'
+	input:
+		'/mnt/hdd/data/geno/references/1000g/populations.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/gene_based/samples_to_extract.txt')
+	run:
+		d= pd.read_csv(input[0], sep='\t', header= 0)
+		pop= ['CEU', 'TSI', 'FIN', 'GBR', 'IBS']
+		d= d.loc[d.Population.isin(pop)]
+		d['IID']= d['Individual ID']
+		d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['IID'])
+
+rule concat_vcf:
+	'Concat vcfs using bcftools.'
+	input:
+		expand('/mnt/hdd/data/geno/references/1000g/phase3_chr{CHR}.vcf.gz', CHR= ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', '23'])
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/allchr.vcf')
+	run:
+		vcfs= [x for x in input if '1000g' in x]
+		shell('/home/pol/software/bcftools-1.9/bcftools concat {input} -o {output[0]} -Oz')
+
+rule vcf_to_bed_KG:
+	'VCF to PLINK BED file format.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/allchr.vcf',
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/samples_to_extract.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/temp/allchr.bed'),
+		temp('/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/temp/allchr.bim'),
+		temp('/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/temp/allchr.fam')
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/temp/allchr'
+	shell:
+		'/home/pol/software/plink2 --vcf {input[0]} --max-alleles 2 --keep {input[1]} --make-bed --out {params[0]}'
+
+rule format_bim_file:
+	'Change bim RS id to CHR:POS:REF:EFF.'
+	input:
+                '/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/temp/allchr.bim',
+                '/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/temp/allchr.bed',
+                '/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/temp/allchr.fam'
+	output:
+                '/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/allchr.bim',
+                '/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/allchr.bed',
+                '/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/allchr.fam'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['CHR', 'RSID', 'cm', 'POS', 'A1', 'A2'])
+		d['REF']= np.where(d.A1.str.len() > d.A2.str.len(), 'I', d.A1)
+		d['EFF']= np.where(d.A2.str.len() > d.A1.str.len(), 'I', d.A2)
+		d['REF']= np.where(d.EFF== 'I', 'D', d.REF)
+		d['EFF']= np.where(d.REF== 'I', 'D', d.EFF)
+		d['RSID']= np.where(d.REF > d.EFF, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.EFF + ':' + d.REF, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.REF + ':' + d.EFF)
+		d= d[['CHR', 'RSID', 'cm', 'POS', 'A1', 'A2']]
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+		shell('mv {input[1]} {output[1]}')
+		shell('mv {input[2]} {output[2]}')
+
+rule format_pvalue:
+	'Format pvalues for fastBAT.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/gene_based/pvalues_{pheno}.txt')
+	run:
+		d= pd.read_csv(input[0], header= 0, sep= '\t', compression= 'gzip', usecols= ['ID', 'pvalue'])
+		d.dropna(subset= ['ID'], inplace= True)
+		d= d.loc[d.ID != '-', :]
+		d= d[['ID', 'pvalue']]
+		d.columns= ['SNP', 'p']
+		d['SNP']= d.SNP.str.replace('^23:', 'X:')
+		d.to_csv(output[0], sep= '\t', header= True, index= None, columns= ['SNP', 'p'])
+
+
+rule fastBAT:
+	'Gene-based test using fastBAT.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/allchr.bed',
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/pvalues_{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/gene_based_UCSC_gene_cds.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/fastBAT_{pheno}.txt.gene.fastbat'
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/1KG/allchr',
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/fastBAT_{pheno}.txt'
+	threads: 10
+	shell:
+		'/home/pol/software/gcta_1.93.2beta/gcta64 --bfile {params[0]} --maf 0.01 --fastBAT {input[1]} --fastBAT-gene-list {input[2]} --out {params[1]} --thread-num {threads}'
+

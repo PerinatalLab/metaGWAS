@@ -1,0 +1,30 @@
+SCHEME   STDERR
+
+AVERAGEFREQ ON
+MINMAXFREQ ON
+FREQLABEL EAF 
+
+CUSTOMVARIABLE TOTALSAMPLESIZE
+
+LABEL TOTALSAMPLESIZE AS N
+
+MARKER SNP
+ALLELE EFF REF
+EFFECT BETA
+STDERR SE
+PVALUE pvalue 
+WEIGHT N
+SEPARATOR TAB
+
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DECODE.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/EGCUT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/HUNT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/DBDS.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/FINNGEN.txt
+
+OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/NLB/meta_allPTD_all_pregnancies_ .txt
+
+ANALYZE HETEROGENEITY
+
+QUIT
+

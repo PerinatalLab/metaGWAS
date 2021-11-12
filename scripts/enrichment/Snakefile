@@ -1,0 +1,149 @@
+
+from functools import reduce
+import pandas as pd
+import numpy as np
+import scipy.stats as st
+import math
+import sys
+
+def enrichment_binary(base, i_list, l0, l1):
+	if ~all(np.isin(i_list, np.concatenate([l0, l1]))):
+		print('Not all the elements in your set of genes are found in the ' + base + ' set of genes.')
+	i_list= [gene for gene in i_list if gene in np.concatenate([l0, l1])]
+	x1= len([gene for gene in l0 if gene not in i_list])
+	x2= len([gene for gene in l1 if gene not in i_list])
+	x3= len([gene for gene in i_list if gene in l0])
+	x4= len([gene for gene in i_list if gene in l1])
+	prop_i= x4 / (x3 + x4)
+	prop_base= x2 / (x1 + x2)
+	xtab= np.array([[x1,x3], [x2, x4]])
+	chi2_pvalue= st.chi2_contingency(xtab)[1]
+	return([base, prop_i, prop_base, chi2_pvalue])
+
+rule select_top:
+	'Select genetic variants with cumulative PP== 0.99.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/FINEMAPPING/results/PP_{pheno}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/variants/{pheno}_CS95.txt',
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/variants/{pheno}_nonCS95.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		top_list= list()
+		non_top_list= list()
+		for lname in set(d.locus):
+			df_temp= d.loc[d.locus== lname, :]
+			df_temp.sort_values(['PP'], ascending= False, inplace= True)
+			df_temp['PPcum']= df_temp.PP.cumsum()
+			top_vars= df_temp.loc[df_temp.PPcum< 0.95, :]
+			non_top= df_temp.loc[df_temp.PPcum>= 0.95, :]
+			top_list.append(top_vars)
+			non_top_list.append(non_top)
+		top= pd.concat(top_list)
+		non_top= pd.concat(non_top_list)
+		top.to_csv(output[0], sep= '\t', header= True, index= False)
+		non_top.to_csv(output[1], sep= '\t', header= True, index= False)
+
+rule enrichment_pLI:
+	'Enrichment in intolerance to heterozygous pLoF variation (pLI).'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt',
+		'/mnt/hdd/common/pol/references/GNOMAD/gnomad.v2.1.1.lof_metrics.by_gene.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/GNOMAD/pLI_{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep='\t', header= 0)
+		pli= pd.read_csv(input[1], header= 0, sep= '\t', usecols= ['gene_id', 'gene', 'chromosome', 'start_position', 'end_position', 'pLI'])[['gene_id', 'gene', 'chromosome', 'start_position', 'end_position', 'pLI']]
+		d= d.loc[d.nearestGene.isin(pli.gene.values), :]
+		pli.columns= ['EID', 'gene', 'CHR', 'start', 'end', 'pLI']
+		pli.dropna(subset= ['pLI'], inplace= True)
+		pli_genes= pli.loc[pli.pLI>= 0.9, 'gene'].values.tolist()
+		df= d.loc[d.nearestGene.isin(pli_genes), :]
+		b= len(pli_genes) - df.shape[0]
+		c= d.shape[0] - df.shape[0]
+		d= df.shape[0]
+		a= pli.shape[0] - b - d - c
+		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+		z= ['pli', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
+		with open(output[0], 'w') as file_handler:
+			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+
+rule enrichment_RNA:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt',
+		'/mnt/hdd/common/pol/references/HCA/rna_consensus.tsv'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/HPA/RNA_{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		rna= pd.read_csv(input[1], sep= '\t', header= 0)
+		rna['GA']= np.where(rna['Gene name'].isin(d.nearestGene.values), 1, 0)
+		rna['NX_rk']= rna.groupby('Gene name')['NX'].rank('average', ascending= True)
+		df_list= list()
+		for tissue in set(rna.Tissue):
+			ilist= rna.loc[((rna.GA== 1) & (rna.Tissue == tissue)), 'NX_rk']
+			base= rna.loc[((rna.GA== 0) & (rna.Tissue == tissue)), 'NX_rk']
+			mannw_pvalue= st.mannwhitneyu(ilist, base, alternative= 'greater')[1]
+			i_median= np.median(ilist)
+			base_median= np.median(base)
+			df_list.append([tissue, i_median, base_median, mannw_pvalue])
+		z= pd.DataFrame.from_records(df_list)
+		z.to_csv(output[0], sep= '\t', header= ['tissue', 'i_listmedian', 'base_list_median', 'MannW_pvalue'], index= False)
+
+rule enrichment_dominant_recessive:
+	'Enrichment analysis for dominant and recessive genes from MacArthur Lab.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt',
+		'/mnt/hdd/common/pol/references/MacArthurLab/all_ad.tsv',
+		'/mnt/hdd/common/pol/references/MacArthurLab/all_ar.tsv'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/MacArthur/diseases_{pheno}.txt'
+	run:
+		pheno= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID', 'nearestGene'])
+		x= pd.read_csv(input[1], sep= '\t', header= None, names= ['CHR', 'start', 'end', 'gene', 'EnsembleID'])
+		add= [line.strip() for line in open(input[2], 'r')]
+		df= pheno.loc[pheno.nearestGene.isin(add), :]
+		b= len(add) - df.shape[0]
+		c= pheno.shape[0] - df.shape[0]
+		d= df.shape[0]
+		a= x.shape[0] - b - d - c
+		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+		z= ['dominant', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
+		with open(output[0], 'w') as file_handler:
+			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+		rec= [line.strip() for line in open(input[3], 'r')]
+		df= pheno.loc[pheno.nearestGene.isin(rec), :]
+		b= len(rec) - df.shape[0]
+		c= pheno.shape[0] - df.shape[0]
+		d= df.shape[0]
+		a= x.shape[0] - b - d - c
+		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+		z= ['recessive', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
+		with open(output[0], 'a') as file_handler:
+			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+
+rule enrichment_RNA_decidualization:
+	'Enrichment in intolerance to heterozygous pLoF variation (pLI).'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/stromal_cells/rna-seq/diff_expression.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/stromalRNA_{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID', 'nearestGene'])
+		stc= pd.read_csv(input[1], header= 0, sep= '\t', usecols= ['geneid', 'log2FoldChange', 'pvalue'])[['geneid', 'log2FoldChange', 'pvalue']]
+                stc.columns= ['gene', 'log2FoldChange', 'pvalue']
+		stc.dropna(subset= ['pvalue'], inplace= True)
+		diff_genes= stc.loc[stc.pvalue< 0.05/ stc.shape[0], 'gene'].values.tolist()
+		df= d.loc[d.nearestGene.isin(diff_genes), :]
+                b= len(diff_genes) - df.shape[0]
+                c= d.shape[0] - df.shape[0]
+                d= df.shape[0]
+                a= stc.shape[0] - b - d - c
+                oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+                z= ['non_biased', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
+		print(z)
+		with open(output[0], 'w') as file_handler:
+			file_handler.write('\t'.join([str(item) for item in z]) + '\n')

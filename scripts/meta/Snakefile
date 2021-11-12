@@ -1,0 +1,105 @@
+import csv
+import numpy as np
+import gzip
+import math
+
+
+pheno_nms= ['allPTD', 'postTerm', 'GAraw', 'GAnrm']
+
+rule METAL:
+	''
+	input:
+		'scripts/meta/metal_script_{pheno}',
+		pheno_cohorts
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/log/METAL_{pheno}_log.txt'
+	wildcard_constraints:
+		pheno= '|'.join(pheno_nms)
+	shell:
+		'/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+
+rule METAL_noMOBA:
+    'Inverse-variance weighted meta-analysis without MOBA samples.'
+    input:
+        'scripts/meta/noMOBA_metal_script_GAraw',
+        'scripts/meta/noMOBA_metal_script_GAnrm',
+	'scripts/meta/noMOBA_metal_script_allPTD',
+        expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms),
+        expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/filtered/{GAnrm_coh}.txt', GAnrm_coh= GAnrm_coh_nms),
+	expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms)
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAraw_1.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_GAnrm_1.txt',
+	'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/meta_allPTD_1.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/log/METAL_log.txt'
+    shell:
+        '''
+        /home/pol/software/generic-metal/metal {input[0]} >> {output[3]}
+        /home/pol/software/generic-metal/metal {input[1]} >> {output[3]}
+	/home/pol/software/generic-metal/metal {input[2]} >> {output[3]}
+        '''
+
+rule METAL_no23andme:
+    'Inverse-variance weighted meta-analysis without 23andme samples.'
+    input:
+        'scripts/meta/no23andme_metal_script_allPTD',
+        'scripts/meta/no23andme_metal_script_GAraw',
+        expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/{GAraw_coh}_GAraw.txt', GAraw_coh= GAraw_coh_nms),
+        expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAnrm/{GAnrm_coh}_GAnrm.txt', GAnrm_coh= GAnrm_coh_nms)
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_1.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_GAraw_1.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/log/METAL_log.txt'
+    shell:
+        '''
+        /home/pol/software/generic-metal/metal {input[0]} >> {output[2]}
+        /home/pol/software/generic-metal/metal {input[1]} >> {output[2]}
+        '''
+
+
+rule METAL_allPTD_single_pregnancy:
+        ''
+        input:
+                'scripts/meta/metal_script_allPTD_single_pregnancy',
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/NLB/meta_allPTD_single_pregnancy_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/NLB/log/METAL_allPTD_single_pregnancy_log.txt'
+        shell:
+                '/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+
+rule METAL_allPTD_allpregnancies:
+        ''
+        input:
+                'scripts/meta/metal_script_allPTD_all_pregnancies',
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/NLB/meta_allPTD_all_pregnancies_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/NLB/log/METAL_allPTD__all_pregnancies_log.txt'
+        shell:
+                '/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+
+rule METAL_big5_allPTD:
+        ''
+        input:
+                'scripts/meta/metal_script_allPTD_big5',
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/big5/meta_allPTD_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/log/big5/METAL_allPTD_log.txt'
+        shell:
+                '/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+
+
+rule METAL_big5_GAraw:
+        ''
+        input:
+                'scripts/meta/metal_script_GAraw_big5',
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/big5/meta_GAraw_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/log/big5/METAL_GAraw_log.txt'
+        shell:
+                '/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+

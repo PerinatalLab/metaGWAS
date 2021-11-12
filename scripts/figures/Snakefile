@@ -1,0 +1,296 @@
+
+rule manhattan_plot_GAraw:
+	'Manhattan plot for GAraw.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_allPTD.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/allPTD.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_manhattan.png'
+	script:
+		'manhattan_plot.R'
+
+rule effect_origin_lm:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_lm_h2_maternal.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_lm_h3_maternal.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_lm_h1_maternal.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/GAraw_effect_origin_lm.txt'
+	script:
+		'lm_effect_origin.R'
+
+rule effect_origin_dendrogram:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt',
+                '/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_dend.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/GAraw_effect_origin_dend.txt'
+	script:
+		'effect_origin_dendrogram.R'
+
+rule gene_based_colocalization:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/iPSC/pph_GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/gene_based/fastBAT_GAraw.txt.gene.fastbat',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/iPSC/results_GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/gene_based_coloc_eqtl.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/gene_based_coloc_eqtl.txt',
+		'/mnt/hdd/common/pol/metaGWAS/figures/gene_based_coloc_eqtl_legend.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/Tables/Gene_based_eQTL_coloc.txt'
+	script:
+		'gene_based_vs_coloc_iPSC.R'
+
+rule coloc_BW:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/colocalization/GAraw/pph_{BW}.txt', BW= ['BW_maternal_effect', 'BW_fetal_effect'])
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/spider_BW_coloc_maternal.png',
+		'/mnt/hdd/common/pol/metaGWAS/figures/spider_BW_coloc_fetal.png'
+	script:
+		'BW_coloc_spider.R'
+
+rule KCNAB1_Phewas:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/KCNAB1/PheWas/PAN_UKBB/pph_GAraw.txt',
+                '/mnt/hdd/common/pol/references/PAN_UKBB/PAN_UKBB_manifest.txt',
+                '/mnt/hdd/common/pol/metaGWAS/KCNAB1/PheWas/FINNGEN/results/pph_GAraw.txt',
+                '/mnt/hdd/common/pol/references/FINNGEN/manifest_R4.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/figures/KCNAB1_PheWas.tiff',
+                '/mnt/hdd/common/pol/metaGWAS/data_figures/KCNAB1_PheWas.txt'
+        script:
+                'KCNAB1_pheWAS.R'
+
+
+rule ADCY5_Phewas:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/final/pph.txt',
+		'/mnt/hdd/common/pol/references/PAN_UKBB/PAN_UKBB_manifest.txt',
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/results/pph_GAraw.txt',
+		'/mnt/hdd/common/pol/references/FINNGEN/manifest_R4.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_PheWas.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/ADCY5_PheWas.txt'
+	script:
+		'ADCY5_pheWAS.R'
+
+rule ADCY5_FST_AFR_EUR:
+	''
+	input:
+		'/mnt/hdd/common/pol/references/FST/results/EUR_AFR.weir.fst',
+		'/mnt/hdd/common/pol/references/FST/results/EUR_EAS.weir.fst',
+		'/mnt/hdd/common/pol/references/FST/results/AFR_EAS.weir.fst',
+		'/mnt/hdd/common/pol/metaGWAS/SNPsnap/SNPsnap_ADCY5/matched_snps.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_FST_EUR_AFR.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_FST_EUR_EAS.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_FST_AFR_EAS.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/ADCY5_FST.txt',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/ADCY5_FST_comparison.txt'
+	params:
+	script:
+		'ADCY5_FST_AFR_EUR.R'
+
+rule genet_correlations_BW:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/GAraw_rg_temp',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/repr_phenos_rg'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/BW_genetic_correlations.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/BW_genetic_correlations.txt'
+	script:
+		'BW_genetic_correlations.R'
+
+
+rule genet_correlations_reproductive_traits:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/GAraw_rg_temp',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/repr_phenos_rg',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/mtCOJO/results/BW_maternal_effect_rg_temp'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_genetic_correlations.tiff',
+                '/mnt/hdd/common/pol/metaGWAS/data_figures/repr_pheno_genetic_correlations.txt',
+		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_genetic_correlations_legend.tiff'
+        script:
+                'repr_pheno_genet_corr.R'
+
+rule partitioned_h2_figure:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/part_h2/GAraw.results'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/partitioned_h2.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/partitioned_h2.txt'
+	script:
+		'partitioned_h2.R'
+
+rule MacArthurlab_enrichment:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/GNOMAD/pLI_GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/MacArthur/diseases_GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/MacArthur_enrichment.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/MacArthur_enrichment.txt'
+	script:
+		'MacArthurlab_enrichment.R'
+
+rule ADCY5_effect_direction:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/results/individual_variant_GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/results/pph_GAraw.txt',
+		'/mnt/hdd/common/pol/references/FINNGEN/manifest_R4.txt',
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/final/individual_variant.txt',
+		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/PAN_UKBB/final/pph.txt',
+		'/mnt/hdd/common/pol/references/PAN_UKBB/PAN_UKBB_manifest.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_effect_direction.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/ADCY5_effect_direction.txt',
+		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_effect_direction_legend.pdf'
+	script:
+		'ADCY5_effect_direction.R'
+
+rule conditional_all:
+	''
+	input:
+		'/mnt/hdd/common/pol/references/approx_LD_blocks.txt',
+		'/mnt/hdd/common/pol/metaGWAS/mtCOJO/BW_maternal_effect_GA.mtcojo.cma.gz',
+		'/mnt/hdd/common/pol/metaGWAS/mtCOJO/BW_fetal_effect_GA.mtcojo.cma.gz',
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/BW_conditioning.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/BW_conditioning.txt',
+		'/mnt/hdd/common/pol/metaGWAS/figures/BW_conditioning2.pdf'
+	script:
+		'BW_conditioning.R'
+
+rule MR_GA_BW:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_maternal_effect.txt',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_fetal_effect.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_maternal_effect.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_fetal_effect.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/MR_GA_BW_plot.txt',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/MR_GA_BW_2sampleMR.txt'
+	script:
+		'MR_GA_BW.R'
+
+rule coloc_repr_phenos:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/colocalization/GAraw/pph_allpheno.txt',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/GAraw_rg_temp'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_coloc_main.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_coloc_GENE.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_coloc_rg.tiff'
+	script:
+		'repr_pheno_coloc.R'
+
+rule repr_pheno_LCV:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/GAraw_rg_temp',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/allPTD_rg_temp',
+		'/mnt/hdd/common/pol/metaGWAS/LCV/results/repr_pheno/GAraw_LCV.txt',
+		'/mnt/hdd/common/pol/metaGWAS/LCV/results/repr_pheno/allPTD_LCV.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_LCV.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/Tables/repr_pheno_LCV.txt'
+	script:
+		'repr_pheno_LCV.R'
+
+rule repr_pheno_correlations:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/GAraw_rg_temp',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/allPTD_rg_temp'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_rg.tiff'
+	script:
+		'repr_pheno_correlations.R'
+
+rule RNA_enrichment:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/HPA/RNA_GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/RNA_enrichment.pdf'
+	script:
+		'RNA_enrichment.R'
+
+
+### Supp figures
+
+
+rule QQ_plot:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/QQ_plot_{pheno}.png'
+	script:
+		'QQ_plot.R'
+	
+
+
+rule h2_plots:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/h2/h2_all_phenos.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/h2_allpheno.pdf'
+	script:
+		'h2_allphenos.R'
+
+rule h2_cohorts:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allcohorts.txt',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allPTD/allcohorts.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/h2_allcohort.pdf'
+	script:
+		'h2_cohorts.R'
+
+rule post_term_manhattan:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_postTerm.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/postTerm.txt',
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/postTerm_manhattan.png'
+	script:
+		'manhattan_plot_postTerm.R'
+
+
+rule GAnrm_manhattan:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAnrm.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAnrm.txt',
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/figures/GAnrm_manhattan.png'
+        script:
+                'manhattan_plot_postTerm.R'

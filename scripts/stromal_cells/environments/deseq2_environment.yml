@@ -1,0 +1,12 @@
+name: deseq2
+channels:
+    - bioconda
+    - conda-forge
+dependencies:
+    - r-data.table
+    - R=4.0
+    - zlib=1.2.11
+    - r-dplyr
+    - r-r.utils
+    - bioconductor-deseq2
+    - r-tidyverse

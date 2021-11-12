@@ -1,0 +1,256 @@
+---
+author: "Pol Sole-Navais"
+date: "`r paste('Report date:', format(Sys.time(), '%d %B, %Y'))`"
+output: tint::tintPdf
+link-citations: yes
+latex_engine: xelatex
+---
+
+```{r echo=F, include= F}
+library(tint)
+
+knitr::opts_chunk$set(tidy = FALSE, cache.extra = packageVersion('tint'))
+options(htmltools.dir.version = FALSE)
+pdf.options(useDingbats = TRUE)
+#knitr::opts_chunk$set(dpi=300)
+knitr::opts_chunk$set(dev = 'png', warning= FALSE, message= FALSE, dpi= 600)
+
+
+
+model= ifelse(grepl('rec', snakemake@input[[1]]), 'recessive', 'dominant')
+
+```
+
+---
+title: "`r paste('EGG GWAS meta-analysis of gestational duration using maternal genome under a', model, 'model')`"
+---
+
+
+
+```{r include=FALSE, echo=F}
+library("ggplot2")
+library("dplyr")
+library("knitr")
+library("tidyr")
+library(cowplot)
+library("kableExtra")
+library(ggrepel)
+library("data.table")
+options(warn=-1)
+
+```
+
+```{r echo=F, fig.margin = TRUE, fig.cap = 'Density plot of minor allele frequency.'}
+
+d= fread(snakemake@input[[1]], h= T)
+d$MAF= ifelse(d$EAF>0.5,  1 - d$EAF, d$EAF)
+
+d= filter(d, TOTALSAMPLESIZE> 66106)
+
+colorBlindBlack8= c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
+
+ggplot(d, aes(MAF)) +
+  geom_density(fill= colorBlindBlack8[4]) +
+theme_cowplot(font_size= 12) +
+xlab('MAF')
+
+#d= select(d, -MAF)
+
+```
+
+```{r echo=F, fig.margin = TRUE, fig.cap = 'Density plot of sample size per genetic variant.'}
+
+
+ggplot(d, aes(TOTALSAMPLESIZE)) +
+  geom_density(fill= colorBlindBlack8[3]) +
+theme_cowplot(font_size= 12) +
+xlab('Sample size')
+
+
+```
+
+
+
+
+# Summary  
+
+We conducted a meta-analysis of gestational duration (in days) on `r max(d$TOTALSAMPLESIZE)` women using METAL. This report contains the results obtained after QC. A total of `r nrow(d)` genetic variants are described in this report.  
+
+
+
+Per-study genetic variants were included if:  
+- MAF> 5%  
+- MAC> 6  
+- Allele matching with HRC or 1KG (restricted to white Europeans)  
+- Imputation score> 0.4  
+- 0 < P-value < 1  
+- Expected pvalue (calculated from z-score) and reported pvalue do not differ more than 10%  
+- Effect allele frequency differs less than 0.2 compared to HRC or 1KG (restricted to white Europeans)  
+
+
+
+
+
+```{r, echo=F}
+add_model= fread(snakemake@input[[2]])
+add_model$CHR= ifelse(add_model$CHR== 'X', '23', add_model$CHR)
+add_model$CHR= as.numeric(add_model$CHR)
+add_model$pos= round((add_model$pos1 + add_model$pos2) / 2)
+```
+
+\newpage  
+
+
+# Manhattan plot  
+
+
+We identified independent loci as genetic variants within a radius of 250kb from the lead SNP (p-value< 5x10^-8^). Previous discoveries for either gestational duration or preterm delivery were obtained from the previous largest [GWAS](https://www-nejm-org.ezproxy.ub.gu.se/doi/full/10.1056/nejmoa1612665) on the outcome.  
+
+```{marginfigure}
+The same number of loci is obtained when using a larger radius (1.5Mb).
+```
+
+```{marginfigure}
+We note that we used a naive approach to identify independent loci. This should be interpreted cautiously. We mapped top genetic variants to the body (TSS or TES) nearest protein coding gene.  
+
+```
+
+
+```{r, echo=F, fig.align = "center", fig.width= 10, fig.fullwidth=TRUE, fig.height= 4, dpi= 600, fig.cap= 'Manhattan plot'}
+
+df= arrange(d, pvalue)
+
+#df= group_by(df, CHR, POS) %>% filter(row_number() == 1) %>% ungroup()
+df= df[!duplicated(df[, c('CHR', 'POS')]), ]
+
+dg= df %>% arrange(CHR, POS) %>% filter(pvalue< 5*10**-8) %>% group_by(CHR) %>%
+		mutate(d=POS-lag(POS, default=-Inf), clumpid=cumsum(d>250000)) %>%
+		group_by(CHR, clumpid) %>%
+		filter(rank(pvalue, ties.method = "random")==1) %>%
+		mutate(GENE= ifelse(SYMBOL=='', RSID, SYMBOL)) %>%
+		ungroup()
+
+dg= filter(dg, pvalue< 5*10**-8)
+dg= group_by(dg, CHR, POS) %>% filter(row_number()== 1)
+#dg$GENE= ifelse(grepl('rs|-', dg$GENE), dg$nearestGene, ifelse(dg$GENE=='', dg$nearestGene, dg$GENE))
+dg$GENE= dg$nearestGene
+
+  don <- df %>%
+    group_by(CHR)      %>%
+    summarise(chr_len= max(POS)) %>%
+    mutate(tot= cumsum(as.numeric(chr_len))-chr_len) %>% # Calculate cumulative position of each chromosome
+    select(-chr_len) %>%
+    left_join(df, ., by= 'CHR') %>%
+    arrange(CHR, POS) %>% # Add a cumulative position of each SNP
+    mutate( BPcum=POS+tot) %>%
+	 ungroup()
+
+  axisdf = don %>% group_by(CHR) %>% summarize(center=( max(BPcum) + min(BPcum) ) / 2 )
+  names(axisdf)= c('CHR', 'center')
+HC= -log10(5*10**-8)
+dg= dg %>% ungroup() %>% select(ID, GENE, CHR, POS, MAF)
+don= left_join(don, select(dg, ID, GENE), by= 'ID')
+names(dg)= c('ID', 'GENE', 'CHR', 'POS_new', 'MAF')
+
+lims= 250000
+
+don$disc= ifelse(don$pvalue> 5*10**-8, 0, NA)
+
+don= data.frame(don)
+dg= data.frame(dg)
+add_model= data.frame(add_model)
+
+for (i in rownames(dg)) {
+don= mutate(don, disc= ifelse(CHR== as.integer(dg[i, 'CHR']) & POS>= as.integer(dg[i, 'POS_new']) - lims & POS<= as.integer(dg[i, 'POS_new']) + lims, 2, disc))
+}
+
+for (i in rownames(add_model)) {
+don= mutate(don, disc= ifelse(CHR== as.integer(add_model[i, 'CHR']) & POS>= as.integer(add_model[i, 'pos']) - lims & POS<= as.integer(add_model[i, 'pos']) + lims, 1, disc))
+}
+
+don= don[order(don$disc, decreasing= F, na.last= T), ]
+don$disc= factor(don$disc, levels=c(0, 1, 2), labels=c('Not significant', 'Additive model discovery', 'New discovery'))
+
+cols <- c('Not significant'= 'grey', 'Additive model discovery'= colorBlindBlack8[4], 'New discovery'= colorBlindBlack8[2])
+
+don$GENE= ifelse(!is.na(don$GENE), don$nearestGene, don$GENE)
+ggplot(don) +
+    geom_point(data= don, aes(x=BPcum, y= -log10(pvalue), colour= disc), size=0.3) +   # Show all points
+theme_cowplot(font_size= 12) + #theme_minimal_hgrid(12, rel_small = -1) + 
+#scale_alpha_manual(values= rep(c(1/10, 1/2), 23)) +
+scale_colour_manual(values= cols) +
+    scale_x_continuous(label = axisdf$CHR, breaks= axisdf$center, expand=c(0,0) ) + # custom X axis
+scale_y_continuous(expand= c(0,0)) +
+         xlab('Chromosome') +
+    ylab('-log10(pvalue)') +
+labs(colour= '') +
+geom_hline(yintercept= 0, size= 0.5, colour= 'black') +
+geom_hline(yintercept= HC, size= 0.5, linetype= 2, colour= '#878787') +
+geom_text_repel(data= don, aes(x= BPcum, y= -log10(pvalue), label= GENE), size= 3, hjust= 1, force= 1, vjust= 1, colour= 'black') +
+theme(legend.position= 'bottom') +
+guides(colour = guide_legend(override.aes = list(size=3)))
+
+
+```
+
+
+
+# QQplot by minor allele frequency  
+
+```{r, echo=F, fig.align = "center", fig.width= 5, dpi= 600, fig.cap= 'QQ-plot by MAF tertiles'}
+
+d= mutate(d, maf_tertiles = ntile(MAF, 3))
+m1= round(max(d[d$maf_tertiles== 1, 'MAF']), 3)
+m2= round(max(d[d$maf_tertiles== 2, 'MAF']), 3)
+
+
+d$maf_tertiles= factor(d$maf_tertiles, levels=c("1", "2", "3"), labels=c(paste('MAF<', m1), paste(m1,'< MAF >', m2), paste('MAF>', m2)))
+
+df= arrange(d, pvalue) %>% group_by(maf_tertiles) %>% mutate(exp1= -log10(1:length(pvalue)/length(pvalue)))
+
+ggplot(filter(df, pvalue<0.05), aes(exp1, -log10(pvalue), color= maf_tertiles)) +
+  geom_point(size= 0.4) +
+scale_color_manual(values= colorBlindBlack8[2:4])+ 
+  geom_abline(intercept = 0, slope = 1, alpha = .5) +
+labs(colour="") +
+theme_cowplot(font_size= 12) +
+xlab('Expected (-log10(p-value))') +
+ylab('Observed (-log10(p-value))') +
+theme(legend.position= 'bottom') +
+guides(colour = guide_legend(override.aes = list(size=3)))
+
+```
+
+
+\pagebreak
+
+# Top genetic variants from each locus  
+
+```{r echo=F}
+don= filter(don, pvalue< 1*10**-4)
+d1= filter(don, pvalue<5*10**-8)
+d1= d1[order(d1$pvalue, decreasing= F), ]
+d1$pvalue= format(d1$pvalue, digits= 3)
+don$pvalue= format(don$pvalue, digits= 3)
+
+kable(filter(d1, GENE!= '') %>% select(ID, RSID, GENE, TOTALSAMPLESIZE, EAF, pvalue, Consequence), col.names= c('CHR:POS:REF:EFF', 'RSID', 'Gene', 'N', 'EAF', 'P-value', 'Consequence'), digits= 3) #%>% kable_styling(latex_options = c("striped", "scale_down"))
+
+
+```
+
+
+
+# Sugestive genetic variants with HIGH or MODERATE impact  
+
+Genetic variants within 1.5Mb from the top variants, a p-value< 1x10^-4^ and with HIGH or MODERATE are included in this table. Genetic variants were annotated using [Variant Effect Predictor](https://grch37.ensembl.org/Homo_sapiens/Tools/VEP) command line tool.
+
+
+```{r echo= F}
+
+kable(filter(don, (IMPACT== 'HIGH') | (IMPACT== 'MODERATE')) %>% select(ID, RSID, SYMBOL, TOTALSAMPLESIZE, EAF, pvalue, Consequence), col.names= c('CHR:POS:REF:EFF', 'RSID', 'Gene', 'N', 'EAF', 'P-value', 'Consequence'), digits= 3)
+
+
+```
+
+
+

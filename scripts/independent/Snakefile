@@ -1,0 +1,95 @@
+import pandas as pd
+import numpy as np
+
+CHR_nms= [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,21, 22, 23]
+
+rule format_input_clump:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/top_independent_{pheno}.txt'
+	run:
+		d=pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'RSID', 'pvalue'])[['RSID', 'CHR', 'POS', 'pvalue']]
+		d.columns= ['SNP', 'CHR', 'POS', 'P']
+		d.to_csv(output[0], header= True, index= False, sep= '\t')
+
+rule extract_regions:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/regions/regions_extracted_{pheno}.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['CHR', 'POS'])
+                d.sort_values(['CHR', 'POS'], inplace= True)
+                d['pos2']= d.POS
+		d['CHR']= d.CHR.apply(str)
+		d['CHR']= np.where(d.CHR== '23', 'X', d.CHR)
+                d.to_csv(output[0], header= False, index= False, sep= '\t')
+
+rule extract_1KG_samples:
+	''
+	input:
+		'/mnt/hdd/data/geno/references/1000g/populations.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG_non_related.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/women_1KG_non_related.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d= d.loc[d.Relationship== 'unrel', :]
+		pop= ['CEU', 'TSI', 'FIN', 'GBR', 'IBS']
+                d= d.loc[d.Population.isin(pop)]
+		d.to_csv(output[0], sep= '\t', header= False, index =False, columns= ['Family ID', 'Individual ID'])
+		d= d.loc[d.Gender==2, :]
+		d.to_csv(output[1], sep= '\t', header= False, index =False, columns= ['Family ID', 'Individual ID'])
+
+rule filter_vcf:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/regions/regions_extracted_{pheno}.txt',
+		expand('/mnt/hdd/data/geno/references/1000g/phase3_chr{CHR}.vcf.gz', CHR= CHR_nms)
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/1KG_{pheno}.vcf')
+	run:
+		vcfs= [infile for infile in input if 'vcf' in infile]
+		shell('/home/pol/software/bcftools-1.9/bcftools concat -a -O v -R {input[0]} {vcfs} -o {output[0]}')
+
+
+rule vcf_to_bed:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/1KG_{pheno}.vcf',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG_non_related.txt'
+	output:
+		expand('/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{{pheno}}.{ext}', ext= ['log', 'bed', 'bim', 'fam'])
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{pheno}'
+	shell:
+		'/home/pol/software/plink --vcf {input[0]} --keep {input[1]} --make-bed -out {params[0]}'
+
+rule list_duplicates:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{pheno}.bim'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/duplicated/vars_{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['chr', 'snp', 'x1', 'pos', 'a1', 'a2'])
+		d= d[d.duplicated(['snp'], keep=False)]
+		d.drop_duplicates(subset= ['snp'], keep= 'first')
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule clump_assoc:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/top_independent_{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/duplicated/vars_{pheno}.txt',
+		expand('/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{{pheno}}.{ext}', ext= ['bed', 'bim', 'fam'])
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{pheno}',
+		'/mnt/hdd/common/pol/metaGWAS/independent_signals/{pheno}/indep'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/independent_signals/{pheno}/indep.clumped'
+	shell:
+		'~/software/plink --bfile {params[0]} --clump {input[0]} --exclude {input[1]} --clump-r2 0.05 --clump-kb 1000 --clump-p1 5e-8 --clump-p2 1e-5 --out {params[1]}'
