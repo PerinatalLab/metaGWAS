@@ -41,3 +41,16 @@ xlab('-log10(pvalue)')
 
 ggsave(snakemake@output[[1]], plot= p1, width= 120, height= 90, units= 'mm', dpi= 300)
 
+
+p1= ggplot(d, aes(i_listmedian / base_list_median, tissue, colour= organ, size= -log10(MannW_pvalue))) +
+geom_point() + 
+theme_cowplot(font_size= 10) +
+scale_colour_manual('Legend', values= c(colorBlindBlack8[c(3, 2, 8)], 'grey'), guide= 'none') +
+scale_size_continuous(guide= 'none') +
+xlab('Enrichment') +
+ylab('') +
+scale_x_continuous(limits= c(0, 2)) +
+geom_vline(xintercept= seq(0, 2, 0.5), colour= 'grey', alpha= 0.4)
+
+
+
