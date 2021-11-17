@@ -196,6 +196,21 @@ rule MR_GA_BW:
 	script:
 		'MR_GA_BW.R'
 
+rule MR_GA_BW_haplotype:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_{genome}_effect.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_1.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_2.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_h3.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/MR_GA_BW_plot_haplotype_{genome}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/MR_GA_BW_2sampleMR_haplotype_{genome}.txt'
+	script:
+		'MR_GA_BW_haplotype.R'
+
 rule coloc_repr_phenos:
 	''
 	input:
