@@ -119,11 +119,11 @@ ggsave(snakemake@output[[1]], plot= p1, width= 60, height= 60, units= 'mm', dpi=
 ggsave(snakemake@output[[2]], plot= p2, width= 60, height= 60, units= 'mm', dpi= 300)
 ggsave(snakemake@output[[3]], plot= p3, width= 60, height= 60, units= 'mm', dpi= 300)
 
-df_h1$haplotype= 'h1'
-df_h2$haplotype= 'h2'
-df_h3$haplotype= 'h3'
+h1$haplotype= 'h1'
+h2$haplotype= 'h2'
+h3$haplotype= 'h3'
 
-df= bind_rows(df_h1, df_h2, df_h3)
+df= bind_rows(h1, h2, h3)
 
 fwrite(d, snakemake@output[[4]], sep= '\t')
 fwrite(df, snakemake@output[[5]], sep= '\t')
