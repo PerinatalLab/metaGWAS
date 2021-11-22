@@ -27,7 +27,7 @@ d$enrichment= d$candidate_gene / d$rest_genes
 d= arrange(d, desc(pvalue))
 
 d$description= with(d, ifelse(Name== 'pli', 'Loss-of-function intolerant',
-			ifelse(Name== 'additive', 'Dominant', 'Recessive')))
+			ifelse(Name== 'dominant', 'Dominant', 'Recessive')))
 
 d$description= factor(d$description, levels= unique(d$description))
 
