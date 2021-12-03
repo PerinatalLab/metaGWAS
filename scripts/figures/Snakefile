@@ -289,6 +289,16 @@ rule h2_cohorts:
 	script:
 		'h2_cohorts.R'
 
+rule genet_correlations_GAraw:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/GAraw_temp'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/figures/genet_corr_GAraw.pdf'
+        script:
+                'genet_correlations_meta.R'
+
+
 rule post_term_manhattan:
 	''
 	input:
