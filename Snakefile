@@ -46,7 +46,7 @@ include: 'scripts/iPSC/Snakefile'
 include: 'scripts/other_metas/Snakefile'
 include: 'scripts/MR/Snakefile'
 include: 'scripts/nonadditive/Snakefile'
-include: 'scripts/ADCY5/Snakefile'
+#include: 'scripts/ADCY5/Snakefile'
 include: 'scripts/stromal_cells/Snakefile'
 include: 'scripts/figures/Snakefile'
 include: 'scripts/effect_origin/Snakefile'
@@ -152,10 +152,11 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/figures/postTerm_manhattan.png',
 		'/mnt/hdd/common/pol/metaGWAS/Tables/ADCY5_PheWas.txt',
 		'/mnt/hdd/common/pol/metaGWAS/Tables/Genetic_correlations_males.txt',
-		expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/results/{coloc_out_eqtl}_GAraw.txt', coloc_out_eqtl= ['pph', 'results', 'individual_variant']),
-		'/mnt/hdd/common/pol/metaGWAS/Tables/ADCY5_eQTL.txt',
+#		expand('/mnt/hdd/common/pol/metaGWAS/ADCY5/eQTL_Catalog/results/{coloc_out_eqtl}_GAraw.txt', coloc_out_eqtl= ['pph', 'results', 'individual_variant']),
+#		'/mnt/hdd/common/pol/metaGWAS/Tables/ADCY5_eQTL.txt',
 		expand('/mnt/hdd/common/pol/metaGWAS/Tables/sample_size_{pheno}.txt', pheno= pheno_nms),
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAnrm_manhattan.png',
 		'/mnt/hdd/common/pol/metaGWAS/LDScore/big5/RG/results/rp.txt',
 		'/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/meta/GAraw_allPTD_rg.log',
-		expand('/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_1.tiff', genome= ['maternal', 'fetal'])
+		expand('/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_1.tiff', genome= ['maternal', 'fetal']),
+		'/mnt/hdd/common/pol/metaGWAS/figures/genet_corr_GAraw.pdf'
