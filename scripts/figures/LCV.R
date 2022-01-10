@@ -62,7 +62,7 @@ ifelse(trait== 'miscarriage', 'Miscarriage',
                 ifelse(trait== 'BW_fetal_effect', 'Fetal only',
                 ifelse(trait== 'Preeclampsia', 'Pre-eclampsia',
                 ifelse(trait== 'BW_maternal_effect', 'Maternal only',
-                ifelse(trait== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis')))))))))))))))))))))))
+                ifelse(trait== 'PCOS', 'Polycystic ovary syndrome', 'Endometriosis')))))))))))))))))))))))
 
 d$repr_pheno= d$trait
 

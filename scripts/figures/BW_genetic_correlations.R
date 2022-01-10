@@ -52,7 +52,7 @@ d$trait= with(d, ifelse(trait== 'miscarriage', 'Miscarriage',
                 ifelse(trait== 'BW_fetal_effect', 'Fetal \nonly',
                 ifelse(trait== 'Preeclampsia', 'Pre-eclampsia',
                 ifelse(trait== 'BW_maternal_effect', 'Maternal \nonly',
-                ifelse(trait== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
+                ifelse(trait== 'PCOS', 'Polycystic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
 
 
 

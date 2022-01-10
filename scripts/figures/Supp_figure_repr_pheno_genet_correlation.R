@@ -45,7 +45,7 @@ d$p1= with(d, ifelse(p1== 'miscarriage', 'Miscarriage',
                 ifelse(p1== 'BW_fetal_effect', 'Birth weight fetal effect (adjusted MG)',
                 ifelse(p1== 'Preeclampsia', 'Pre-eclampsia',
                 ifelse(p1== 'BW_maternal_effect', 'Birth weight maternal effect (adjusted FG)',
-                ifelse(p1== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
+                ifelse(p1== 'PCOS', 'Polycystic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
 
 
 d$trait= d$p2
@@ -69,7 +69,7 @@ d$trait= with(d, ifelse(trait== 'miscarriage', 'Miscarriage',
                 ifelse(trait== 'BW_fetal_effect', 'Birth weight fetal effect (adjusted MG)',
                 ifelse(trait== 'Preeclampsia', 'Pre-eclampsia',
                 ifelse(trait== 'BW_maternal_effect', 'Birth weight maternal effect (adjusted FG)',
-                ifelse(trait== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
+                ifelse(trait== 'PCOS', 'Polycystic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
 
 
 ord= hclust( dist(d$rg, method = "euclidean"), method = "ward.D" )$order

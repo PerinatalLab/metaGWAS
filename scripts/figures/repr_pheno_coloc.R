@@ -39,10 +39,10 @@ d$trait= with(d, ifelse(trait== 'miscarriage', 'Miscarriage',
                 ifelse(trait== 'BW_fetal_effect', 'Fetal only',
                 ifelse(trait== 'Preeclampsia', 'Pre-eclampsia',
                 ifelse(trait== 'BW_maternal_effect', 'Maternal only',
-                ifelse(trait== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
+                ifelse(trait== 'PCOS', 'Polycystic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
 
 pregnancy= c('Miscarriage', 'Pre-eclampsia')
-uterus= c('Leiomyoma uterus', 'Pelvic Organ Prolapse', 'Endometriosis', 'Polycistic ovary syndrome')
+uterus= c('Leiomyoma uterus', 'Pelvic Organ Prolapse', 'Endometriosis', 'Polycystic ovary syndrome')
 fitness= c('Age at first birth', 'Number of live births')
 hormonal= c('Age at menarche', 'Age at menopause', 'Testosterone (women)', 'SHBG (women)', 'CBAT (women)', 'Oestradiol (women)')
 
@@ -186,7 +186,7 @@ d$trait= with(d, ifelse(trait== 'miscarriage', 'Miscarriage',
                 ifelse(trait== 'BW_fetal_effect', 'Fetal only',
                 ifelse(trait== 'Preeclampsia', 'Pre-eclampsia',
                 ifelse(trait== 'BW_maternal_effect', 'Maternal only',
-                ifelse(trait== 'PCOS', 'Polycistic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
+                ifelse(trait== 'PCOS', 'Polycystic ovary syndrome', 'Endometriosis'))))))))))))))))))))))
 
 
 d= filter(d, trait!= 'GA fetal effect')
