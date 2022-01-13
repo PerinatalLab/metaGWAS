@@ -9,6 +9,7 @@ WEIGHT N
 SEPARATOR TAB
 
 PROCESS /mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h2_MoBaGenetics.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h2_HUNT.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h2_ALSPAC.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h2_DNBC.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h2_FIN.txt

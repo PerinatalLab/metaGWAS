@@ -53,12 +53,37 @@ rule format_MobaGenetics_haplotype:
 		h2.to_csv(output[1], sep= '\t', header= True, index= False, columns= ['ID', 'CHR', 'POS', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
 		h3.to_csv(output[2], sep= '\t', header= True, index= False, columns= ['ID', 'CHR', 'POS', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
 
+rule format_HUNT_haplotype:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/raw_data/trio_gene_HUNT.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h1_HUNT.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h2_HUNT.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/h3_HUNT.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d[['CHR', 'POS', 'REF', 'EFF']]= d.snp.str.split(':', expand= True)
+		h1= d.loc[:, ['CHR', 'POS', 'EFF', 'REF', 'beta_h1', 'se_h1', 'pvalue_h1']]
+                h1.columns= ['CHR', 'POS', 'EFF', 'REF', 'BETA', 'SE', 'pvalue']
+                h2= d.loc[:, ['CHR', 'POS', 'EFF', 'REF', 'beta_h2', 'se_h2', 'pvalue_h2']]
+                h2.columns= ['CHR', 'POS', 'EFF', 'REF', 'BETA', 'SE', 'pvalue']
+                h3= d.loc[:, ['CHR', 'POS', 'EFF', 'REF', 'beta_h3', 'se_h3', 'pvalue_h3']]
+                h3.columns= ['CHR', 'POS', 'EFF', 'REF', 'BETA', 'SE', 'pvalue']
+		h1= add_ID(h1)
+                h2= add_ID(h2)
+                h3= add_ID(h3)
+                h1.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['ID', 'CHR', 'POS', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
+                h2.to_csv(output[1], sep= '\t', header= True, index= False, columns= ['ID', 'CHR', 'POS', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
+                h3.to_csv(output[2], sep= '\t', header= True, index= False, columns= ['ID', 'CHR', 'POS', 'REF', 'EFF', 'BETA', 'SE', 'pvalue'])
+	
 rule meta_haplotype:
 	''
 	input:
 		'scripts/effect_origin/metal_script_{haplotype}',
 		expand('/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/{{haplotype}}_{CCHMC_cohort}.txt', CCHMC_cohort= CCHMC_cohort_nms),
-		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/{haplotype}_MoBaGenetics.txt'
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/{haplotype}_MoBaGenetics.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/processed_data/{haplotype}_HUNT.txt'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/meta_{haplotype}_1.txt',
 		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/meta_{haplotype}.log'
