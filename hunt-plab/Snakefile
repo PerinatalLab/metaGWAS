@@ -4,11 +4,53 @@ pheno_nms= ['allPTD', 'GAraw', 'GAnrm', 'postTerm']
 
 
 include: 'scripts/FINEMAP/Snakefile'
-
+include: 'scripts/HLA/Snakefile'
+include: 'scripts/survival/Snakefile'
+include: 'scripts/reports/Snakefile'
+include: 'scripts/PGS_BW/Snakefile'
+include: 'scripts/GxE_BW/Snakefile'
+include: 'scripts/effect_origin/Snakefile'
 
 rule all:
 	'Collect all results'
 	input:
-		expand('/mnt/work/pol/metaGWAS/FINEMAP/results/{pheno}.{ext}', ext= ['config', 'snp', 'cred', 'log_sss'], pheno= pheno_nms),
-		expand('FINEMAP/{pheno}.{ext}', ext= ['config', 'snp', 'cred', 'log_sss'], pheno= pheno_nms),
-		'/mnt/work/pol/metaGWAS/processed_data/ids/chrX_IDS.txt'
+#		'/mnt/work/pol/metaGWAS/GxE_BW/results/GAraw.txt',
+		'/mnt/work/pol/metaGWAS/pheno/trio_pheno.txt',
+		'/mnt/work/pol/metaGWAS/effect_origin/results/HUNT.txt',
+#		expand('/mnt/work/pol/metaGWAS/to_phase/data/mother_child.{ext}', ext= ['bim', 'bed', 'fam'])
+
+rule phenofile:
+	''
+	input:
+		'/mnt/archive/hunt/phenotypes/mfr/MFR.txt',
+		'/mnt/work/hunt/relatedness/mother_samples_related.kin0',
+		'/mnt/work/hunt/pca/mother_pca.sscore'
+	output:
+		'/mnt/work/pol/metaGWAS/pheno/pheno_all.txt',
+		'/mnt/work/pol/metaGWAS/pheno/covars_all.txt'
+	script:
+		'scripts/pheno_file.R'
+
+rule phenofile_duo:
+        ''
+        input:
+                '/mnt/archive/hunt/phenotypes/mfr/MFR.txt',
+                '/mnt/work/hunt/relatedness/all_related.kin0',
+                '/mnt/work/hunt/pca/fetal_pca.sscore'
+		''
+        output:
+                '/mnt/work/pol/metaGWAS/pheno/duo_pheno.txt'
+        script:
+                'scripts/pheno_file.R'
+
+rule phenofile_trio:
+	''
+	input:
+		'/mnt/archive/hunt/phenotypes/mfr/MFR.txt',
+		'/mnt/work/hunt/relatedness/all_related.kin0',
+		'/mnt/work/hunt/pca/fetal_pca.sscore',
+		'/mnt/work/pol/metaGWAS/effect_origin/processed_data/parent_offspring_trios.txt'
+	output:
+		'/mnt/work/pol/metaGWAS/pheno/trio_pheno.txt'
+	script:
+		'scripts/pheno_file.R'
