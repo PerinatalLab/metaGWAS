@@ -100,7 +100,7 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_PheWas.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_FST_EUR_AFR.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/BW_genetic_correlations.tiff',
-		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_genetic_correlations.tiff',
+#		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_genetic_correlations.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/partitioned_h2.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/MacArthur_enrichment.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_effect_direction.pdf',
