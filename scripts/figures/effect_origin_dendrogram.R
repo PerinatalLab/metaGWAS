@@ -115,7 +115,7 @@ geom_hilight(node=21, fill= colorBlindBlack8[7], alpha=0.5) +
 #geom_cladelabel(21, "Mt", offset= 0.0, barsize=0, angle=0, offset.text= -0.15, hjust=0.5, fontsize=8/.pt) +
 geom_hilight(node=24, fill= colorBlindBlack8[3], alpha=0.5) +
 #geom_cladelabel(24, "Opp.", offset=0.0, barsize=0, angle=0, offset.text=-0.3, hjust=0.5, fontsize=8/.pt) +
-geom_hilight(node=27, fill=colorBlindBlack8[8], alpha=0.5) +
+geom_hilight(node=14, fill=colorBlindBlack8[8], alpha=0.5) +
 #geom_cladelabel(27, "Maternal", offset=0.0, barsize=0, angle=0, offset.text=-0.45, hjust=0.5, fontsize=8/.pt) +
 geom_hilight(node=26, fill="grey", alpha=0.5)  +
 #geom_cladelabel(26, "Unclassified", offset=0.0, barsize=0, angle=0, offset.text=-0.3, hjust=0.5, fontsize=8/.pt) +
