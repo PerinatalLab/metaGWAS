@@ -1,58 +1,178 @@
 allchrs_nms= ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X']
 
+import csv
+import os
+import pandas as pd
+import numpy as np
+
+
 rule filter_INFO_COJO:
 	'Filter out variants with INFO score< 0.4.'
 	input:
-		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/markerinfo/{allchrs}-markerinfo'
+		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/markerinfo/{allchrs}-markerinfo',
+		'/mnt/work2/pol/metaGWAS/results/meta/Maternal_GWAMA_{pheno}.txt.gz'
 	output:
-		'/mnt/work2/pol/metaGWAS/processed_data/cojo/filter_{allchrs}_variants.txt'
+		'/mnt/work2/pol/metaGWAS/processed_data/cojo/{pheno}_filter_{allchrs}_variants.txt'
 	run:
 		d= pd.read_csv(input[0], sep='\t', header=0, usecols= ['# [1]CHROM', '[2]POS', '[7]INFO'])
                 d.columns= ['CHR', 'POS', 'INFO']
 		d= d.loc[d.INFO>= 0.4, :]
                 d['ID']= d.CHR.map(str) + ':' + d.POS.map(str)
-                with open(output[0], 'w') as f:
-                        writer= csv.writer(f, delimiter= ' ')
-                        writer.writerow(d['ID'])
+		x= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['CHR', 'POS'])
+		x['CHR']= np.where(x.CHR== 23, 'X', x.CHR)
+		x['ID']= x.CHR.apply(str) + ':' + x.POS.apply(str)
+		d= d.loc[d.ID.isin(x.ID.values), :]
+		d.drop_duplicates('ID', inplace= True, keep ='first')
+		d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['CHR', 'POS', 'POS', 'ID'])
+#                with open(output[0], 'w') as f:
+#                        writer= csv.writer(f, delimiter= ' ')
+#                        writer.writerow(d['ID'])
 
-rule filter_MOBAGENETICS_COJO:
-        'Extract from MoBaGenetics all genetic variants matching women.'
-        input:
-                '/mnt/work2/pol/metaGWAS/processed_data/chrX_IDS.txt',
-                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/bgen/{allchrs}.bgen',
-                '/mnt/work2/pol/metaGWAS/processed_data/cojo/filter_{allchrs}_variants.txt'
-        output:
-                temp('/mnt/work2/pol/metaGWAS/cojo/data/{allchrs}.vcf.gz')
-        shell:
-                '/home/pol.sole.navais/soft/qctool_v2.0.8/qctool -g {input[1]} -incl-samples {input[0]} -incl-positions {input[2]} -og {output[0]}'
+rule obtain_non_related_maternal_samples:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/PGS/GA/pheno/pheno_all.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/processed_data/cojo/IDS/maternal_ids_plink.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d.drop_duplicates('Mother', keep= 'first', inplace= True)
+		with open(output[0], 'w') as f:
+                        for item in d.Mother.values:
+                                f.write("%s\n" % item)
 
-rule vcf_to_bed_cojo:
-        'VCF file to bed format and filter MAF.'
-        input:
-                '/mnt/work2/pol/metaGWAS/cojo/data/{allchrs}.vcf.gz'
-        output:
-                '/mnt/work2/pol/metaGWAS/cojo/data/MOBAGENETICS_{allchrs}.bim',
-                '/mnt/work2/pol/metaGWAS/cojo/data/MOBAGENETICS_{allchrs}.fam',
-                '/mnt/work2/pol/metaGWAS/cojo/data/MOBAGENETICS_{allchrs}.bed'
-        params:
-                '/mnt/work2/pol/metaGWAS/cojo/data/MOBAGENETICS_{allchrs}'
-        shell:
-                '''
-                /home/pol.sole.navais/soft/plink2 --vcf {input[0]} --maf 0.005 --exclude bed1 {input[1]} --make-bed --out {params[0]}
-		'''
+rule bgen_to_bed:
+	'Extract from MoBaGenetics all genetic variants matching women.'
+	input:
+		'/mnt/work2/pol/metaGWAS/processed_data/cojo/IDS/maternal_ids_plink.txt',
+		'/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/bgen/{allchrs}.bgen',
+		'/mnt/work2/pol/metaGWAS/processed_data/cojo/{pheno}_filter_{allchrs}_variants.txt'
+	output:
+		temp('/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}.bed'),
+		temp('/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}.bim'),
+		temp('/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}.fam')
+	params:
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}'
+	threads: 5
+	shell:
+		'~/soft/plink2 --bgen {input[1]} ref-first --keep {input[0]} --extract bed1 {input[2]} --memory 5000 --threads {threads} --make-bed --out {params[0]}'
+#                '/home/pol.sole.navais/soft/qctool_v2.0.8/qctool -g {input[1]} -incl-samples {input[0]} -incl-positions {input[2]} -og - | bgzip > {output[0]}'
+
+
+rule modify_bim:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}.bim',
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}.bed',
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}.fam'
+	output:
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.bim',
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.bed',
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.fam',
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/duplicates_{allchrs}.norsid.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['CHR', 'SNP', 'x1', 'POS', 'A1', 'A2'])
+                d['A1']= np.where(len(d.A1) > len(d.A2), 'I', d.A1)
+                d['A2']= np.where(len(d.A1) < len(d.A2), 'I', d.A2)
+                d['A1']= np.where(d.A2== 'I', 'D', d.A1)
+                d['A2']= np.where(d.A1== 'I', 'D', d.A2)
+		d['CHR']= d.CHR.apply(str)
+		d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+                d['SNP']= np.where(d.A1>d.A2, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A2 + ':' + d.A1, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A1 + ':' + d.A2)
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+                d= d[d.duplicated(['SNP'], keep= False)]
+                d.drop_duplicates('SNP', inplace= True, keep= 'first')
+		d.to_csv(output[3], sep='\t', columns= ['SNP'])
+		shell('mv {input[1]} {output[1]}')
+		shell('mv {input[2]} {output[2]}')
+
+
+rule bed_list:
+	''
+	input:
+		expand('/mnt/work2/pol/metaGWAS/cojo/data/plink/{{pheno}}/{allchrs}_norsid.bim', allchrs= allchrs_nms)
+	output:
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/list_files_{pheno}.txt'
+	run:
+		bed_list= [infile.replace('.bim', '') for infile in input]
+		with open(output[0], 'w') as f:
+			for item in bed_list:
+				f.write("%s\n" % item)
+		
+
 
 rule format_sumstats_cojo:
 	'Format sumstats according to CGTA cojo.'
 	input:
-		'/mnt/work2/pol/metaGWAS/results/meta/Maternal_GWAMA_{pheno}.txt.gz',
-		'/mnt/work2/pol/metaGWAS/results/top_regions_FINEMAP_{pheno}.txt'
+		'/mnt/work2/pol/metaGWAS/results/meta/Maternal_GWAMA_{pheno}.txt.gz'
 	output:
-		'/mnt/work2/pol/metaGWAS/cojo/sumstats_{pheno}.txt'
+		'/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_{pheno}.txt'
 	run:
-		d= pd.read_csv(input[0], sep= '\t', header= 0, compression= 'gzip', usecols= ['CHR', 'POS', 'RSID', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue'])[['CHR', 'POS', 'RSID', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']]
-		d= d.loc[d.RSID!='', :]
-		d.drop_duplicates('RSID', inplace= True, keep= 'first')
+		d= pd.read_csv(input[0], sep= '\t', header= 0, compression= 'gzip', usecols= ['CHR', 'POS', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue', 'ID'])[['CHR', 'POS', 'ID', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']]
 		d.columns= ['CHR', 'POS', 'SNP', 'A1', 'A2', 'N', 'freq', 'b', 'se', 'p']
+		d['CHR']= d.CHR.apply(str)
+		d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+		d['SNP']= d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A2 + ':' + d.A1
+		d.drop_duplicates('SNP', keep= 'first', inplace= True)
 		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['SNP', 'A1', 'A2', 'freq', 'b', 'se', 'p', 'N'])
-		
+
+rule merge_overlapping_regions:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/topregions/final/{pheno}.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/cojo/top_regions/{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], header= 0, sep= '\t')
+		d.sort_values(['CHR', 'pos1'], ascending= True, inplace= True)
+		d= d.reset_index(drop= True)
+		d['overlap']= d.groupby('CHR')['pos1'].shift(-1) -d.pos2
+		d.loc[d.index[d.overlap<0].values + 1, 'overlap']= d.loc[d.index[d.overlap<0].values + 1, 'overlap'] * -1
+		d['overlap']= np.where(d.overlap<0, 999, d.index)
+		d= d.groupby('overlap').agg({'pos1':'min', 'pos2':'max', 'CHR':'min', 'nearestGene': "_".join})
+		d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+		d= d[['CHR', 'pos1', 'pos2', 'nearestGene']]
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule COJO_slct:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_{pheno}.txt',
+		'/mnt/work2/pol/metaGWAS/cojo/top_regions/{pheno}.txt',
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/list_files_{pheno}.txt',
+		expand('/mnt/work2/pol/metaGWAS/cojo/data/plink/{{pheno}}/{allchrs}_norsid.{ext}', ext= ['bim', 'fam', 'bed'], allchrs= allchrs_nms)
+	output:
+		'/mnt/work2/pol/metaGWAS/cojo/results/{pheno}.jma',
+		'/mnt/work2/pol/metaGWAS/cojo/results/{pheno}.cma'
+	params:
+		'/mnt/work2/pol/metaGWAS/cojo/results/temp/'
+	threads: 5
+	run:
+		if not os.path.exists(params[0]):
+			os.makedirs(params[0])
+		df_list= list()
+		cma_list= list()
+		file_suffix= ['.jma.cojo', '.freq.badsnps', '.ldr.cojo', '.cma.cojo']
+		d= pd.read_csv(input[1], sep= '\t', header= 0)
+		for index, row in d.iterrows():
+			pos= round((int(row['pos1']) + int(row['pos2'])) / 2)
+			region= str(row['CHR']) + ' ' + str(pos) + ' ' + '1500'
+			outfile= params[0] + row['nearestGene']
+			shell('~/soft/gcta_1.93.2beta/gcta64 --mbfile {input[2]} --maf 0.001 --extract-region-bp {region} --cojo-file {input[0]} --cojo-slct --thread-num {threads} --out {outfile}')
+			if os.path.exists(outfile + '.jma.cojo'):
+				x= pd.read_csv(outfile + '.jma.cojo', sep= '\t', header= 0)
+				x['locus']= row['nearestGene']
+				df_list.append(x)
+			if os.path.exists(outfile + '.cma.cojo'):
+                                x= pd.read_csv(outfile + '.cma.cojo', sep= '\t', header= 0)
+                                x['locus']= row['nearestGene']
+                                cma_list.append(x)
+			for suffix in file_suffix:
+				if os.path.exists(outfile + suffix):
+					os.remove(outfile + suffix)
+		x= pd.concat(df_list)
+		x.to_csv(output[0], sep= '\t', header= True, index= False)
+		x= pd.concat(cma_list)
+		x.to_csv(output[1], sep= '\t', header= True, index= False)
+
 
