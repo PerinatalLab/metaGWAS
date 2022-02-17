@@ -1,0 +1,224 @@
+allchrs_nms= ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '21', '22', 'X']
+
+BW_pheno_nms= ['BW_maternal', 'BW_maternal_effect', 'BW_fetal', 'BW_fetal_effect']
+
+import csv
+import os
+import pandas as pd
+import numpy as np
+
+
+rule format_sumstats_BW_mtcojo:
+	'Format birth weight summary statistics for mtCOJO.'
+	input:
+		'/mnt/work2/pol/metaGWAS/results/BW/{BW_pheno}.txt.gz'
+	output:
+		temp('/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/{BW_pheno}.txt')
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d= d[['ID', 'EFF', 'REF', 'EAF', 'BETA', 'SE', 'pvalue', 'N']]
+		d.columns= ['SNP', 'A1', 'A2', 'freq', 'b', 'se', 'p', 'N']
+		d.drop_duplicates('SNP', keep= 'first', inplace= True)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule mtcojo_file:
+	'List of files for mtCOJO.'
+	input:
+		'/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/{BW_pheno}.txt',
+		'/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_GAraw.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/mtCOJO/flist/mtcojo_file_list_{BW_pheno}.txt'
+	run:
+		d= pd.DataFrame({'trait': [wildcards.BW_pheno, 'GA_maternal'], 'input': input})
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule mtcojo_analysis_BW_GA:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/cojo/data/plink/list_files.txt',
+		'/mnt/work2/pol/metaGWAS/mtCOJO/flist/mtcojo_file_list_{BW_pheno}.txt',
+		'/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/{BW_pheno}.txt',
+		'/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_GAraw.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/mtCOJO/results/{BW_pheno}_GA.mtcojo.cma',
+		'/mnt/work2/pol/metaGWAS/mtCOJO/results/{BW_pheno}_GA.pleio_snps'
+	params:
+		'/home/pol.sole.navais/soft/ldsc/ressources/eur_w_ld_chr/',
+		'/mnt/work2/pol/metaGWAS/mtCOJO/results/{BW_pheno}_GA'
+	threads: 10
+	shell:
+		'~/soft/gcta_1.93.2beta/gcta64 --mbfile {input[0]} --mtcojo-file {input[1]} --ref-ld-chr {params[0]} --w-ld-chr {params[0]} --out {params[1]}'
+
+rule mtcojo_file_GA_BW:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_GAraw.txt',
+		'/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/{BW_pheno}.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/mtCOJO/flist/mtcojo_file_GA_{BW_pheno}_list.txt'
+	run:
+		d= pd.DataFrame({'trait': ['GA_maternal', wildcards.BW_pheno], 'input': input})
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule mtcojo_analysis_GA_BW:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/cojo/data/plink/list_files.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/flist/mtcojo_file_GA_{BW_pheno}_list.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/{BW_pheno}.txt',
+                '/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_GAraw.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/GA_{BW_pheno}.mtcojo.cma'
+        params:
+                '/home/pol.sole.navais/soft/ldsc/ressources/eur_w_ld_chr/',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/GA_{BW_pheno}'
+        threads: 10
+	shell:
+                '~/soft/gcta_1.93.2beta/gcta64 --mbfile {input[0]} --mtcojo-file {input[1]} --ref-ld-chr {params[0]} --w-ld-chr {params[0]} --out {params[1]}'
+
+rule format_sumstats_GA_fetal_mtcojo:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/results/GA_fetal.txt',
+		'/mnt/archive/resources/HRC/HRC.r1-1.GRCh37.wgs.mac5.sites.tab'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/GA_fetal.txt')
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0)
+		x= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['#CHROM', 'POS', 'REF', 'ALT', 'AF_EXCLUDING_1000G'])
+		x= x.loc[x.AF_EXCLUDING_1000G> 0.005, :]
+		x= x.loc[x.AF_EXCLUDING_1000G< 0.995, :]
+		x= x.loc[x.POS.isin(d.POS.values), :]
+		d= d[['ID', 'EFF', 'REF', 'BETA', 'SE', 'pvalue', 'N']]
+                d.columns= ['SNP', 'A1', 'A2', 'b', 'se', 'p', 'N']
+                d.drop_duplicates('SNP', keep= 'first', inplace= True)
+		x['AF_EXCLUDING_1000G']= np.where(x.REF> x.ALT, 1 - x.AF_EXCLUDING_1000G, x.AF_EXCLUDING_1000G)
+		x['SNP']= np.where(x.REF > x.ALT, x['#CHROM'].apply(str) + ':' + x.POS.apply(str) + ':' + x.ALT + ':' + x.REF, x['#CHROM'].apply(str) + ':' + x.POS.apply(str) + ':' + x.REF + ':' + x.ALT)
+		x= x[['SNP', 'AF_EXCLUDING_1000G']]
+		x.columns= ['SNP', 'freq']
+		d= pd.merge(d, x, on= ['SNP'])
+		d= d[['SNP', 'A1', 'A2', 'freq', 'b', 'se', 'p', 'N']]
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule mtcojo_file_GA_maternal_fetal:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_GAraw.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/GA_fetal.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/mtcojo_file_GA_maternal_fetal_list.txt'
+        run:
+                d= pd.DataFrame({'trait': ['GA_maternal', 'GA_fetal'], 'input': input})
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+
+rule mtcojo_analysis_GA_maternal_fetal:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/cojo/data/plink/list_files.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/mtcojo_file_GA_maternal_fetal_list.txt',
+                '/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_GAraw.txt',
+		'/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/GA_fetal.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/GA_maternal_fetal.mtcojo.cma'
+        params:
+                '/home/pol.sole.navais/soft/ldsc/ressources/eur_w_ld_chr/',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/GA_maternal_fetal'
+        threads: 10
+	shell:
+                '~/soft/gcta_1.93.2beta/gcta64 --mbfile {input[0]} --mtcojo-file {input[1]} --ref-ld-chr {params[0]} --w-ld-chr {params[0]} --out {params[1]}'
+
+rule mtcojo_file_BW_GA_fetal:
+        'List of files for mtCOJO.'
+        input:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/{BW_pheno}.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/GA_fetal.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/flist/GA_fetal_mtcojo_file_list_{BW_pheno}.txt'
+        run:
+                d= pd.DataFrame({'trait': [wildcards.BW_pheno, 'GA_fetal'], 'input': input})
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule mtcojo_analysis_BW_GA_fetal:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/cojo/data/plink/list_files.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/flist/GA_fetal_mtcojo_file_list_{BW_pheno}.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/{BW_pheno}.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/GA_fetal.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/{BW_pheno}_GA_fetal.mtcojo.cma'
+        params:
+                '/home/pol.sole.navais/soft/ldsc/ressources/eur_w_ld_chr/',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/{BW_pheno}_GA_fetal'
+        threads: 10
+	shell:
+                '~/soft/gcta_1.93.2beta/gcta64 --mbfile {input[0]} --mtcojo-file {input[1]} --ref-ld-chr {params[0]} --w-ld-chr {params[0]} --out {params[1]}'
+
+rule format_testosterone_shbg_mtCOJO:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/results/Testosterone_fem.txt',
+		'/mnt/work2/pol/metaGWAS/results/SHBG_fem.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/Testosterone_fem.txt',
+		'/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/SHBG_fem.txt'
+	run:
+		for i in range(len(input)):
+			d= pd.read_csv(input[i], sep= '\t', header= 0, usecols= ['ID', 'REF', 'EFF', 'EAF', 'BETA', 'SE', 'pvalue', 'N'])[['ID', 'REF', 'EFF', 'EAF', 'BETA', 'SE', 'pvalue', 'N']]
+			d.columns= ['SNP', 'A2', 'A1', 'freq', 'b', 'se', 'p', 'N']
+			d.drop_duplicates('SNP', keep= 'first', inplace= True)
+			d= d[['SNP', 'A1', 'A2', 'freq', 'b', 'se', 'p', 'N']]
+			d.to_csv(output[i], sep= '\t', header= True, index= False)
+
+rule mtcojo_file_testosterone_shbg:
+        'List of files for mtCOJO.'
+        input:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/Testosterone_fem.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/SHBG_fem.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/flist/Testosterone_SHBG_fem.txt'
+        run:
+                d= pd.DataFrame({'trait': ['Testosterone_fem', 'SHBG_fem'], 'input': input})
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule mtcojo_analysis_testosterone_shbg:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/cojo/data/plink/list_files.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/flist/Testosterone_SHBG_fem.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/Testosterone_fem.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/SHBG_fem.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/Testosterone_SHBG_fem.mtcojo.cma'
+        params:
+                '/home/pol.sole.navais/soft/ldsc/ressources/eur_w_ld_chr/',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/Testosterone_SHBG_fem'
+        shell:
+                '~/soft/gcta_1.93.2beta/gcta64 --mbfile {input[0]} --mtcojo-file {input[1]} --ref-ld-chr {params[0]} --w-ld-chr {params[0]} --out {params[1]}'
+
+rule mtcojo_file_shbg_testosterone:
+        'List of files for mtCOJO.'
+        input:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/SHBG_fem.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/Testosterone_fem.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/flist/SHBG_Testosterone_fem.txt'
+        run:
+                d= pd.DataFrame({'trait': ['SHBG_fem', 'Testosterone_fem'], 'input': input})
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule mtcojo_analysis_shbg_testosterone:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/cojo/data/plink/list_files.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/flist/SHBG_Testosterone_fem.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/Testosterone_fem.txt',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/sumstats/SHBG_fem.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/SHBG_Testosterone_fem.mtcojo.cma'
+        params: 
+                '~/soft/ldsc/ressources/ressources/eur_w_ld_chr/',
+                '/mnt/work2/pol/metaGWAS/mtCOJO/results/SHBG_Testosterone_fem'
+        shell:
+                '~/soft/gcta_1.93.2beta/gcta64 --mbfile {input[0]} --mtcojo-file {input[1]} --ref-ld-chr {params[0]} --w-ld-chr {params[0]} --out {params[1]}'
