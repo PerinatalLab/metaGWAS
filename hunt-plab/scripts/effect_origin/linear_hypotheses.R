@@ -25,6 +25,10 @@ pheno= fread(snakemake@input[[4]])
 print(dim(pheno))
 pheno$PREG_ID= paste('PREG', pheno$MOR_PID, pheno$BARN_PID, pheno$FAR_PID, sep= '_')
 
+trio= fread(snakemake@input[[5]])
+
+pheno= filter(pheno, PREG_ID %in% trio$PREG_ID)
+
 write( paste('snp', 'n', 'freq_h1', 'freq_h2', 'freq_h3', 'beta_h1', 'se_h1', 'pvalue_h1', 'beta_h2', 'se_h2', 'pvalue_h2', 'beta_h3', 'se_h3', 'pvalue_h3', 'pval_maternal', 'pval_fetal', 'pval_poe', 'pval_h2_vs_h3', sep= '\t'), snakemake@output[[1]], append= T)
 
 results_list= lapply(names(h1)[1:(length(names(h1))-1)], function(snp) {
@@ -48,7 +52,7 @@ d= inner_join(pheno, h1_temp, by= 'PREG_ID') %>% inner_join(., h2_temp, by= 'PRE
 
 d= filter(d, !duplicated(MOR_PID))
 d= filter(d, !duplicated(FAR_PID))
-m1= lm(SVLEN_UL_DG~ h1 + h2 + h3 + PARITY0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + GAMETOD, d)
+m1= lm(SVLEN_UL_DG~ h1 + h2 + h3 + PARITY0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + FAAR, d)
 
 n= length(resid(m1))
 coefs= summary(m1)$coefficients[2:5,]

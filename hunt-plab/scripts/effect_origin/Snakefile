@@ -110,7 +110,8 @@ rule haplotype_based_analysis:
                 '/mnt/work/pol/metaGWAS/effect_origin/single_variant/processed_data/haplotypes/MT_PREG_ID',
                 '/mnt/work/pol/metaGWAS/effect_origin/single_variant/processed_data/haplotypes/MnT_PREG_ID',
                 '/mnt/work/pol/metaGWAS/effect_origin/single_variant/processed_data/haplotypes/PT_PREG_ID',
-                '/mnt/work/pol/metaGWAS/pheno/trio_pheno.txt'
+                '/mnt/work/pol/metaGWAS/pheno/trio_pheno.txt',
+		'/mnt/work/pol/metaGWAS/effect_origin/trio_confirmed.txt'
         output:
                 '/mnt/work/pol/metaGWAS/effect_origin/results/HUNT.txt'
         script:

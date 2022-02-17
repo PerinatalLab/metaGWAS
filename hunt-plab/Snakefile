@@ -3,7 +3,6 @@ CHR_nms= ['01', '02', '03', '04', '05', '06', '07', '08', '09', '10', '11', '12'
 pheno_nms= ['allPTD', 'GAraw', 'GAnrm', 'postTerm']
 
 
-include: 'scripts/FINEMAP/Snakefile'
 include: 'scripts/HLA/Snakefile'
 include: 'scripts/survival/Snakefile'
 include: 'scripts/reports/Snakefile'
