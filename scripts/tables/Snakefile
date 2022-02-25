@@ -129,3 +129,14 @@ rule table_sample_size:
 		d= pd.concat(df_list)
 		d.to_csv(output[0], sep= '\t', header= True, index= False)
 
+rule table_IV_repr_phenos:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/IVs/all_traits_GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/Tables/genetic_instruments_MR_repr_phenos.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['ID', 'beta', 'se', 'pvalue', 'trait'])
+		d[['CHR', 'POS', 'REF', 'EFF']]= d.ID.str.split(':', expand= True)
+		d['CHR']= np.where(d.CHR== '23', 'X', d.CHR)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
