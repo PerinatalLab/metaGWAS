@@ -21,128 +21,71 @@ showtext_auto(enable = TRUE)
 
 d= fread(snakemake@input[[1]])
 
-d= filter(d, MarkerName!= '6:32595083:G:T')
 
-top= fread(snakemake@input[[2]])
-ids= pull(top, ID)
-ids= c('3:156697097:A:G', '5:158058432:G:T', ids)
-d$ID= d$MarkerName
+x= fread(snakemake@input[[2]], select= c('nearestGene', 'RSID'))
 
-d= filter(d, ID %in% ids)
-
-
-d= separate(d, MarkerName, into= c('CHR', 'POS', 'REF', 'EFF'), sep= ':')
-d$beta_h1= with(d, ifelse(REF > EFF, -1 * beta_h1, beta_h1))
-d$beta_h2= with(d, ifelse(REF > EFF, -1 * beta_h2, beta_h2))
-d$beta_h3= with(d, ifelse(REF > EFF, -1 * beta_h3, beta_h3))
-d$beta_h1= with(d, ifelse(d$beta_h2<0, d$beta_h1 * -1, d$beta_h1))
-d$beta_h3= with(d, ifelse(d$beta_h2<0, d$beta_h3 * -1, d$beta_h3))
-d$beta_h2= with(d, ifelse(d$beta_h2<0, d$beta_h2 * -1, d$beta_h2))
-
-d$ID= with(d, ifelse(REF> EFF, paste(CHR, POS, EFF, REF, sep= ':'), paste(CHR, POS, REF, EFF, sep= ':')))
-
-d= left_join(d, top[, c('ID', 'nearestGene', 'BETA', 'RSID', 'pvalue')], by= 'ID')
-d$nearestGene= ifelse(is.na(d$nearestGene), 'EBF1', d$nearestGene)
+d= inner_join(d, x, by= c('rsid'= 'RSID'))
 
 d$GENE= d$nearestGene
 d$GENE= with(d, ifelse(GENE== 'CDC42', 'CDC42/ WNT4', ifelse(GENE== 'HIVEP3', 'HIVEP3/ EDN2', ifelse(GENE== 'TET3', 'TET3/ DGUOK-AS1', ifelse(GENE== 'TCEA2', 'TCEA2/ OPRL1', GENE)))))
 d$nearestGene= d$GENE
 
-d$RSID= ifelse(d$ID== '5:158058432:G:T', 'rs6879092', d$RSID)
-d$pvalue= ifelse(d$ID== '5:158058432:G:T', 1e-7, d$pvalue)
+d$nearestGene= with(d, ifelse(rsid== 'rs3129768', 'HLA-DQA1', ifelse(rsid== 'rs5991030', 'AGTR2', ifelse(rsid== 'rs5930554', 'RAP2C', nearestGene)))) 
 
-d$RSID= ifelse(d$ID== '3:156697097:A:G', 'rs6780427', d$RSID)
-d$pvalue= ifelse(d$ID== '3:156697097:A:G', 2.633e-08, d$pvalue)
-d$nearestGene= ifelse(d$ID== '3:156697097:A:G', 'KCNAB1', d$nearestGene)
+d$nearestGene= with(d, ifelse(rsid== 'rs6780427', 'KCNAB1', nearestGene))
+d$nearestGene= with(d, ifelse(rsid== 'rs6879092', 'EBF1', nearestGene))
 
+d$rsid_lab= with(d, paste0(rsid, ' (', nearestGene, ')'))
 
-d$rsid_lab= with(d, paste0(RSID, ' (', nearestGene, ')'))
+d$beta_PT= with(d, ifelse(beta_MNT<0, -1 * beta_PT, beta_PT))
+d$beta_MT= with(d, ifelse(beta_MNT<0, -1 * beta_MT, beta_MT))
+d$beta_MNT= with(d, ifelse(beta_MNT<0, -1 * beta_MNT, beta_MNT))
 
+d= gather(d, haplotype, beta, c('beta_MT', 'beta_MNT', 'beta_PT'))
 
-ds= dist((d[, c('beta_h2', 'beta_h1', 'beta_h3')]))
+max_beta= max(abs(d$beta))
 
-hc= hclust(ds)
-hc$labels= d$rsid_lab
-clust= cutree(hc, k= 4)
+d$class_name= factor(d$class_name, levels= c("MF SD", "MF OD", "Maternal", "Fetal MatT", "Fetal"))
 
-d$clust= clust
+d= arrange(d, class_name, desc(probability))
+#d$haplotype= with(d, ifelse(haplotype== 'beta_MT', 'MT', ifelse(haplotype== 'beta_MNT', 'MnT', 'PT')))
 
-circ1 <- ggtree(hc, layout = "circular")
-df1= as.data.frame(select(d, beta_h2, beta_h1, beta_h3))
-#names(df1)= c('MnT', 'MT', 'PT')
-names(df1)= c('Maternal\nnon-transmitted', 'Maternal\ntransmitted', 'Paternal\ntransmitted')
+d$haplotype= with(d, ifelse(haplotype== 'beta_MT', 'Maternal\ntransmitted', ifelse(haplotype== 'beta_MNT', 'Maternal\nnon-transmitted', 'Paternal\ntransmitted')))
+d$rsid_lab= factor(d$rsid_lab, levels= unique(d$rsid_lab))
 
-rownames(df1) <- d$rsid_lab
-print('
-circ1= ggtree(hc) +
-theme(legend.position="none") +
-geom_hilight(node=21, fill= colorBlindBlack8[7], alpha=0.5) +
-geom_cladelabel(21, "Mt", offset= 0.03, barsize=0, angle=90, offset.text= -1/100, hjust=0.5, fontsize=8/.pt) +
-geom_hilight(node=24, fill= colorBlindBlack8[3], alpha=0.5) +
-geom_cladelabel(24, "Opposite", offset=0.03, barsize=0, angle=90, offset.text=-1/100, hjust=0.5, fontsize=8/.pt) +
-geom_hilight(node=27, fill=colorBlindBlack8[8], alpha=0.5) +
-geom_cladelabel(27, "Maternal", offset=0.03, barsize=0, angle=90, offset.text=-1/100, hjust=0.5, fontsize=8/.pt) +
-geom_hilight(node=26, fill="grey", alpha=0.5)  +
-geom_cladelabel(26, "Unclassified", offset=0.03, barsize=0, angle=90, offset.text=-1/100, hjust=0.5, fontsize=8/.pt) +
-theme(plot.margin=margin(0, 0, 0, 0, unit= "cm"))+
-scale_x_continuous(expand= c(0, NA), limits= c(0, 3.1))
+p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
+  theme_cowplot(8) +
+  geom_tile() +
+  scale_fill_gradient2(low= colorBlindBlack8[4], high= colorBlindBlack8[2], mid= 'white', limits= c(-max_beta, max_beta), guide= 'none') +
+  coord_equal() +
+#  scale_x_discrete(guide = guide_axis(angle = 45, hjust = 1)) +
+  theme(axis.title= element_blank(),
+        axis.ticks= element_blank(),
+        plot.margin = margin(0, 0, 0, 0, "mm"),
+        text= element_text(size= 9/ .pt),
+        axis.text.y= element_text(hjust= 0.5),
+	axis.text.x= element_text(angle= 45, hjust= 1),
+        axis.line = element_line(colour = 'black', size = 0.2)) +
+  geom_text_repel(data= filter(d, haplotype== 'Paternal\ntransmitted'), aes(x= rsid_lab, y= 4,
+                label= round(probability, 2)),  direction= 'y', size= 8/ .pt, box.padding = 0.01)  
 
-grp= split(d$rsid_lab, d$clust)
-max_beta= max(abs(as.numeric(stack(d)$values)))
- 
+ggsave(snakemake@output[[1]], plot= p1, width= 185, height= 60, units= 'mm', dpi= 300)
 
-p1= groupOTU(circ1, grp, "RSID") + 
-aes(color= RSID ) + 
-theme(legend.position="none", 
-plot.margin=margin(0, 0, 0, 0, unit= "cm")) +
-scale_colour_manual(values=c(colorBlindBlack8[c(1, 8, 3)], "grey", colorBlindBlack8[7]), guide= "none")
+p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
+  theme_cowplot(8) +
+  geom_tile() +
+  scale_fill_gradient2(low= colorBlindBlack8[4], high= colorBlindBlack8[2], mid= 'white', limits= c(-max_beta, max_beta), name= 'Effect size') +
+  coord_equal() +
+  scale_x_discrete(guide = guide_axis(angle = 45), position= 'top') +
+  theme(axis.title= element_blank(),
+        axis.ticks= element_blank(),
+        plot.margin = margin(0, 9, 0,0, "mm"),
+        text= element_text(size= 9/ .pt),
+        axis.text.y= element_text(hjust= 0.5),
+        axis.line = element_line(colour = 'black', size = 0.2)) +
+  geom_text_repel(data= filter(d, haplotype== 'Paternal\ntransmitted'), aes(x= rsid_lab, y= -0.05,
+                                                                                label= round(probability, 2)), direction= "y" ,
+                  size= 6.5/ .pt) 
+ggsave(snakemake@output[[2]], plot= p1, width= 185, height= 100, units= 'mm', dpi= 300)
 
-
-ctree= gheatmap(p1, df1, offset= 0, width=0.7, 
-        colnames=TRUE, legend_title="genotype", colnames_angle= 0, font.size= 8/.pt, hjust= 0.5) +
-    geom_tiplab(align = TRUE, linesize=0, offset= 0.9, size= 8/.pt) +
-    scale_fill_gradient2(low= colorBlindBlack8[2], high= colorBlindBlack8[4], mid= "white", guide= F, limits= c(-max_beta, max_beta)) +
-coord_cartesian(clip = "off") + 
-  theme(plot.margin=margin(0, 0, 0, 0, unit= "cm"))
-
-ggsave(snakemake@output[[1]], plot= ctree, width= 100, height= 120, units= "mm", dpi= 300)
-')
-
-
-circ1= ggtree(hc) +
-theme(legend.position='none') +
-geom_hilight(node=21, fill= colorBlindBlack8[7], alpha=0.5) +
-#geom_cladelabel(21, "Mt", offset= 0.0, barsize=0, angle=0, offset.text= -0.15, hjust=0.5, fontsize=8/.pt) +
-geom_hilight(node=24, fill= colorBlindBlack8[8], alpha=0.5) +
-#geom_cladelabel(24, "Opp.", offset=0.0, barsize=0, angle=0, offset.text=-0.3, hjust=0.5, fontsize=8/.pt) +
-geom_hilight(node=14, fill='grey', alpha=0.5) +
-#geom_cladelabel(27, "Maternal", offset=0.0, barsize=0, angle=0, offset.text=-0.45, hjust=0.5, fontsize=8/.pt) +
-geom_hilight(node=26, fill= colorBlindBlack8[3], alpha=0.5)  +
-#geom_cladelabel(26, "Unclassified", offset=0.0, barsize=0, angle=0, offset.text=-0.3, hjust=0.5, fontsize=8/.pt) +
-theme(plot.margin=margin(0, 0, 0, 0, unit= 'cm'))+
-scale_x_continuous(expand= c(0, NA), limits= c(0, 3.1))
-
-grp= split(d$rsid_lab, d$clust)
-max_beta= max(abs(as.numeric(stack(d)$values)))
-
-
-p1= groupOTU(circ1, grp, 'RSID') +
-aes(color= RSID, angle= 45, hjust= 1) +
-theme(legend.position="none",
-plot.margin=margin(0, 0, 0, 0, unit= 'cm')) +
-scale_colour_manual(values=c(colorBlindBlack8[c(1, 8, 3)], 'grey', colorBlindBlack8[7]), guide= 'none')
-
-
-ctree= gheatmap(p1, df1, offset= 0, width= 0.7,
-        colnames= TRUE, legend_title= "genotype", colnames_offset_y= -1, colnames_angle= 0, font.size= 8/.pt, hjust= 0.5) +
-    geom_tiplab(align = FALSE, linesize= 0, offset= -0.9, size= 8/.pt, hjust= 1) +
-    scale_fill_gradient2(low= colorBlindBlack8[2], high= colorBlindBlack8[4], mid= 'white', guide= F, limits= c(-max_beta, max_beta)) +
-coord_cartesian(clip = 'off') +
-  theme(plot.margin=margin(0, 0, 0.6, 0.5, unit= 'cm')) +
-  scale_x_reverse(limits= c(2.5, 0))+ 
-coord_flip(clip= 'off')
-  
-ggsave(snakemake@output[[1]], plot= ctree, width= 185, height= 100, units= 'mm', dpi= 300)
-
-
-fwrite(d, snakemake@output[[2]], sep= '\t')
+fwrite(d, snakemake@output[[3]], sep= '\t')

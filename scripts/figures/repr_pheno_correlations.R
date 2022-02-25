@@ -27,7 +27,7 @@ x1$p2= gsub('.txt.sumstats.gz', '', apply(x1[, 'p2'], 1, function(x) unlist(strs
 x1$rg= -1 * x1$rg
 d= rbind(x, x1)
 
-traits= filter(d, p< 0.05/ 14, !grepl('BW', p2), !grepl('GA', p2)) %>% pull(p2)
+#traits= filter(d, p< 0.05/ 14, !grepl('BW', p2), !grepl('GA', p2)) %>% pull(p2)
 
 d$trait= d$p2
 d$trait= with(d, ifelse(trait== 'GAraw', 'Maternal gestational duration',
@@ -43,8 +43,8 @@ ifelse(trait== 'miscarriage', 'Miscarriage',
                 ifelse(trait== 'SHBG_male', 'SHBG (men)',
                 ifelse(trait== 'CBAT_fem', 'CBAT (women)',
                 ifelse(trait== 'CBAT_male', 'CBAT (men)',
-                ifelse(trait== 'Oestradiol_fem', 'Oestradiol (women)',
-                ifelse(trait== 'POP', 'Pelvic Organ Prolapse',
+                ifelse(trait== 'Oestradiol_fem', 'Estradiol (women)',
+                ifelse(trait== 'POP', 'Pelvic organ prolapse',
                 ifelse(trait== 'Testosterone_male', 'Testosterone (men)',
                 ifelse(trait== 'leiomyoma_uterus', 'Leiomyoma uterus',
                 ifelse(trait== 'BW_fetal', 'Fetal',
@@ -73,3 +73,22 @@ theme(axis.line.x = element_line(size = 0.3),
 
 
 ggsave(snakemake@output[[1]], plot= p1, width= 88, height= 120, units= 'mm', dpi= 300)
+
+fwrite(d, snakemake@output[[2]], sep= '\t')
+
+p1= ggplot(d, aes(rg, trait, colour= p1)) +
+geom_pointrange(aes(xmax= rg + 1.96 * se, xmin= rg - 1.96 * se), position = position_dodge(width = 0.3), fatten= 1) +
+scale_colour_manual(values= colorBlindBlack8[c(8,3)], name= 'Trait') +
+theme_cowplot(font_size= 9) +
+scale_x_continuous(limits= c(-1, 1), breaks= seq(-1, 1, 0.5)) +
+xlab('Genetic correlation') +
+geom_vline(xintercept= 0, size= 0.3) +
+geom_vline(xintercept= c(seq(-1, 1, 0.25)), colour= 'grey', linetype= 'dashed', alpha= 0.5, size= 0.2) +
+theme(axis.line.x = element_line(size = 0.3),
+        axis.line.y = element_line(size = 0.3),
+        axis.ticks= element_line(size= 0.3),
+        axis.title.y= element_blank())
+
+
+ggsave(snakemake@output[[3]], plot= p1, width= 88, height= 120, units= 'mm', dpi= 300)
+

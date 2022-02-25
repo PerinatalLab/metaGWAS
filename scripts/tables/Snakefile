@@ -60,20 +60,16 @@ rule Supp_table_maternal_fetal_effects:
         ''
         input:
                 '/mnt/hdd/common/pol/metaGWAS/colocalization/GAraw/pph_GA_fetal.txt',
-                '/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt',
-                '/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt'
+                '/mnt/hdd/common/pol/metaGWAS/effect_origin/haplotype_analysis_all.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz'
         output:
                 '/mnt/hdd/common/pol/metaGWAS/Tables/Maternal_fetal_effects.txt'
         run:
                 d= pd.read_csv(input[1], sep= '\t', header= 0)
-                d= d.rename(columns = {'MarkerName':'ID'})
-                coloc= pd.read_csv(input[0], sep= '\t', header= 0)
                 top= pd.read_csv(input[2], sep= '\t', header= 0, usecols= ['ID', 'nearestGene', 'RSID'])
-                top= top.append({'ID': '5:158058432:G:T', 'nearestGene': 'EBF1', 'RSID': 'rs6879092'}, ignore_index= True)
-                top= top.append({'ID': '3:156697097:A:G', 'nearestGene': 'KCNAB1', 'RSID': 'rs6780427'}, ignore_index= True)
-                d= pd.merge(d, top, on= 'ID')
-		coloc[['CHR', 'locus']]= coloc['locus'].str.split('_', expand= True)
-		d= pd.merge(d, coloc, left_on= 'nearestGene', right_on= 'locus', how= 'left')
+                d= pd.merge(d, top, left_on= 'rsid', right_on= 'RSID')
+		d['nearestGene']= np.where(d.nearestGene== 'CDC42', 'CDC42/ WNT4', np.where(d.nearestGene== 'HIVEP3', 'HIVEP3/ EDN2', np.where(d.nearestGene== 'TET3', 'TET3/ DGUOK-AS1', np.where(d.nearestGene== 'TCEA2', 'TCEA2/ OPRL1', d.nearestGene))))
+		d['nearestGene']= np.where(d.rsid== 'rs3129768', 'HLA-DQA1', np.where(d.rsid== 'rs5991030', 'AGTR2', np.where(d.rsid== 'rs5930554', 'RAP2C', np.where(d.rsid== 'rs6780427', 'KCNAB1', np.where(d.rsid== 'rs6879092', 'EBF1', d.nearestGene)))))
 		d[['CHR', 'POS', 'REF', 'EFF']]= d['ID'].str.split(':', expand= True)
 		d.to_csv(output[0], sep= '\t', header= True, index= False)
 

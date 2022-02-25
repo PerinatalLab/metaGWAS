@@ -21,7 +21,7 @@ x= fread(snakemake@input[[2]])
 
 d= rbind(d, x)
 
-names(d)= c('Name', 'candidate_gene', 'rest_genes', 'OR', 'pvalue')
+names(d)= c('Name', 'no_no', 'no_yes', 'yes_no', 'yes_yes', 'candidate_gene', 'rest_genes', 'OR', 'pvalue')
 d$enrichment= d$candidate_gene / d$rest_genes
 
 d= arrange(d, desc(pvalue))

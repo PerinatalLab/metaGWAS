@@ -72,7 +72,7 @@ theme(axis.line.x = element_line(size = 0.3),
         axis.ticks= element_line(size= 0.3))
 
 
-ggsave(snakemake@output[[1]], plot= p1, width= 60, height= 60, units= 'mm', dpi= 300)
+ggsave(snakemake@output[[1]], plot= p1, width= 70, height= 70, units= 'mm', dpi= 300)
 
 p1= ggplot(d, aes(beta_dif, group= GWAS, fill= GWAS)) +
 geom_hline(yintercept= 0, colour= 'black') +
@@ -90,7 +90,7 @@ theme(axis.line.x = element_line(size = 0.3),
         axis.line.y = element_line(size = 0.3),
         axis.ticks= element_line(size= 0.3))
 
-ggsave(snakemake@output[[3]], plot= p1, width= 60, height= 60, units= 'mm', dpi= 300)
+ggsave(snakemake@output[[3]], plot= p1, width= 70, height= 70, units= 'mm', dpi= 300)
 
 fwrite(d, snakemake@output[[2]], sep= '\t')
 

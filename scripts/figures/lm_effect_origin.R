@@ -18,61 +18,37 @@ showtext_auto(enable = TRUE)
 
 d= fread(snakemake@input[[1]])
 
-d= filter(d, MarkerName!= '6:32595083:G:T')
-
-d= separate(d, MarkerName, into= c('CHR', 'POS', 'REF', 'EFF'), sep= ':')
-d$beta_h1= with(d, ifelse(Allele2 > Allele1, -1 * beta_h1, beta_h1))
-d$beta_h2= with(d, ifelse(Allele2 > Allele1, -1 * beta_h2, beta_h2))
-d$beta_h3= with(d, ifelse(Allele2 > Allele1, -1 * beta_h3, beta_h3))
+x= fread(snakemake@input[[2]], select= c('RSID', 'BETA'))
 
 
-d$ID= with(d, ifelse(REF> EFF, paste(CHR, POS, EFF, REF, sep= ':'), paste(CHR, POS, REF, EFF, sep= ':')))
+d= inner_join(d, x, by= c('rsid' = 'RSID'))
 
-
-top= fread(snakemake@input[[2]])
-top= filter(top, ID!= '6:32595083:G:T')
-ids= pull(top, ID)
-ids= c('3:156697097:A:G', '5:158058432:G:T', ids)
-
-d= filter(d, ID %in% ids)
-
-x= fread(snakemake@input[[3]], select= c('ID', 'BETA'))
-
-x= filter(x, ID %in% ids)
-
-d= inner_join(d, x, by= 'ID')
-
-d$beta_h2= with(d, ifelse(BETA< 0, -1 * beta_h2,  beta_h2))
-d$beta_h3= with(d, ifelse(BETA< 0, -1 * beta_h3, beta_h3))
-d$beta_h1= with(d, ifelse(BETA< 0, -1 * beta_h1, beta_h1))
+d$beta_MNT= with(d, ifelse(BETA< 0, -1 * beta_MNT,  beta_MNT))
+d$beta_PT= with(d, ifelse(BETA< 0, -1 * beta_PT, beta_PT))
+d$beta_MT= with(d, ifelse(BETA< 0, -1 * beta_MT, beta_MT))
 d$BETA= with(d, ifelse(BETA<0, -1 * BETA, BETA))
 
-d$lo95_h1= d$beta_h1 - 1.96 * d$se_h1
-d$up95_h1= d$beta_h1 + 1.96 * d$se_h1
+d$lo95_MT= d$beta_MT - 1.96 * d$se_MT
+d$up95_MT= d$beta_MT + 1.96 * d$se_MT
 
-d$lo95_h2= d$beta_h2 - 1.96 * d$se_h2
-d$up95_h2= d$beta_h2 + 1.96 * d$se_h2
+d$lo95_MNT= d$beta_MNT - 1.96 * d$se_MNT
+d$up95_MNT= d$beta_MNT + 1.96 * d$se_MNT
 
-d$lo95_h3= d$beta_h3 - 1.96 * d$se_h3
-d$up95_h3= d$beta_h3 + 1.96 * d$se_h3
+d$lo95_PT= d$beta_PT - 1.96 * d$se_PT
+d$up95_PT= d$beta_PT + 1.96 * d$se_PT
 
-d$sig_origin= with(d, ifelse(pvalue_h1<0.05 & pvalue_h2>= 0.05 & pvalue_h3 >= 0.05, 'Maternal and/or fetal', ifelse(pvalue_h1<0.05 & pvalue_h2<0.05 & pvalue_h3>= 0.05, 'Maternal', ifelse(pvalue_h1>= 0.05 & pvalue_h2< 0.05 & pvalue_h3>= 0.05, 'Maternal', ifelse(pvalue_h1>= 0.05 & pvalue_h2< 0.05 & pvalue_h3< 0.05, 'Maternal and fetal', 'Unclassified')))))
+d$class_name= with(d, ifelse(class_name== 'MF SD', 'Maternal and fetal (same direction)', ifelse(class_name== 'Fetal MatT', 'Fetal effect, maternal transmitted only', ifelse(class_name== 'Maternal', 'Maternal', ifelse(class_name== 'Fetal', 'Fetal', ifelse(class_name== 'MF OD', 'Maternal and fetal (opposite direction)', ''))))))
 
-d$sig_origin= factor(d$sig_origin, levels= c('Maternal', 'Fetal', 'Maternal and fetal', 'Maternal and/or fetal', 'Unclassified'))
-
-d$sig_h2= with(d, ifelse(pvalue_h2<0.05, '2', '1'))
-d$sig_h1= with(d, ifelse(pvalue_h1<0.05, '2', '1'))
-d$sig_h3= with(d, ifelse(pvalue_h3<0.05, '2', '1'))
-
-p1= ggplot(d, aes(beta_h2, BETA, colour= sig_h2)) +
+p1= ggplot(d, aes(beta_MNT, BETA, colour= class_name)) +
 geom_point(size= 0.5) +
 #geom_errorbarh(data= filter(d, (lo95_h2 >0 & up95_h2>0) | (lo95_h2<0 & up95_h2 <0)), aes(xmax = lo95_h2, xmin = up95_h2), size= 0.05) +
 theme_cowplot(font_size= 8) +
-scale_colour_manual(values= c('grey', colorBlindBlack8[8]), guide= F) +
+scale_colour_manual(values= c('grey', colorBlindBlack8[c(8, 2, 4, 3)])) +
 geom_vline(xintercept= 0, colour= colorBlindBlack8[1], linetype= 'dashed', size= 0.2, alpha= 0.6) +
 geom_hline(yintercept= 0, colour= colorBlindBlack8[1], linetype= 'dashed', size= 0.2, alpha= 0.6) +
 xlab('Effect size maternal \nnon-transmitted alleles, days') +
-ylab('Effect size maternal genome, days') 
+ylab('Effect size maternal genome, days')
+#theme(legend.direction = "horizontal", legend.position = "bottom")
 #scale_x_continuous(breaks = round(seq(-1.5, 3, by= 0.5), 1)) +
 #  scale_y_continuous(breaks = round(seq(-1.5, 3, by= 0.5), 1))
 
@@ -80,11 +56,11 @@ ylab('Effect size maternal genome, days')
 ggsave(snakemake@output[[1]], plot= p1, width= 60, height= 60, units= 'mm', dpi= 300)
 
 print('plot1')
-p1= ggplot(d, aes(beta_h3, BETA, colour= sig_h3)) +
+p1= ggplot(d, aes(beta_PT, BETA, colour= class_name)) +
 geom_point(size= 0.5) +
 #geom_errorbarh(data= filter(d, (lo95_h3 >0 & up95_h3>0) | (lo95_h3<0 & up95_h3 <0)), aes(xmax = lo95_h3, xmin = up95_h3), size= 0.05) +
 theme_cowplot(font_size= 8) +
-scale_colour_manual(values= c('grey', colorBlindBlack8[8]), guide= F) +
+scale_colour_manual(values= c('grey', colorBlindBlack8[c(8, 2, 4, 3)])) +
 geom_vline(xintercept= 0, colour= colorBlindBlack8[1], linetype= 'dashed', size= 0.2, alpha= 0.6) +
 geom_hline(yintercept= 0, colour= colorBlindBlack8[1], linetype= 'dashed', size= 0.2, alpha= 0.6) +
 xlab('Effect size paternal \ntransmitted alleles, days') +
@@ -95,19 +71,32 @@ ylab('Effect size maternal genome, days')
 ggsave(snakemake@output[[2]], plot= p1, width= 60, height= 60, units= 'mm', dpi= 300)
 
 print('plot2')
-p1= ggplot(d, aes(beta_h1, BETA, colour= sig_h1)) +
+p1= ggplot(d, aes(beta_MT, BETA, colour= class_name)) +
 geom_point(size= 0.5) +
 #geom_errorbarh(data= filter(d, (lo95_h3 >0 & up95_h3>0) | (lo95_h3<0 & up95_h3 <0)), aes(xmax = lo95_h3, xmin = up95_h3), size= 0.05) +
 theme_cowplot(font_size= 8) +
-scale_colour_manual(values= c('grey', colorBlindBlack8[8]), guide= F) +
+scale_colour_manual(values= c('grey', colorBlindBlack8[c(8, 2, 4, 3)]), guide= F) +
 geom_vline(xintercept= 0, colour= colorBlindBlack8[1], linetype= 'dashed', size= 0.2, alpha= 0.6) +
 geom_hline(yintercept= 0, colour= colorBlindBlack8[1], linetype= 'dashed', size= 0.2, alpha= 0.6) +
 xlab('Effect size maternal \ntransmitted alleles, days') +
-ylab('Effect size maternal genome, days') 
+ylab('Effect size maternal genome, days')
 #scale_x_continuous(breaks = round(seq(-1.5, 3, by= 0.5), 1)) +
 #  scale_y_continuous(breaks = round(seq(-1.5, 3, by= 0.5), 1))
 
 ggsave(snakemake@output[[3]], plot= p1, width= 60, height= 60, units= 'mm', dpi= 300)
 
+p1= ggplot(d, aes(beta_MNT, BETA, colour= class_name)) +
+geom_point(size= 0.5) +
+#geom_errorbarh(data= filter(d, (lo95_h2 >0 & up95_h2>0) | (lo95_h2<0 & up95_h2 <0)), aes(xmax = lo95_h2, xmin = up95_h2), size= 0.05) +
+theme_cowplot(font_size= 8) +
+scale_colour_manual(values= c('grey', colorBlindBlack8[c(8, 2, 4, 3)])) +
+geom_vline(xintercept= 0, colour= colorBlindBlack8[1], linetype= 'dashed', size= 0.2, alpha= 0.6) +
+geom_hline(yintercept= 0, colour= colorBlindBlack8[1], linetype= 'dashed', size= 0.2, alpha= 0.6) +
+xlab('Effect size maternal \nnon-transmitted alleles, days') +
+ylab('Effect size maternal genome, days') 
+theme(legend.direction = "horizontal", legend.position = "bottom")
+#scale_x_continuous(breaks = round(seq(-1.5, 3, by= 0.5), 1)) +
+#  scale_y_continuous(breaks = round(seq(-1.5, 3, by= 0.5), 1))
 
-fwrite(d, snakemake@output[[4]], sep= '\t')
+ggsave(snakemake@output[[4]], plot= p1, width= 120, height= 60, units= 'mm', dpi= 300)
+fwrite(d, snakemake@output[[5]], sep= '\t')

@@ -14,13 +14,13 @@ rule manhattan_plot_GAraw:
 rule effect_origin_lm:
 	''
 	input:
-		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt',
-		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/haplotype_analysis_all.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_lm_h2_maternal.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_lm_h3_maternal.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_lm_h1_maternal.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_lm_legend.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/data_figures/GAraw_effect_origin_lm.txt'
 	script:
 		'lm_effect_origin.R'
@@ -28,13 +28,25 @@ rule effect_origin_lm:
 rule effect_origin_dendrogram:
 	''
 	input:
-		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt',
-                '/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt'
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/haplotype_analysis_all.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_dend.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_dend_legend.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/data_figures/GAraw_effect_origin_dend.txt'
 	script:
 		'effect_origin_dendrogram.R'
+
+rule effect_origin_ternary:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/haplotype_analysis_all.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_ternary.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/GAraw_effect_origin_ternary.txt'
+	script:
+		'effect_origin_ternary.R'
 
 rule gene_based_colocalization:
 	''
@@ -122,14 +134,14 @@ rule genet_correlations_reproductive_traits:
         ''
         input:
                 '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/GAraw_rg_temp',
-                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/repr_phenos_rg',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/allPTD_rg_temp',
 		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/mtCOJO/results/BW_maternal_effect_rg_temp'
         output:
                 '/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_genetic_correlations.tiff',
                 '/mnt/hdd/common/pol/metaGWAS/data_figures/repr_pheno_genetic_correlations.txt',
 		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_genetic_correlations_legend.tiff'
         script:
-                'repr_pheno_genet_corr.R'
+                'repr_pheno_correlations.R'
 
 rule partitioned_h2_figure:
 	''
@@ -181,31 +193,17 @@ rule conditional_all:
 	script:
 		'BW_conditioning.R'
 
-rule MR_GA_BW:
-	''
-	input:
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
-                '/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
-		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_maternal_effect.txt',
-		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_fetal_effect.txt'
-	output:
-		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_maternal_effect.tiff',
-		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_fetal_effect.tiff',
-		'/mnt/hdd/common/pol/metaGWAS/data_figures/MR_GA_BW_plot.txt',
-		'/mnt/hdd/common/pol/metaGWAS/data_figures/MR_GA_BW_2sampleMR.txt'
-	script:
-		'MR_GA_BW.R'
 
 rule MR_GA_BW_haplotype:
 	''
 	input:
-		'/mnt/hdd/common/pol/metaGWAS/effect_origin/META/haplotype_based_analysis.txt',
-		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/effect_origin/haplotype_analysis_all.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
 		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_{genome}_effect.txt'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_1.tiff',
-		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_2.tiff',
-		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_h3.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_MT.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_MnT.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_PT.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/data_figures/MR_GA_BW_plot_haplotype_{genome}.txt',
 		'/mnt/hdd/common/pol/metaGWAS/data_figures/MR_GA_BW_2sampleMR_haplotype_{genome}.txt'
 	script:

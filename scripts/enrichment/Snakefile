@@ -64,7 +64,7 @@ rule enrichment_pLI:
 		d= df.shape[0]
 		a= pli.shape[0] - b - d - c
 		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
-		z= ['pli', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
+		z= ['pli', a, b, c, d, (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
 		with open(output[0], 'w') as file_handler:
 			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
 
@@ -110,7 +110,7 @@ rule enrichment_dominant_recessive:
 		d= df.shape[0]
 		a= x.shape[0] - b - d - c
 		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
-		z= ['dominant', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
+		z= ['dominant', a, b, c, d, (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
 		with open(output[0], 'w') as file_handler:
 			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
 		rec= [line.strip() for line in open(input[3], 'r')]
@@ -120,7 +120,7 @@ rule enrichment_dominant_recessive:
 		d= df.shape[0]
 		a= x.shape[0] - b - d - c
 		oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
-		z= ['recessive', (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
+		z= ['recessive', a, b, c, d, (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
 		with open(output[0], 'a') as file_handler:
 			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
 

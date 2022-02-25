@@ -119,7 +119,6 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/colocalization/GA/GW/pph_GAraw_allPTD.txt',
 		'/mnt/hdd/common/pol/metaGWAS/topregions/BW/final/BW_maternal_effect.txt',
 		'/mnt/hdd/common/pol/metaGWAS/colocalization/BW/GW/pph_GAraw_BW.txt',
-		'/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_maternal_effect.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_coloc_main.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/mtCOJO/results/BW_maternal_effect_rg_temp',
 		'/mnt/hdd/common/pol/metaGWAS/LDscore/individual_cohorts/h2/allPTD/allcohorts.txt',
@@ -158,5 +157,6 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAnrm_manhattan.png',
 		'/mnt/hdd/common/pol/metaGWAS/LDScore/big5/RG/results/rp.txt',
 		'/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/meta/GAraw_allPTD_rg.log',
-		expand('/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_effect_haplotype_1.tiff', genome= ['maternal', 'fetal']),
-		'/mnt/hdd/common/pol/metaGWAS/figures/genet_corr_GAraw.pdf'
+		expand('/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_MT.pdf', genome= ['maternal', 'fetal']),
+		'/mnt/hdd/common/pol/metaGWAS/figures/genet_corr_GAraw.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_ternary.tiff'
