@@ -1,0 +1,263 @@
+import pandas as pd
+import numpy as np
+from functools import reduce
+
+CHR_nms= [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20,21, 22]
+
+allchrs_nms= ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20', '22', 'X']
+
+
+repr_trait_nms= ['GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male', 'Testosterone_only_fem', 'CBAT_only_fem']
+
+rule MR_repr_pheno_betas:
+	'Obtain two files (regions to extract in one, betas in the other).'
+	input:
+		'/mnt/work2/pol/metaGWAS/MR/raw_data/all_traits_GAraw.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/MR/processed_data/{repr_trait}_regions.txt',
+		'/mnt/work2/pol/metaGWAS/MR/processed_data/{repr_trait}_betas.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['ID', 'beta', 'se', 'pvalue', 'trait'])
+		d[['CHR', 'POS', 'REF', 'EFF']]= d.ID.str.split(':', expand= True)
+		d['CHR']= np.where(d.CHR== '23', 'X', d.CHR)
+		df= d.loc[((d.trait== 'Testosterone_fem') | (d.trait== 'CBAT_fem')), :]
+		df.drop_duplicates(['CHR', 'POS'], keep= False, inplace= True)
+		df['trait']= np.where(df.trait== 'Testosterone_fem', 'Testosterone_only_fem', 'CBAT_only_fem')
+		d= pd.concat([d, df])
+		d= d.loc[d.trait== wildcards.repr_trait, :]
+		d.to_csv(output[0], index= False, header= False, sep= '\t', columns= ['CHR', 'POS'])
+		d= d[['CHR', 'POS', 'REF', 'EFF','beta', 'trait']]
+		d.columns= ['chr', 'pos', 'REF', 'EFF', 'beta', 'trait']
+		d.to_csv(output[1], index= False, header= True, sep= '\t', columns= ['chr', 'pos', 'REF', 'EFF', 'beta'])
+
+
+rule get_GT_MR_repr_pheno:
+        'Extract GT from VCF file for a subset of genetic variants.'
+        input:
+                '/mnt/work2/pol/metaGWAS/MR/processed_data/{repr_trait}_regions.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/{sample}_toextract.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/vcf/{CHR}.vcf.gz'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/MR/processed_data/GT/temp/{repr_trait}/{sample}_gt{CHR}')
+        run:
+                shell("bcftools query -S {input[1]} -R {input[0]} -f '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n' {input[2]} -o {output[0]}")
+
+rule add_header_GT_MR_repr_pheno:
+        'Add header to genotype files.'
+        input:
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/{sample}_toextract.txt',
+                '/mnt/work2/pol/metaGWAS/MR/processed_data/GT/temp/{repr_trait}/{sample}_gt{CHR}'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/MR/processed_data/GT/CHR/{repr_trait}_{sample}_GT{CHR}')
+        run:
+                cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[0], 'r')]
+		d= pd.DataFrame(columns= cols)
+#                d= pd.read_csv(input[1], header= None, names= cols, sep= '\t')
+#                d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+                shell('cat {input[1]} >> {output[0]} ')
+
+rule concat_GT_chr_MR_repr_pheno:
+        'Collect GT from all CHR.'
+        input:
+                expand('/mnt/work2/pol/metaGWAS/MR/processed_data/GT/CHR/{{repr_trait}}_{{sample}}_GT{CHR}', CHR= CHR_nms)
+        output:
+                '/mnt/work2/pol/metaGWAS/MR/processed_data/GT/{repr_trait}/{sample}_GT.txt'
+        shell:
+                '''
+                set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'chr' >> {output[0]}
+                '''
+
+rule get_allele_transmission_MR_repr_pheno:
+        'Retrieve allele transmission from family trios (after phasing).'
+        input:
+                '/mnt/work2/pol/metaGWAS/MR/processed_data/GT/{repr_trait}/fets_GT.txt',
+                '/mnt/work2/pol/metaGWAS/MR/processed_data/GT/{repr_trait}/moms_GT.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt',
+                '/mnt/work2/pol/metaGWAS/MR/processed_data/GT/{repr_trait}/dads_GT.txt'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_h1_PREG_ID'),
+                temp('/mnt/work2/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_h2_PREG_ID'),
+                temp('/mnt/work2/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_h3_PREG_ID'),
+                temp('/mnt/work2/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_h4_PREG_ID')
+        script:
+                'allele_transmission.py'
+
+rule calculate_haplotype_GRS_MR_repr_pheno:
+        'Calculate GRS for each sample and chromosome.'
+        input:
+                '/mnt/work2/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_{haplo}_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/MR/processed_data/{repr_trait}_betas.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_{haplo}.txt'
+        script:
+                'calculate_GRS.py'
+
+rule merge_haplotype_pheno:
+        'Merge each haplotype and the pheno file.'
+        input:
+                '/mnt/work2/pol/metaGWAS/effect_origin/pheno/fets_pheno.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt',
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_h1.txt',
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_h2.txt',
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_h3.txt',
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_h4.txt'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/MR/haplotypes/pheno/temp/{repr_trait}-all_subjects.txt')
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0)
+                ids= pd.read_csv(input[1], sep= '\t', header= 0)
+                d= pd.merge(d, ids[['Child', 'Mother', 'Father']], left_on= 'IID', right_on= 'Child')
+                df_list= list()
+                for i in range(2, len(input)):
+                        x= pd.read_csv(input[i], sep= '\t', header= 0)
+                        haplo= input[i].split('_')[-1].replace('.txt', '')
+                        df_list.append(x)
+                x= reduce(lambda x, y: pd.merge(x, y, on = 'PREG_ID', how = 'inner'), df_list)
+                x['PREG_ID']= x.PREG_ID.apply(str)
+                d['PREG_ID']= d.PREG_ID.apply(str)
+                x= pd.merge(x, d, on= 'PREG_ID')
+                print(x.columns)
+		print(x.shape[0])
+                x.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule remove_related_effect_origin:
+        'Remove related individuals'
+        input:
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/pheno/temp/{repr_trait}-all_subjects.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pedigree/mobagen-ethnic-core-samples.kin0'
+        output:
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/pheno/effect_origin/delivery/{repr_trait}.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0)
+                remove= selectUnrelated(input[1], d, d.Child)
+                d= d.loc[~d.Child.isin(remove), :]
+                remove= selectUnrelated(input[1], d, d.Mother)
+                d= d.loc[~d.Mother.isin(remove), :]
+                remove= selectUnrelated(input[1], d, d.Father)
+                d= d.loc[~d.Father.isin(remove), :]
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule linear_hypotheses:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/pheno/effect_origin/delivery/{repr_trait}.txt'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/temp/{repr_trait}.txt')
+        script:
+                'MR_repr_pheno_individual_level.R'
+
+rule concat_MR_repr_pheno:
+	''
+	input:
+		expand('/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/temp/{repr_trait}.txt', repr_trait= repr_trait_nms)
+	output:
+		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt'
+	shell:
+		'''
+		head -2 {input[0]} > {output[0]}
+		tail -n +3 -q {input} >> {output[0]}
+		'''
+
+rule filter_INFO_MVMR:
+	'Filter out variants with INFO score< 0.4.'
+	input:
+		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/markerinfo/all-markerinfo.gz',
+		'/mnt/work2/pol/metaGWAS/MR/raw_data/all_traits_GAraw.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/MR/MVMR/data/variants/ids.txt'
+	run:
+		x= pd.read_csv(input[1], sep= '\t', header= None, names= ['ID', 'beta', 'se', 'pvalue', 'trait'])
+		x= x.loc[((x.trait== 'SHBG_fem') | (x.trait== 'Testosterone_fem') | (x.trait== 'CBAT_fem')), :]
+		x.drop_duplicates(subset= 'ID', inplace= True)
+		x[['CHR', 'POS', 'REF', 'EFF']]= x.ID.str.split(':', expand= True)
+		x['CHR']= np.where(x.CHR== '23', 'X', x.CHR)
+		x['ID']= x.CHR + ':' + x.POS
+                d= pd.read_csv(input[0], sep='\t', header=0, usecols= ['CHROM', 'POS', 'INFO'])
+                d.columns= ['CHR', 'POS', 'INFO']
+                d= d.loc[d.INFO>= 0.4, :]
+                d['ID']= d.CHR.map(str) + ':' + d.POS.map(str)
+                d= d.loc[d.ID.isin(x.ID.values), :]
+                d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['CHR', 'POS', 'POS', 'ID'])
+
+rule bgen_to_bed_MVMR:
+        'Extract from MoBaGenetics all genetic variants matching women.'
+        input:
+                '/mnt/work2/pol/metaGWAS/processed_data/cojo/IDS/maternal_ids_plink.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/bgen/{allchrs}.bgen',
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/variants/ids.txt'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/temp_{allchrs}.bed'),
+                temp('/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/temp_{allchrs}.bim'),
+                temp('/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/temp_{allchrs}.fam')
+        params:
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/temp_{allchrs}'
+        threads: 5
+        shell:
+                '~/soft/plink2 --bgen {input[1]} ref-first --keep {input[0]} --extract bed1 {input[2]} --memory 5000 --threads {threads} --make-bed --out {params[0]}'
+
+rule modify_bim_MVMR:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/temp_{allchrs}.bim',
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/temp_{allchrs}.bed',
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/temp_{allchrs}.fam'
+        output:
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/{allchrs}_norsid.bim',
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/{allchrs}_norsid.bed',
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/{allchrs}_norsid.fam',
+                '/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/duplicates_{allchrs}.norsid.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= None, names= ['CHR', 'SNP', 'x1', 'POS', 'A1', 'A2'])
+                d['A1']= np.where(d.A1.str.len() > d.A2.str.len(), 'I', d.A1)
+                d['A2']= np.where(d.A1.str.len() < d.A2.str.len(), 'I', d.A2)
+                d['A1']= np.where(d.A2== 'I', 'D', d.A1)
+                d['A2']= np.where(d.A1== 'I', 'D', d.A2)
+                d['CHR']= d.CHR.apply(str)
+                d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+                d['SNP']= np.where(d.A1>d.A2, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A2 + ':' + d.A1, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A1 + ':' + d.A2)
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+                d= d[d.duplicated(['SNP'], keep= False)]
+                d.drop_duplicates('SNP', inplace= True, keep= 'first')
+                d.to_csv(output[3], sep='\t', columns= ['SNP'])
+                shell('mv {input[1]} {output[1]}')
+                shell('mv {input[2]} {output[2]}')
+
+rule file_list_bim:
+	''
+	input:
+		expand('/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/{allchrs}_norsid.{ext}', allchrs= allchrs_nms, ext= ['bed', 'bim', 'fam'])
+	output:
+		temp('/mnt/work2/pol/metaGWAS/MR/MVMR/data/merge_list.txt')
+	run:
+		x= [infile.split('.')[0] for infile in input]
+		d= pd.DataFrame({'file': x})
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule merge_bim_MVMR:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/MR/MVMR/data/merge_list.txt',
+		expand('/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/{allchrs}_norsid.{ext}', allchrs= allchrs_nms, ext= ['bed', 'bim', 'fam'])
+	output:
+		expand('/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/final/norsid.{ext}', ext= ['bed', 'bim', 'fam'])
+	params:
+		'/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/final/norsid'
+	shell:
+		'~/soft/plink --merge-list {input[0]} --make-bed --out {params[0]}'
+
+rule calculate_corr_matrix:
+	''
+	input:
+		expand('/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/final/norsid.{ext}', ext= ['bim', 'bed', 'fam'])
+	output:
+		'/mnt/work2/pol/metaGWAS/MR/MVMR/data/corr_matrix/norsid_rho.ld'
+	params:
+		'/mnt/work2/pol/metaGWAS/MR/MVMR/data/plink/final/norsid',
+		'/mnt/work2/pol/metaGWAS/MR/MVMR/data/corr_matrix/norsid_rho'
+	shell:
+		'~/soft/plink --bfile {params[0]} --r --matrix --out {params[1]}'
+
+

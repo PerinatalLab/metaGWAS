@@ -63,7 +63,7 @@ rule all:
 #		'/mnt/work2/pol/metaGWAS/haplotype_analysis/rsids/GAraw.txt',
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_GRS_{sample}_{haplotype}.txt', sample= sample_nms, haplotype= ['MT', 'MnT', 'PT']),
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_{haplotype}_{haplo}.txt', haplotype= ['MT', 'MnT', 'PT'], haplo= ['h1', 'h2', 'h3', 'h4'])
-		'/mnt/work2/pol/metaGWAS/figures/data/MR_repr_phenos_individual_level.txt'
+		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt'
 
 def selectUnrelated(input_kin, df, x):
 	kin= pd.read_csv(input_kin, header= 0, sep= '\t')
@@ -169,46 +169,36 @@ rule rsids_haplotype:
 	shell:
 		'cut -f7 {input[0]} > {output[0]}'
 
-rule phenofile_TED:
-        'Merge all data necessary to create a phenotype file for spontaneous delivery and PROM.'
+
+rule phenofile_trio:
+        'Pheno file for trio analysis.'
         input:
-                '/mnt/work/pol/rotterdam2/pheno/rotterdam2_mfr.csv',
+                '/mnt/work/pol/MOBAGENETICS/rotterdam2_mfr.csv',
                 '/mnt/work/pol/MOBAGENETICS/PREG_ID_to_IID.txt',
                 '/mnt/archive/MOBAGENETICS/genotypes-base/aux/flaglist-merged/mobagen-flaglist-n99259.txt',
-                '/mnt/work/pol/MOBAGENETICS/pca_out.txt'
+                '/mnt/work/pol/MOBAGENETICS/pca_out.txt',
+		'/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt'
         output:
-                temp('/mnt/work2/pol/metaGWAS/pheno/temp_pheno_TED.txt')
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/pheno/temp/temp_pheno_moms.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/pheno/temp/temp_pheno_fets.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/pheno/temp/temp_pheno_dads.txt'
         script:
-                'scripts/pheno_file.R'
+                'scripts/trio_pheno_file.R'
 
-rule add_PCA_remove_related_TED:
-        'Remove related and add PCA.'
+rule concat_phenos_PCA:
+        'Concat pheno files, and add PCA.'
         input:
                 '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pca/mobagen-total/mobagen-total-proj-pc',
-                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pedigree/mobagen-ethnic-core-samples.kin0',
-                '/mnt/work2/pol/metaGWAS/pheno/temp_pheno_TED.txt'
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/pheno/temp/temp_pheno_{sample}.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pedigree/mobagen-ethnic-core-samples.kin0'
         output:
-                '/mnt/work2/pol/metaGWAS/pheno/TED/pheno_trio.txt',
-                '/mnt/work2/pol/metaGWAS/pheno/TED/pheno_moms.txt',
-                '/mnt/work2/pol/metaGWAS/pheno/TED/pheno_fets.txt',
-                '/mnt/work2/pol/metaGWAS/pheno/TED/pheno_dads.txt'
+                '/mnt/work2/pol/metaGWAS/effect_origin/pheno/{sample}_pheno.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/pheno/aux/ids/samples/{sample}_ids.txt',
         run:
-                d= pd.read_csv(input[2], header= 0, sep= '\t')
+                d= pd.read_csv(input[1], header= 0, sep= '\t')
                 pca= pd.read_csv(input[0], header= 0, sep= '\t')
-                remove= selectUnrelated(input[1], d, d.Mother)
-                d['Mother']= np.where(d.Mother.isin(remove), np.nan, d.Mother)
-                remove= selectUnrelated(input[1], d, d.Child)
-                d['Child']= np.where(d.Child.isin(remove), np.nan, d.Child)
-                remove= selectUnrelated(input[1], d, d.Father)
-                d['Father']= np.where(d.Father.isin(remove), np.nan, d.Father)
-                moms= pd.merge(d, pca, how= 'left', left_on= 'Mother', right_on= 'IID')
-                fets= pd.merge(d, pca, how= 'left', left_on= 'Child', right_on= 'IID')
-                dads= pd.merge(d, pca, how= 'left', left_on= 'Father', right_on= 'IID')
-                d= pd.merge(d, pca, how= 'left', left_on= 'Child', right_on= 'IID')
-                d.dropna(subset= ['Child', 'Mother'], inplace= True)
+                d= pd.merge(d, pca, how= 'inner', on= 'IID')
                 d.fillna('NA', inplace= True)
+                d['FID']= d.IID
                 d.to_csv(output[0], sep= '\t', header= True, index= False)
-                moms.to_csv(output[1], sep= '\t', header= True, index= False)
-                fets.to_csv(output[2], sep= '\t', header= True, index= False)
-                dads.to_csv(output[3], sep= '\t', header= True, index= False)
-
+                d.to_csv(output[1], sep= '\t', header= False, index= False, columns= ['FID', 'IID'])

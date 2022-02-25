@@ -13,7 +13,7 @@ def format_df(df):
 	return df
 
 
-d= pd.read_csv(snakemake.input[2], sep= '\t', header= None, names= ['PREG_ID', 'Child', 'Father', 'Mother'])
+d= pd.read_csv(snakemake.input[2], sep= '\t', header= 0)
 d.dropna(axis= 0, inplace= True)
 
 fets= pd.read_csv(snakemake.input[0], sep='\t', header= 0)
