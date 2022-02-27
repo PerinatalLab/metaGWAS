@@ -26,9 +26,9 @@ scale_fill_manual(values= colorBlindBlack8[c(8,3,2)], guide= 'none') +
 scale_colour_manual(guide= 'none', values= colorBlindBlack8[c(8,3,2)]) +
 xlab('Phenotype') +
 ylab('Genetic correlation [95% CI]') +
-theme(legend.position= 'none',
-        axis.text.x= element_text(angle= 45, hjust= 1)) +
-ylim(pmin(-1, min(d$rg - 1.96*d$se)), pmax(1, max(d$rg + 1.96 * d$se)))
+theme(legend.position= 'none') +
+ylim(pmin(-1, min(d$rg - 1.96*d$se)), pmax(1, max(d$rg + 1.96 * d$se))) +
+geom_hline(yintercept= 0, linetype= 'dashed', colour= 'grey', size= 0.5)
 
 
 ggsave(snakemake@output[[1]], plot= p1, width= 60, height= 80, units= 'mm', dpi= 300)

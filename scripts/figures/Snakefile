@@ -148,7 +148,7 @@ rule partitioned_h2_figure:
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/LDscore/part_h2/GAraw.results'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/figures/partitioned_h2.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/partitioned_h2.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/data_figures/partitioned_h2.txt'
 	script:
 		'partitioned_h2.R'
@@ -159,7 +159,7 @@ rule MacArthurlab_enrichment:
 		'/mnt/hdd/common/pol/metaGWAS/enrichment/GNOMAD/pLI_GAraw.txt',
 		'/mnt/hdd/common/pol/metaGWAS/enrichment/MacArthur/diseases_GAraw.txt'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/figures/MacArthur_enrichment.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/MacArthur_enrichment.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/data_figures/MacArthur_enrichment.txt'
 	script:
 		'MacArthurlab_enrichment.R'
@@ -240,7 +240,9 @@ rule repr_pheno_correlations:
 		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/GAraw_rg_temp',
                 '/mnt/hdd/common/pol/metaGWAS/repr_phenos/LDSC/results/allPTD_rg_temp'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_rg.tiff'
+		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_rg.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/data_figures/repr_pheno_rg.txt',
+		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_rg_legend.tiff'
 	script:
 		'repr_pheno_correlations.R'
 

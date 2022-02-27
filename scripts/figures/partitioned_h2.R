@@ -33,7 +33,7 @@ d$description= factor(d$description, levels= unique(d$description))
 
 p1= ggplot(data=d, aes(x= description, y= -log10(Enrichment_p))) +
 geom_col(fill=colorBlindBlack8[2], alpha= 0.6) +
-theme_cowplot(font_size= 8) +
+theme_cowplot(font_size= 10) +
 ylab('Enrichment -log10(pvalue)') +
 theme(axis.title.y=element_blank()) +
 geom_hline(yintercept= -log10(0.05/ (nr -1)), linetype= 'dashed', colour= 'grey') +
@@ -41,7 +41,7 @@ coord_flip()
 
 p2= ggplot(data=d, aes(x= description, y= Enrichment)) +
 geom_col(fill=colorBlindBlack8[4], alpha= 0.6) +
-theme_cowplot(font_size= 8) +
+theme_cowplot(font_size= 10) +
 ylab('Enrichment (h2 / proportion of SNPs)') +
 theme(axis.title.y=element_blank(),
         axis.text.y=element_blank(),
@@ -52,6 +52,6 @@ coord_flip()
 x= plot_grid(p1, p2)
 
 
-ggsave(snakemake@output[[1]], plot= x, height= 45, width= 140, units= 'mm', dpi= 300)
+ggsave(snakemake@output[[1]], plot= x, height= 50, width= 140, units= 'mm', dpi= 300)
 
 fwrite(d, snakemake@output[[2]], sep= '\t')

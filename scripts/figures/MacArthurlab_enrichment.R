@@ -35,7 +35,7 @@ d$description= factor(d$description, levels= unique(d$description))
 
 p1= ggplot(data=d, aes(x= description, y= -log10(pvalue))) +
 geom_col(fill=colorBlindBlack8[2], alpha= 0.6) +
-theme_cowplot(font_size= 8) +
+theme_cowplot(font_size= 10) +
 ylab('Enrichment -log10(pvalue)') +
 theme(axis.title.y=element_blank()) +
 geom_hline(yintercept= -log10(0.05/nrow(d)), linetype= 'dashed', colour= 'grey') +
