@@ -101,8 +101,8 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_FST_EUR_AFR.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/BW_genetic_correlations.tiff',
 #		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_genetic_correlations.tiff',
-		'/mnt/hdd/common/pol/metaGWAS/figures/partitioned_h2.tiff',
-		'/mnt/hdd/common/pol/metaGWAS/figures/MacArthur_enrichment.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/partitioned_h2.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/MacArthur_enrichment.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_effect_direction.pdf',
 		#expand('/mnt/hdd/common/pol/metaGWAS/MR/results/{pheno}/MR_repr_phenos.txt', pheno= pheno_nms),
 		'/mnt/hdd/common/pol/metaGWAS/MR/results/MVMR_repr_phenos.txt',
@@ -159,4 +159,6 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/LDscore/big5/RG/meta/GAraw_allPTD_rg.log',
 		expand('/mnt/hdd/common/pol/metaGWAS/figures/MR_GA_BW_{genome}_MT.pdf', genome= ['maternal', 'fetal']),
 		'/mnt/hdd/common/pol/metaGWAS/figures/genet_corr_GAraw.pdf',
-		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_ternary.tiff'
+		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_ternary.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/Tables/genetic_instruments_MR_repr_phenos.txt',
+		expand('/mnt/hdd/common/pol/metaGWAS/Tables/2MR_repr_phenos_{pheno}.txt', pheno= pheno_nms)
