@@ -1,0 +1,186 @@
+Sun_prot_names= [i.strip() for i in open('/home/pol/sumstats/Sun_proteins.txt')]
+
+repr_pheno_nms= ['miscarriage', 'GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male']
+
+import numpy as np
+import pandas as pd
+import os
+
+rule format_files_clumping:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/sumstats/to_clump_{repr_pheno}_{pheno}.txt')
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['CHR', 'POS', 'pvalue', 'ID'])
+		x= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['ID', 'EAF'])
+		x= x.loc[((x.EAF>=0.01) & (x.EAF<= 0.99)), :]
+		d= d.loc[d.pvalue< 5e-8, :]
+		d= d.loc[d.ID.isin(x.ID.values), :]
+		d.drop_duplicates('ID', inplace= True)
+		if d.shape[0] == 0: 
+			open(output[0], 'a').close()
+		else:
+	                d.sort_values(['CHR', 'POS'], inplace= True)
+                	d['CHR']= d.CHR.apply(str)
+	                d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+			d= d[['ID', 'CHR', 'POS', 'pvalue']]
+			d.columns= ['SNP', 'CHR', 'POS', 'P']
+        	        d.to_csv(output[0], header= True, index= False, sep= '\t')
+
+rule format_bim_1Kgenomes:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{pheno}.bim'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/repr_phenos/1KG_extract_{pheno}_repr_phenos.bim',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/repr_phenos/{pheno}_duplicates_1KG_repr_phenos.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['CHR', 'SNP', 'x1', 'POS', 'A1', 'A2'])
+		d['A1']= np.where(d.A1.str.len() > d.A2.str.len(), 'I', d.A1)
+		d['A2']= np.where(d.A1.str.len() < d.A2.str.len(), 'I', d.A2)
+		d['A1']= np.where(d.A2== 'I', 'D', d.A1)
+		d['A2']= np.where(d.A1== 'I', 'D', d.A2)
+		d['SNP']= np.where(d.A1>d.A2, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A2 + ':' + d.A1, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A1 + ':' + d.A2)
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+		d= d[d.duplicated(['SNP'], keep= False)]
+		d.drop_duplicates('SNP', inplace= True, keep= 'first')
+		d.to_csv(output[1], sep='\t', columns= ['SNP'])
+	
+rule clump_assoc_MR_repr_assoc:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/sumstats/to_clump_{repr_pheno}_{pheno}.txt',
+#                '/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/{pheno}_duplicates_1KG_repr_phenos.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/repr_phenos/1KG_extract_{pheno}_repr_phenos.bim',
+                expand('/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{{pheno}}.{ext}', ext= ['bed', 'fam', 'bim'])
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{pheno}',
+		'/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/independent_signals/{pheno}/indep_{repr_pheno}'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/independent_signals/{pheno}/indep_{repr_pheno}.clumped'
+        run:
+                shell('~/software/plink --bim {input[1]} --bed {input[2]} --fam {input[3]} --clump {input[0]} --clump-r2 0.001 --clump-kb 1000 --clump-p1 5e-8 --clump-p2 1e-5 --out {params[1]} || true')
+		if os.path.exists(output[0]) == False: open(output[0], "w").close
+
+rule extract_instruments:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/independent_signals/{pheno}/indep_{repr_pheno}.clumped'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/IVs/{repr_pheno}_{pheno}.txt')
+	run:
+		if os.stat(input[1]).st_size == 0:
+			open(output[0], "w").close
+		else:
+			d= pd.read_csv(input[0], sep='\t', header= 0, usecols= ['ID', 'BETA', 'SE', 'pvalue'])
+			x= pd.read_csv(input[1], delim_whitespace= True, header= 0)
+			d= d.loc[d.ID.isin(x.SNP.values), :]
+			d= d.groupby('ID').head(1)
+			d= d[['ID', 'BETA', 'SE', 'pvalue']]
+			d['trait']= wildcards.repr_pheno
+			d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule concat_results:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/IVs/{repr_pheno}_{{pheno}}.txt', repr_pheno= repr_pheno_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/IVs/all_traits_{pheno}.txt'
+	shell:
+		'echo -e "ID\tbeta\tse\tpvalue_exp\ttrait" | cat {input} > {output[0]}'
+
+
+rule MR_data:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/IVs/all_traits_{pheno}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/MR/results/{pheno}/MR_repr_phenos.txt'
+        script:
+                'MR_reproductive_traits.R'
+
+rule filter_INFO_MVMR:
+	'Filter out variants with INFO score< 0.4.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/IVs/all_traits_GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/MR/processed_data/variants_to_extract.txt'
+	run:
+		x= pd.read_csv(input[0], sep= '\t', header= None, names= ['ID', 'beta', 'se', 'pvalue', 'trait'])
+		x= x.loc[((x.trait== 'SHBG_fem') | (x.trait== 'Testosterone_fem') | (x.trait== 'CBAT_fem')), :]
+		x.drop_duplicates(subset= 'ID', inplace= True)
+		x[['CHR', 'POS', 'REF', 'EFF']]= x.ID.str.split(':', expand= True)
+		x['CHR']= np.where(x.CHR== 'X', '23', x.CHR)
+		x.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['CHR', 'POS', 'POS', 'ID'])
+
+rule extract_variants_samples_vcf_1KG:
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/MR/processed_data/variants_to_extract.txt',
+		expand('/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_GAraw.{ext}', ext= ['bim', 'bed', 'fam'])
+	output:
+		temp(expand('/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/rsid.{ext}', ext= ['bim', 'bed', 'fam']))
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_GAraw',
+		'/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/rsid'
+	threads: 5
+	shell:
+		'~/software/plink2 --bfile {params[0]} --extract bed1 {input[0]} --memory 5000 --threads {threads} --make-bed --out {params[1]}'
+
+rule modify_bim_MVMR:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/rsid.bim',
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/rsid.bed',
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/rsid.fam'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/no_rsid.bim',
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/no_rsid.bed',
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/no_rsid.fam',
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/duplicates_norsid.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= None, names= ['CHR', 'SNP', 'x1', 'POS', 'A1', 'A2'])
+                d['A1']= np.where(d.A1.str.len() > d.A2.str.len(), 'I', d.A1)
+                d['A2']= np.where(d.A1.str.len() < d.A2.str.len(), 'I', d.A2)
+                d['A1']= np.where(d.A2== 'I', 'D', d.A1)
+                d['A2']= np.where(d.A1== 'I', 'D', d.A2)
+                d['CHR']= d.CHR.apply(str)
+                d['CHR']= np.where(d.CHR== 'X', '23', d.CHR)
+                d['SNP']= np.where(d.A1>d.A2, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A2 + ':' + d.A1, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.A1 + ':' + d.A2)
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+                d= d[d.duplicated(['SNP'], keep= False)]
+                d.drop_duplicates('SNP', inplace= True, keep= 'first')
+                d.to_csv(output[3], sep='\t', columns= ['SNP'])
+                shell('mv {input[1]} {output[1]}')
+                shell('mv {input[2]} {output[2]}')
+
+rule calculate_corr_matrix:
+        ''
+        input:
+                expand('/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/no_rsid.{ext}', ext= ['bim', 'bed', 'fam'])
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/rho_matrix/no_rsid.ld'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/no_rsid',
+                '/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/rho_matrix/no_rsid'
+        shell:
+                '~/software/plink --bfile {params[0]} --r square --out {params[1]}'
+
+rule MVMR:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/IVs/all_traits_GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/Testosterone_fem.txt',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/SHBG_fem.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/rho_matrix/no_rsid.ld',
+		'/mnt/hdd/common/pol/metaGWAS/MR/processed_data/plink/no_rsid.bim',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/CBAT_fem.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/MR/results/MVMR_repr_phenos.txt'
+	script:
+		'MVMR.R'

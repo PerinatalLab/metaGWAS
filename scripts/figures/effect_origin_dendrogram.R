@@ -37,9 +37,9 @@ d$nearestGene= with(d, ifelse(rsid== 'rs6879092', 'EBF1', nearestGene))
 
 d$rsid_lab= with(d, paste0(rsid, ' (', nearestGene, ')'))
 
-d$beta_PT= with(d, ifelse(beta_MNT<0, -1 * beta_PT, beta_PT))
-d$beta_MT= with(d, ifelse(beta_MNT<0, -1 * beta_MT, beta_MT))
-d$beta_MNT= with(d, ifelse(beta_MNT<0, -1 * beta_MNT, beta_MNT))
+d$beta_PT= with(d, ifelse(beta_MT<0, -1 * beta_PT, beta_PT))
+d$beta_MNT= with(d, ifelse(beta_MT<0, -1 * beta_MNT, beta_MNT))
+d$beta_MT= with(d, ifelse(beta_MT<0, -1 * beta_MT, beta_MT))
 
 d= gather(d, haplotype, beta, c('beta_MT', 'beta_MNT', 'beta_PT'))
 
