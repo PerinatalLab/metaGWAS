@@ -3,91 +3,51 @@ library(dplyr)
 library(tidyr)
 
 mfr= fread(snakemake@input[[1]])
-link= fread(snakemake@input[[2]])
-flag= fread(snakemake@input[[3]])
-out= fread(snakemake@input[[4]])
+ids= fread(snakemake@input[[2]], h= F)
 
-link= filter(link, Role== 'Mother')
+names(ids)= c('PREG_ID', 'IID', 'BATCH', 'Role')
 
-if (grepl('harvest', snakemake@input[[1]])) {
+if (!grepl('TED', snakemake@output[[1]])) {
 
-mfr= filter(mfr, FLERFODSEL==0, (DODKAT<6 | DODKAT>10), is.na(IVF), ABRUPTIOP==0, PLACENTA_PREVIA==0, is.na(PREEKL), EKLAMPSI==0, FOSTERV_POLYHYDRAMNION==0, FOSTERV_OLIGOHYDRAMNION== 0, is.na(DIABETES_MELLITUS), HYPERTENSJON_KRONISK==0, REUM_ARTRITT==0, KSNITT_TIDLIGERE==0, C00_MALF_ALL==0)
-mfr= mutate(mfr, spont= as.numeric(FSTART==1 & (is.na(KSNITT) | KSNITT>1) &
-                (is.na(KSNITT_PLANLAGT) | KSNITT_PLANLAGT==1)))
-mfr= inner_join(mfr, link, by= 'PREG_ID_1724')
-flag= filter(flag, genotypesOK== TRUE, phenotypesOK== TRUE)
-mfr= filter(mfr, SentrixID_1 %in% flag$IID)
-mfr= filter(mfr, !(SentrixID_1 %in% out$V2))
-names(mfr)[names(mfr) == 'SentrixID_1']= 'IID'
-names(mfr)[names(mfr) == 'PREG_ID_1724']= 'PREG_ID'
+ids= filter(ids, BATCH != 'TED')
 
+} else {
+ids= filter(ids, BATCH == 'TED')
+ids= group_by(ids, PREG_ID, Role) %>% filter(row_number()== 1)
 }
 
-if (!grepl('harvest', snakemake@input[[1]])) {
+ids= ids[!duplicated(ids[,c('PREG_ID', 'IID')]), ]
+
+flag= fread(snakemake@input[[3]])
+flag= filter(flag, genotypesOK== T, phenoOK== T)
+
+out= readLines(snakemake@input[[4]])
+
+
+ids= filter(ids, !(IID %in% out), IID %in% flag$IID)
+
+ids= spread(ids, key= Role, value= IID)
+
+mfr= inner_join(mfr, ids, by= c('PREG_ID_315'= 'PREG_ID'))
 
 mfr= filter(mfr, FLERFODSEL=='Enkeltfødsel', grepl('Levendefødt', DODKAT), is.na(IVF), ABRUPTIOP== 'Nei', PLACENTA_PREVIA=='Nei', is.na(PREEKL), EKLAMPSI=='Nei', FOSTERV_POLYHYDRAMNION=='Nei', FOSTERV_OLIGOHYDRAMNION== 'Nei', is.na(DIABETES_MELLITUS), HYPERTENSJON_KRONISK=='Nei', REUM_ARTRITT=='Nei', C00_MALF_ALL=='Nei')
-mfr= mutate(mfr, spont= as.numeric(FSTART=='Spontan' | FSTART== '' & (KSNITT=='' | KSNITT== 'Uspesifisert' | KSNITT== 'Akutt keisersnitt')))
+mfr= mutate(mfr, spont= as.numeric(((FSTART=='Spontan' | FSTART== '') | (KSNITT=='' | KSNITT== 'Uspesifisert' | KSNITT== 'Akutt keisersnitt')) & (INDUKSJON_PROSTAGLANDIN=='Nei') & (INDUKSJON_ANNET=='Nei') & (INDUKSJON_OXYTOCIN=='Nei') & (INDUKSJON_AMNIOTOMI=='Nei')), PROM= as.numeric(!is.na(VANNAVGANG)), RESPIRATORISK_DISTR= as.numeric(RESPIRATORISK_DISTR== 'Ja'), INTRAKRANIELL_BLODN= as.numeric(INTRAKRANIELL_BLODN== 'Ja'), SYSTEMISKANTIBIOTIKA= as.numeric(SYSTEMISKANTIBIOTIKA== 'Ja'), ICTERUS= as.numeric(ICTERUS== 'Ja'), OVERFLYTTET= as.numeric(OVERFLYTTET== 'Ja'), KJONN= as.numeric(KJONN== 'Pike'))
 
-mfr= inner_join(mfr, link, by= 'PREG_ID_315')
-flag= filter(flag, genotypesOK== TRUE, phenoOK== TRUE)
-mfr= filter(mfr, SentrixID %in% flag$IID)
-mfr= filter(mfr, !(SentrixID %in% out$V2))
 names(mfr)[names(mfr) == 'SentrixID']= 'IID'
 names(mfr)[names(mfr) == 'PREG_ID_315']= 'PREG_ID'
+mfr$PARITY= as.numeric(mfr$PARITET_5== '0 (førstegangsfødende)')
 
-}
+mfr$SVLEN= with(mfr, ifelse(is.na(SVLEN_UL_DG), SVLEN_SM_DG, SVLEN_UL_DG))
 
-p1= mfr
-p1$allPTD= ifelse((p1$SVLEN_UL_DG<259 & p1$spont==1), 1, NA)
-p1$allPTD= ifelse((p1$SVLEN_UL_DG>= 273 & p1$SVLEN_UL_DG< 294), 0, p1$allPTD)
+mfr= filter(mfr, SVLEN_UL_DG>= 140, SVLEN_UL_DG<=310, !is.na(SVLEN))
+mfr= arrange(mfr, desc(spont), Mother, Child, Father)
 
-p1= filter(p1, !is.na(allPTD))
-p1= p1[order(p1$PARITET_5, decreasing= F), ]
-p1= p1[!duplicated(p1$IID), ]
-p1= select(p1, IID, allPTD)
+mfr= mfr[!duplicated(mfr$Mother, incomparables= NA), ]
+mfr= mfr[!duplicated(mfr$Child, incomparables= NA), ]
+mfr= mfr[!duplicated(mfr$Father, incomparables= NA), ]
 
-p2= mfr
-p2$earlyPTD= ifelse((p2$SVLEN_UL_DG<238 & p2$spont==1), 1, NA)
-p2$earlyPTD= ifelse((p2$SVLEN_UL_DG>= 273 & p2$SVLEN_UL_DG< 294), 0, p2$earlyPTD)
-p2= filter(p2, !is.na(earlyPTD))
-p2= p2[order(p2$PARITET_5, decreasing= F), ]
-p2= p2[!duplicated(p2$IID), ]
-p2= select(p2, IID, earlyPTD)
+mfr$cohort= mfr$BATCH
 
-p3= mfr
-p3$postTerm= ifelse((p3$SVLEN_UL_DG>=273 & p3$SVLEN_UL_DG < 294  & p3$spont==1), 0, NA)
-p3$postTerm= ifelse(p3$SVLEN_UL_DG>= 294, 1, p3$postTerm)
-p3= filter(p3, !is.na(postTerm))
-p3= p3[order(p3$PARITET_5, decreasing= F), ]
-p3= p3[!duplicated(p3$IID), ]
-p3= select(p3, IID, postTerm)
+mfr= select(mfr, Mother, Child, Father, PREG_ID, SVLEN, SVLEN_UL_DG, spont, PROM, PARITY, KJONN, MORS_ALDER_KAT_K6, RESPIRATORISK_DISTR, INTRAKRANIELL_BLODN, SYSTEMISKANTIBIOTIKA, ICTERUS, OVERFLYTTET, VEKT, SVLEN_SM_DG, cohort)
 
-
-p4= mfr
-p4= filter(p4, spont== 1, SVLEN_UL_DG>= 140, SVLEN_UL_DG<=310)
-p4$GAraw= p4$SVLEN_UL_DG
-p4= filter(p4, !is.na(GAraw))
-p4= p4[order(p4$PARITET_5, decreasing= F), ]
-p4= p4[!duplicated(p4$IID), ]
-p4$GAnrm= qnorm((rank(p4$GAraw, na.last="keep") - 0.375) / (sum(!is.na(p4$GAraw)) + 0.25))
-p4= select(p4, IID, GAraw, GAnrm)
-
-d= full_join(p1, p2, by= 'IID') %>% full_join(., p3, by= 'IID') %>% full_join(., p4, by= 'IID')
-
-d$cohort= snakemake@wildcards[['cohort']]
-
-d[is.na(d)]= 'nan'
-
-ids= fread(snakemake@input[[5]], h=F)
-names(ids)= c('FID', 'IID')
-
-d= inner_join(d, ids, by= 'IID')
-
-write.table(d, snakemake@output[[1]], sep= '\t', quote= FALSE, row.names= FALSE, col.names= TRUE)
-
-write.table(d[, c('FID', 'IID')], snakemake@output[[2]], sep= '\t', quote= F, row.names=F, col.names=F)
-#write.table(earlyPTD, snakemake@output[[2]], sep= '\t', quote= FALSE, row.names= FALSE, col.names= TRUE)
-#write.table(postTerm, snakemake@output[[3]], sep= '\t', quote= FALSE, row.names= FALSE, col.names= TRUE)
-#write.table(GAraw, snakemake@output[[4]], sep= '\t', quote= FALSE, row.names= FALSE, col.names= TRUE)
-#write.table(GAnrm, snakemake@output[[5]], sep= '\t', quote= FALSE, row.names= FALSE, col.names= TRUE)
-
+fwrite(mfr, snakemake@output[[1]], sep= '\t')

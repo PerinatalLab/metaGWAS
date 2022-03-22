@@ -21,70 +21,12 @@ rule extract_regions_betas_BW_PGS:
 		d.to_csv(output[1], sep= '\t', header= True, index= False)
 
 
-rule get_DS_GS_PGS_BW_fetal_effect:
-	'Extract DS from VCF file for a subset of genetic variants.'
-	input:
-		'/mnt/work2/pol/metaGWAS/PGS/BW/fetal_effect/processed_data/regions_extract.txt',
-		'/mnt/work2/pol/metaGWAS/ids/processed_data/{sample}_toextract.txt',
-		'/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/vcf/{CHR}.vcf.gz'
-	output:
-		temp('/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/dosages/temp/{sample}_ds{CHR}')
-	run:
-		shell("bcftools query -S {input[1]} -R {input[0]} -f '%CHROM\t%POS\t%REF\t%ALT[\t%DS]\n' {input[2]} -o {output[0]}")
-
-
-rule add_header_GA_PGS_BW_fetal_effect:
-        'Add header to dosage files.'
-        input:
-                '/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/dosages/temp/{sample}_ds{CHR}',
-                '/mnt/work2/pol/metaGWAS/ids/processed_data/{sample}_toextract.txt'
-        output:
-                temp('/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/dosages/{sample}_DS{CHR}')
-        run:
-                cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[1], 'r')]
-                d= pd.read_csv(input[0], header= None, names= cols, sep= '\t')
-                d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
-                d.to_csv(output[0], sep= '\t', header= True, index= False)
-
-rule calculate_GRS_GA_PGS_BW_fetal_effect:
-        'Calculate GRS for each sample and chromosome.'
-        input:
-                '/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/dosages/{sample}_DS{CHR}',
-		'/mnt/work2/pol/metaGWAS/PGS/BW/fetal_effect/processed_data/betas.txt'
-        output:
-                temp('/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GRS/BW_fetal_effect_GRS_{sample}_{CHR}.txt')
-        script:
-                'calculate_GRS.py'
-
-rule concat_CHR_GRS_GA_PGS_BW_fetal_effect:
-        'Concat GRS from all CHR for each sample.'
-        input:
-                expand('/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GRS/BW_fetal_effect_GRS_{{sample}}_{CHR}.txt', CHR= CHR_nms)
-        output:
-                temp('/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GRS/BW_fetal_effect_GRS_{sample}_tosum.txt')
-        shell:
-                '''
-                set +o pipefail;
-                head -1 {input[0]} > {output[0]}
-                cat {input} | grep -v 'GRS' >> {output[0]}
-                '''
-
-rule sum_GRS_GA_PGS_BW_fetal_effect:
-        'Sum chromosome-based GRS for each sample.'
-        input:
-                '/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GRS/BW_fetal_effect_GRS_{sample}_tosum.txt'
-        output:
-                '/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_fetal_effect_GRS_{sample}.txt'
-        run:
-                df= pd.read_csv(input[0], sep= '\t', header= 0)
-                df= df.groupby('IID').sum().reset_index()
-                df.to_csv(output[0], sep= '\t', header= True, index= False)
 
 rule get_GT_GA_PGS_BW:
         'Extract GT from VCF file for a subset of genetic variants.'
         input:
                 '/mnt/work2/pol/metaGWAS/PGS/BW/fetal_effect/processed_data/regions_extract.txt',
-                '/mnt/work2/pol/metaGWAS/ids/processed_data/{sample}_toextract.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/{sample}_toextract.txt',
                 '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/vcf/{CHR}.vcf.gz'
         output:
                 temp('/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GT/temp/{sample}_gt{CHR}')
@@ -94,15 +36,15 @@ rule get_GT_GA_PGS_BW:
 rule add_header_GT_GA_PGS_BW:
         'Add header to genotype files.'
         input:
-                '/mnt/work2/pol/metaGWAS/ids/processed_data/{sample}_toextract.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/{sample}_toextract.txt',
                 '/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GT/temp/{sample}_gt{CHR}'
         output:
                 temp('/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GT/{sample}_GT{CHR}')
         run:
                 cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[0], 'r')]
-                d= pd.read_csv(input[1], header= None, names= cols, sep= '\t')
-                d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
-                d.to_csv(output[0], sep= '\t', header= True, index= False)
+		d= pd.DataFrame(columns= cols)
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+                shell('cat {input[1]} >> {output[0]} ')
 
 rule concat_GT_chr_GA_PGS_BW:
         'Collect GT from all CHR.'
@@ -122,7 +64,7 @@ rule get_allele_transmission_GA_PGS_BW:
         input:
                 '/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GT/fets_GT.txt',
                 '/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GT/moms_GT.txt',
-                '/mnt/work2/pol/metaGWAS/effect_origin/processed_data/parent_offspring_trios.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt',
                 '/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/GT/dads_GT.txt'
         output:
                 temp('/mnt/work2/pol/metaGWAS/PGS/BW/processed_data/haplotypes/h1_PREG_ID'),
@@ -142,3 +84,58 @@ rule calculate_haplotype_GRS_GA_PGS_BW:
         script:
                 'calculate_GRS.py'
 
+
+rule merge_PGW_BW:
+        'Merge each haplotype and the pheno file.'
+        input:
+                '/mnt/work2/pol/metaGWAS/effect_origin/pheno/fets_pheno.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_h1.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_h2.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_h3.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_h4.txt'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/PGS/BW/pheno/temp/all_subjects.txt')
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0)
+                ids= pd.read_csv(input[1], sep= '\t', header= 0)
+                d= pd.merge(d, ids[['Child', 'Mother', 'Father']], left_on= 'IID', right_on= 'Child')
+                df_list= list()
+                for i in range(2, len(input)):
+                        x= pd.read_csv(input[i], sep= '\t', header= 0)
+                        haplo= input[i].split('_')[-1].replace('.txt', '')
+                        df_list.append(x)
+                x= reduce(lambda x, y: pd.merge(x, y, on = 'PREG_ID', how = 'inner'), df_list)
+                x['PREG_ID']= x.PREG_ID.apply(str)
+                d['PREG_ID']= d.PREG_ID.apply(str)
+                x= pd.merge(x, d, on= 'PREG_ID')
+                print(x.columns)
+                print(x.shape[0])
+                x.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule remove_related_PGS_BW:
+        'Remove related individuals'
+        input:
+                '/mnt/work2/pol/metaGWAS/PGS/BW/pheno/temp/all_subjects.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pedigree/mobagen-ethnic-core-samples.kin0'
+        output:
+                '/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/BW_PGS.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0)
+                remove= selectUnrelated(input[1], d, d.Child)
+                d= d.loc[~d.Child.isin(remove), :]
+                remove= selectUnrelated(input[1], d, d.Mother)
+                d= d.loc[~d.Mother.isin(remove), :]
+                remove= selectUnrelated(input[1], d, d.Father)
+                d= d.loc[~d.Father.isin(remove), :]
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+
+rule linear_hypothesis:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/BW_PGS.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt'
+	script:
+		'MR_fetal_growth_pheno_individual_level.R'

@@ -157,8 +157,8 @@ rule concat_MR_repr_pheno:
 		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt'
 	shell:
 		'''
-		head -2 {input[0]} > {output[0]}
-		tail -n +3 -q {input} >> {output[0]}
+		head -1 {input[0]} > {output[0]}
+		tail -n +2 -q {input} >> {output[0]}
 		'''
 
 rule filter_INFO_MVMR:

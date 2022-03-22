@@ -33,7 +33,7 @@ rule all:
 #		expand('/mnt/work2/pol/metaGWAS/PGS/GA/GRS/GA_GRS_{sample}.txt', sample= sample_nms),
 #		'/mnt/work2/pol/metaGWAS/pheno/TED/pheno_moms.txt',
 #		expand('/mnt/work2/pol/metaGWAS/PGS/GA/GRS/GA_{haplo}.txt', haplo= ['h1', 'h2', 'h3', 'h4']),
-		'/mnt/work2/pol/metaGWAS/figures/data/MR_BW.txt',
+#		'/mnt/work2/pol/metaGWAS/figures/data/MR_BW.txt',
 #		'/mnt/work2/pol/metaGWAS/processed_data/ids/autosomes_IDS.txt',
 #		'/mnt/work2/pol/metaGWAS/LDSCORE/data/MOBAGENETICS.bed',
 #		'/mnt/work2/pol/metaGWAS/LDSCORE/ldscores/MOBAGENETICS.l2.ldscore.gz'
@@ -63,7 +63,8 @@ rule all:
 #		'/mnt/work2/pol/metaGWAS/haplotype_analysis/rsids/GAraw.txt',
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_GRS_{sample}_{haplotype}.txt', sample= sample_nms, haplotype= ['MT', 'MnT', 'PT']),
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_{haplotype}_{haplo}.txt', haplotype= ['MT', 'MnT', 'PT'], haplo= ['h1', 'h2', 'h3', 'h4'])
-		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt'
+		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt'
 
 def selectUnrelated(input_kin, df, x):
 	kin= pd.read_csv(input_kin, header= 0, sep= '\t')

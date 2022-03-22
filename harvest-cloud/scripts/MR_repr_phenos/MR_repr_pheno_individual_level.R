@@ -4,7 +4,7 @@ library(data.table)
 
 d= fread(snakemake@input[[1]])
 
-m1= lm(SVLEN_UL_DG~ h1 + h2 + h3 + h4 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + cohort + PARITY, d)
+m1= lm(SVLEN_UL_DG~ h1 + h2 + h3  + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + cohort + PARITY, d)
 
 h= data.frame(summary(m1)$coefficients)[2:4, ]
 names(h)= c('estimate', 'se', 'z', 'pvalue')
@@ -19,7 +19,7 @@ h$outcome= 'UL'
 h$exposure= snakemake@wildcards[['repr_trait']]
 h$n= length(m1$resid)
 
-m1= lm(SVLEN_UL_DG~ h1 + h2 + h3 + h4 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + cohort + PARITY, filter(d, spont== 1))
+m1= lm(SVLEN_UL_DG~ h1 + h2 + h3 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + cohort + PARITY, filter(d, spont== 1))
 
 x= data.frame(summary(m1)$coefficients)[2:4, ]
 names(x)= c('estimate', 'se', 'z', 'pvalue')
