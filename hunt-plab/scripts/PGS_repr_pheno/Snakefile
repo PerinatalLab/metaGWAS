@@ -1,0 +1,113 @@
+repr_trait_nms= ['GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male', 'Testosterone_only_fem', 'CBAT_only_fem']
+
+
+rule MR_repr_pheno_betas:
+        'Obtain two files (regions to extract in one, betas in the other).'
+        input:
+                '/mnt/work/pol/metaGWAS/raw_data/all_traits_GAraw.txt'
+        output:
+                '/mnt/work/pol/metaGWAS/MR/processed_data/{repr_trait}_regions.txt',
+                '/mnt/work/pol/metaGWAS/MR/processed_data/{repr_trait}_betas.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= None, names= ['ID', 'beta', 'se', 'pvalue', 'trait'])
+                d[['CHR', 'POS', 'REF', 'EFF']]= d.ID.str.split(':', expand= True)
+                d['CHR']= np.where(d.CHR== '23', 'X', d.CHR)
+                df= d.loc[((d.trait== 'Testosterone_fem') | (d.trait== 'CBAT_fem')), :]
+                df.drop_duplicates(['CHR', 'POS'], keep= False, inplace= True)
+                df['trait']= np.where(df.trait== 'Testosterone_fem', 'Testosterone_only_fem', 'CBAT_only_fem')
+                d= pd.concat([d, df])
+                d= d.loc[d.trait== wildcards.repr_trait, :]
+                d.to_csv(output[0], index= False, header= False, sep= '\t', columns= ['CHR', 'POS'])
+                d= d[['CHR', 'POS', 'REF', 'EFF','beta', 'trait']]
+                d.columns= ['chr', 'pos', 'REF', 'EFF', 'beta', 'trait']
+                d.to_csv(output[1], index= False, header= True, sep= '\t', columns= ['chr', 'pos', 'REF', 'EFF', 'beta'])
+
+rule get_GT_MR_repr_pheno:
+        'Extract GT from VCF file for a subset of genetic variants.'
+        input:
+                '/mnt/work/pol/metaGWAS/MR/processed_data/{repr_trait}_regions.txt',
+                '/mnt/work/pol/metaGWAS/effect_origin/processed_data/{sample}_toextract.txt',
+                '/mnt/archive/hunt/genotypes/vcf/CHR{CHR}_PID106764.vcf.gz'
+        output:
+                temp('/mnt/work/pol/metaGWAS/MR/processed_data/GT/temp/{repr_trait}/{sample}_gt{CHR}')
+        run:
+                shell("bcftools query -S {input[1]} -R {input[0]} -f '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n' {input[2]} -o {output[0]}")
+
+rule add_header_GT_MR_repr_pheno:
+        'Add header to genotype files.'
+        input:
+                '/mnt/work/pol/metaGWAS/effect_origin/processed_data/{sample}_toextract.txt',
+                '/mnt/work/pol/metaGWAS/MR/processed_data/GT/temp/{repr_trait}/{sample}_gt{CHR}'
+        output:
+                temp('/mnt/work/pol/metaGWAS/MR/processed_data/GT/CHR/{repr_trait}_{sample}_GT{CHR}')
+        run:
+                cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[0], 'r')]
+                d= pd.DataFrame(columns= cols)
+#                d= pd.read_csv(input[1], header= None, names= cols, sep= '\t')
+#                d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+                shell('cat {input[1]} >> {output[0]} ')
+
+rule concat_GT_chr_MR_repr_pheno:
+        'Collect GT from all CHR.'
+        input:
+                expand('/mnt/work/pol/metaGWAS/MR/processed_data/GT/CHR/{{repr_trait}}_{{sample}}_GT{CHR}', CHR= CHR_nms)
+        output:
+                '/mnt/work/pol/metaGWAS/MR/processed_data/GT/{repr_trait}/{sample}_GT.txt'
+        shell:
+                '''
+                set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'chr' >> {output[0]}
+                '''
+
+rule get_allele_transmission_MR_repr_pheno:
+        'Retrieve allele transmission from family trios (after phasing).'
+        input:
+                '/mnt/work/pol/metaGWAS/MR/processed_data/GT/{repr_trait}/fets_GT.txt',
+                '/mnt/work/pol/metaGWAS/MR/processed_data/GT/{repr_trait}/moms_GT.txt',
+                '/mnt/work/pol/metaGWAS/effect_origin/processed_data/parent_offspring_trios.txt',
+                '/mnt/work/pol/metaGWAS/MR/processed_data/GT/{repr_trait}/dads_GT.txt'
+        output:
+                temp('/mnt/work/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_MT_PREG_ID'),
+                temp('/mnt/work/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_MnT_PREG_ID'),
+                temp('/mnt/work/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_PT_PREG_ID'),
+                temp('/mnt/work/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_PnT_PREG_ID')
+        script:
+                'allele_transmission.py'
+
+rule calculate_haplotype_GRS_MR_repr_pheno:
+        'Calculate GRS for each sample and chromosome.'
+        input:
+                '/mnt/work/pol/metaGWAS/MR/processed_data/haplotypes/temp/{repr_trait}_{haplo}_PREG_ID',
+                '/mnt/work/pol/metaGWAS/MR/processed_data/{repr_trait}_betas.txt'
+        output:
+                '/mnt/work/pol/metaGWAS/MR/haplotypes/{repr_trait}_{haplo}.txt'
+        script:
+                'calculate_GRS.py'
+
+rule linear_hypotheses_PGS_repr_pheno:
+        ''
+        input:
+                '/mnt/work/pol/metaGWAS/MR/haplotypes/{repr_trait}_MnT.txt',
+		'/mnt/work/pol/metaGWAS/MR/haplotypes/{repr_trait}_MT.txt',
+		'/mnt/work/pol/metaGWAS/MR/haplotypes/{repr_trait}_PT.txt',
+                '/mnt/work/pol/metaGWAS/pheno/trio_pheno.txt',
+                '/mnt/work/pol/metaGWAS/effect_origin/trio_confirmed.txt'
+        output:
+                temp('/mnt/work/pol/metaGWAS/MR/repr_traits/delivery/temp/{repr_trait}.txt')
+        script:
+                'MR_fetal_growth_pheno_individual_level.R'
+
+rule concat_MR_repr_pheno:
+        ''
+        input:
+                expand('/mnt/work/pol/metaGWAS/MR/repr_traits/delivery/temp/{repr_trait}.txt', repr_trait= repr_trait_nms)
+        output:
+                '/mnt/work/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt'
+        shell:
+                '''
+                head -1 {input[0]} > {output[0]}
+                tail -n +2 -q {input} >> {output[0]}
+                '''
+

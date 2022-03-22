@@ -39,7 +39,7 @@ return(df)
 }
 
 
-pheno_vars= c('BARN_PID', 'MOR_PID','FAR_PID', 'SVLEN_UL_DG', 'PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'FAAR', 'PARITY0', 'spont', 'VEKT', 'FAAR', 'GAMETOD')
+pheno_vars= c('BARN_PID', 'MOR_PID','FAR_PID', 'SVLEN_UL_DG', 'PC1', 'PC2', 'PC3', 'PC4', 'PC5', 'PC6', 'FAAR', 'PARITY0', 'spont', 'VEKT', 'FAAR', 'GAMETOD', 'SVLEN_SM_DG', 'SVLEN_DG')
 
 
 mfr= fread(snakemake@input[[1]])
@@ -59,8 +59,8 @@ mfr= mutate(mfr, PARITY0= as.numeric(PARITET_MFR==0),
                 is.na(INDUKSJON_OXYTOCIN) & is.na(INDUKSJON_AMNIOTOMI)),
 		GAMETOD= ifelse(is.na(SVLEN_UL_DG), 1, 0))
 
-mfr$SVLEN_UL_DG= ifelse(is.na(mfr$SVLEN_UL_DG), mfr$SVLEN_SM_DG, mfr$SVLEN_UL_DG)
-mfr= filter(mfr, is.na(FLERFODSEL), DODKAT<6 | DODKAT>10, !is.na(SVLEN_UL_DG))
+mfr$SVLEN_DG= ifelse(is.na(mfr$SVLEN_UL_DG), mfr$SVLEN_SM_DG, mfr$SVLEN_UL_DG)
+mfr= filter(mfr, is.na(FLERFODSEL), DODKAT<6 | DODKAT>10, !is.na(SVLEN_DG))
 
 pheno= inner_join(mfr, pc, by= 'BARN_PID')
 
