@@ -1,0 +1,100 @@
+import pandas as pd
+import numpy as np
+
+CHR_nms= ['01','02','03','04','05','06','07','08','09','10','11','12','13','14','15','16','17','18','19','20','21','22', 'X']
+
+rule extract_regions_betas_BW_PGS:
+        'Obtain two files (regions to extract in one, betas in the other).'
+        input:
+                '/mnt/work/pol/metaGWAS/PGS/BW/raw_data/bw_classification.txt',
+                '/mnt/work/pol/metaGWAS/PGS/BW/raw_data/bw_betas'
+        output:
+                '/mnt/work/pol/metaGWAS/PGS/BW/fetal_effect/processed_data/regions_extract.txt',
+                '/mnt/work/pol/metaGWAS/PGS/BW/fetal_effect/processed_data/betas.txt'
+        run:
+                df= pd.read_csv(input[0], sep= '\t', header= 0)
+                d= pd.read_csv(input[1], sep= '\t', header= 0)
+                d= pd.merge(d, df, on= ['chr', 'pos', 'eff', 'ref'])
+                d= d.loc[d.origin== 'Fetal Only', :]
+                d.rename(columns= {'beta_fet': 'beta'}, inplace= True)
+                df= d[['chr', 'pos','pos']]
+                df.to_csv(output[0], sep= '\t', header= False, index= False)
+                d= d[['chr', 'pos', 'ref', 'eff','beta']]
+                d.columns= ['chr', 'pos', 'REF', 'EFF', 'beta']
+                d.to_csv(output[1], sep= '\t', header= True, index= False)
+rule extract_GT_PGS_BW:
+        ''
+        input:
+                '/mnt/work/pol/metaGWAS/PGS/BW/fetal_effect/processed_data/regions_extract.txt',
+                '/mnt/work/pol/metaGWAS/effect_origin/processed_data/{sample}_toextract.txt',
+                '/mnt/archive/hunt/genotypes/vcf/CHR{CHR}_PID106764.vcf.gz'
+        output:
+                temp('/mnt/work/pol/metaGWAS/PGS/BW/to_phase/data/temp/{sample}_{CHR}.txt')
+        shell:
+                "bcftools query -S {input[1]} -R {input[0]} -f '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n' {input[2]} -o {output[0]}"
+
+rule add_header_GT_PGS_BW:
+        'Add header to genotype files.'
+        input:
+                '/mnt/work/pol/metaGWAS/effect_origin/processed_data/{sample}_toextract.txt',
+                '/mnt/work/pol/metaGWAS/PGS/BW/to_phase/data/temp/{sample}_{CHR}.txt'
+        output:
+                temp('/mnt/work/pol/metaGWAS/PGS/BW/processed_data/GT/{sample}_GT{CHR}')
+        run:
+                cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[0], 'r')]
+                d= pd.read_csv(input[1], header= None, names= cols, sep= '\t')
+                d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule concat_GT_chr_PGS_BW:
+        'Collect GT from all CHR.'
+        input:
+                expand('/mnt/work/pol/metaGWAS/PGS/BW/processed_data/GT/{{sample}}_GT{CHR}', CHR= CHR_nms)
+        output:
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/GT/allchr/{sample}_GT.txt'
+        shell:
+                '''
+                set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'chr' >> {output[0]}
+                '''
+
+rule get_allele_transmission_PGS_BW:
+        'Retrieve allele transmission from family trios (phasing included).'
+        input:
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/GT/allchr/fets_GT.txt',
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/GT/allchr/moms_GT.txt',
+                '/mnt/work/pol/metaGWAS/effect_origin/processed_data/parent_offspring_trios.txt',
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/GT/allchr/dads_GT.txt'
+        output:
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/haplotypes/MT_PREG_ID',
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/haplotypes/MnT_PREG_ID',
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/haplotypes/PT_PREG_ID',
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/haplotypes/PnT_PREG_ID'
+        script:
+                'allele_transmission.py'
+
+rule calculate_haplotype_GRS_GA_PGS_BW:
+        'Calculate GRS for each sample and chromosome.'
+        input:
+                '/mnt/work/pol/metaGWAS/PGS/BW/processed_data/haplotypes/{haplo}_PREG_ID',
+                '/mnt/work/pol/metaGWAS/PGS/BW/fetal_effect/processed_data/betas.txt'
+        output:
+                '/mnt/work/pol/metaGWAS/PGS/BW/GRS/BW_{haplo}.txt'
+        script:
+                'calculate_GRS.py'
+
+
+
+rule linear_hypothesis_PGS_BW:
+        ''
+        input:
+                '/mnt/work/pol/metaGWAS/PGS/BW/GRS/BW_MnT.txt',
+		'/mnt/work/pol/metaGWAS/PGS/BW/GRS/BW_MT.txt',
+		'/mnt/work/pol/metaGWAS/PGS/BW/GRS/BW_PT.txt',
+		'/mnt/work/pol/metaGWAS/pheno/trio_pheno.txt',
+                '/mnt/work/pol/metaGWAS/effect_origin/trio_confirmed.txt'
+        output:
+                '/mnt/work/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt'
+        script:
+                'MR_fetal_growth_pheno_individual_level.R'

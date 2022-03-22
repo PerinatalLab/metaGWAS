@@ -52,7 +52,8 @@ d= inner_join(pheno, h1_temp, by= 'PREG_ID') %>% inner_join(., h2_temp, by= 'PRE
 
 d= filter(d, !duplicated(MOR_PID))
 d= filter(d, !duplicated(FAR_PID))
-m1= lm(SVLEN_UL_DG~ h1 + h2 + h3 + PARITY0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + FAAR, d)
+print(nrow(d))
+m1= lm(SVLEN_DG~ h1 + h2 + h3 + PARITY0 + PC1 + PC2 + PC3 + PC4 + PC5 + PC6 + FAAR, d)
 
 n= length(resid(m1))
 coefs= summary(m1)$coefficients[2:5,]
