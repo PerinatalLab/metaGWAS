@@ -47,13 +47,13 @@ rule format_bim_1Kgenomes:
 		d.to_csv(output[0], sep= '\t', header= False, index= False)
 		d= d[d.duplicated(['SNP'], keep= False)]
 		d.drop_duplicates('SNP', inplace= True, keep= 'first')
-		d.to_csv(output[1], sep='\t', columns= ['SNP'])
+		d.to_csv(output[1], sep='\t', columns= ['SNP'], index= False, header= False)
 	
 rule clump_assoc_MR_repr_assoc:
         ''
         input:
                 '/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/sumstats/to_clump_{repr_pheno}_{pheno}.txt',
-#                '/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/{pheno}_duplicates_1KG_repr_phenos.txt',
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/repr_phenos/{pheno}_duplicates_1KG_repr_phenos.txt',
 		'/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/repr_phenos/1KG_extract_{pheno}_repr_phenos.bim',
                 expand('/mnt/hdd/common/pol/metaGWAS/processed_data/1KG/plink/1KG_extract_{{pheno}}.{ext}', ext= ['bed', 'fam', 'bim'])
         params:
@@ -62,7 +62,7 @@ rule clump_assoc_MR_repr_assoc:
         output:
                 '/mnt/hdd/common/pol/metaGWAS/MR/repr_phenos/independent_signals/{pheno}/indep_{repr_pheno}.clumped'
         run:
-                shell('~/software/plink --bim {input[1]} --bed {input[2]} --fam {input[3]} --clump {input[0]} --clump-r2 0.001 --clump-kb 1000 --clump-p1 5e-8 --clump-p2 1e-5 --out {params[1]} || true')
+                shell('~/software/plink --bim {input[2]} --bed {input[3]} --fam {input[4]} --clump {input[0]} --exclude {input[1]} --clump-r2 0.001 --clump-kb 1000 --clump-p1 5e-8 --clump-p2 1e-5 --out {params[1]} || true')
 		if os.path.exists(output[0]) == False: open(output[0], "w").close
 
 rule extract_instruments:
