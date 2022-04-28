@@ -1,0 +1,28 @@
+
+
+rule repr_pheno_PGS_meta:
+	'Fixed effects IVW of reproductive phenotypes PGS.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/PGS/moba_repr_traits.txt',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/PGS/decode_repr_traits.txt',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/PGS/HUNT_repr_traits.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/PGS/IVS/PGS_repr_traits.txt'
+	conda:
+		'environments/metafor.yml'
+	script:
+		'PGS_repr_pheno_meta.R'
+
+rule fetal_Growth_PGS_meta:
+        'Fixed effects IVW of reproductive phenotypes PGS.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/BW/moba_growth_PGS.txt',
+                '/mnt/hdd/common/pol/metaGWAS/BW/decode_growth_PGS.txt',
+                '/mnt/hdd/common/pol/metaGWAS/BW/HUNT_growth_PGS.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/BW/PGS_fetal_growth.txt'
+        conda:
+                'environments/metafor.yml'
+        script:
+                'PGS_fetal_growth_meta.R'
+

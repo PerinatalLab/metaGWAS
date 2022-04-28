@@ -1,0 +1,12 @@
+name: R-metafor
+channels:
+    - bioconda
+    - conda-forge
+dependencies:
+    - r-metafor
+    - r-data.table
+    - R=4.0
+    - zlib=1.2.11
+    - r-dplyr
+    - r-r.utils
+    - r-curl
