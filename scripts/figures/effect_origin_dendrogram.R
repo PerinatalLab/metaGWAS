@@ -35,7 +35,10 @@ d$nearestGene= with(d, ifelse(rsid== 'rs3129768', 'HLA-DQA1', ifelse(rsid== 'rs5
 d$nearestGene= with(d, ifelse(rsid== 'rs6780427', 'KCNAB1', nearestGene))
 d$nearestGene= with(d, ifelse(rsid== 'rs6879092', 'EBF1', nearestGene))
 
-d$rsid_lab= with(d, paste0(rsid, ' (', nearestGene, ')'))
+
+d$nearestGene= gsub(' ', '', d$nearestGene)
+d$nearestGene= paste0("(", d$nearestGene, ")")
+d$rsid_lab= with(d, paste(rsid, nearestGene))
 
 d$beta_PT= with(d, ifelse(beta_MT<0, -1 * beta_PT, beta_PT))
 d$beta_MNT= with(d, ifelse(beta_MT<0, -1 * beta_MNT, beta_MNT))
@@ -45,20 +48,27 @@ d= gather(d, haplotype, beta, c('beta_MT', 'beta_MNT', 'beta_PT'))
 
 max_beta= max(abs(d$beta))
 
-d$class_name= factor(d$class_name, levels= c("MF SD", "MF OD", "Maternal", "Fetal MatT", "Fetal"))
-
-d= arrange(d, class_name, desc(probability))
-#d$haplotype= with(d, ifelse(haplotype== 'beta_MT', 'MT', ifelse(haplotype== 'beta_MNT', 'MnT', 'PT')))
 
 d$haplotype= with(d, ifelse(haplotype== 'beta_MT', 'Maternal\ntransmitted', ifelse(haplotype== 'beta_MNT', 'Maternal\nnon-transmitted', 'Paternal\ntransmitted')))
 d$rsid_lab= factor(d$rsid_lab, levels= unique(d$rsid_lab))
+
+
+d$class_name= factor(d$class_name, levels= c("Maternal", "MF SD", "MF OD", "Fetal MatT", "Fetal"))
+
+d= d %>% arrange(class_name, desc(probability)) %>% ungroup()
+d$rsid_lab= factor(d$rsid_lab, levels= unique(d$rsid_lab))
+
+labs <- sapply(
+  strsplit(levels(d$rsid_lab), " "), 
+  function(x) parse(text = paste0(x[1], "~italic('", x[2], "')"))
+)
 
 p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
   theme_cowplot(8) +
   geom_tile() +
   scale_fill_gradient2(low= colorBlindBlack8[4], high= colorBlindBlack8[2], mid= 'white', limits= c(-max_beta, max_beta), guide= 'none') +
   coord_equal() +
-#  scale_x_discrete(guide = guide_axis(angle = 45, hjust = 1)) +
+  scale_x_discrete(labels= labs) +
   theme(axis.title= element_blank(),
         axis.ticks= element_blank(),
         plot.margin = margin(0, 0, 0, 0, "mm"),
@@ -76,8 +86,8 @@ p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
   geom_tile() +
   scale_fill_gradient2(low= colorBlindBlack8[4], high= colorBlindBlack8[2], mid= 'white', limits= c(-max_beta, max_beta), name= 'Effect size') +
   coord_equal() +
-  scale_x_discrete(guide = guide_axis(angle = 45), position= 'top') +
-  theme(axis.title= element_blank(),
+scale_x_discrete(labels= labs) +  
+theme(axis.title= element_blank(),
         axis.ticks= element_blank(),
         plot.margin = margin(0, 9, 0,0, "mm"),
         text= element_text(size= 9/ .pt),

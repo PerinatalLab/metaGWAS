@@ -31,7 +31,7 @@ CCHMC_cohort_nms= ['ALSPAC', 'DNBC', 'FIN', 'GPN', 'HAPO']
 
 include: 'scripts/munge_stats/Snakefile'
 include: 'scripts/LDscore/Snakefile'
-
+include: 'scripts/repr_traits_PGS/Snakefile'
 include: 'scripts/independent/Snakefile'
 include: 'scripts/enrichment/Snakefile'
 include: 'scripts/meta/Snakefile'
@@ -161,4 +161,6 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/figures/genet_corr_GAraw.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_effect_origin_ternary.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/Tables/genetic_instruments_MR_repr_phenos.txt',
-		expand('/mnt/hdd/common/pol/metaGWAS/Tables/2MR_repr_phenos_{pheno}.txt', pheno= pheno_nms)
+		expand('/mnt/hdd/common/pol/metaGWAS/Tables/2MR_repr_phenos_{pheno}.txt', pheno= pheno_nms),
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/PGS/IVS/PGS_repr_traits.txt',
+		'/mnt/hdd/common/pol/metaGWAS/BW/PGS_fetal_growth.txt'
