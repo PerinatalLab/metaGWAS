@@ -64,7 +64,7 @@ annotate('text', x=0.1, y= -15, label="Fetal", color= colorBlindBlack8[8], size=
 geom_density(mapping= aes(x = barn, y = -..density..), fill= colorBlindBlack8[8], colour= colorBlindBlack8[8]) +
   theme_cowplot(font_size = 8) +
 scale_x_continuous(expand= c(0, 0)) +
-  xlab("Effect size relative difference on \nbirth weight before-after conditioning") +
+  xlab("Relative difference in effect size on \nbirth weight after conditioning") +
 ylab('Density') +
 geom_hline(yintercept= 0, colour= 'grey') +
 theme(axis.line.x = element_line(size = 0.3),
@@ -84,7 +84,7 @@ theme_cowplot(font_size= 8) +
 scale_fill_manual(values= alpha(colorBlindBlack8[c(8,3)], 0.5), guide= 'none') +
 scale_x_continuous(expand= c(0, 0)) +
 scale_y_continuous(expand=c(0, 0.5)) +
-  xlab("Effect size relative difference on \nbirth weight before-after conditioning") +
+  xlab("Relative difference in effect size on \nbirth weight after conditioning") +
 ylab('Density') +
 theme(axis.line.x = element_line(size = 0.3),
         axis.line.y = element_line(size = 0.3),
