@@ -1,0 +1,68 @@
+import pandas as pd
+import numpy as np
+
+
+rule extract_GT_fetal_SNP:
+	''
+	input:
+		'/mnt/work/pol/metaGWAS/effect_origin/processed_data/{sample}_toextract.txt',
+                '/mnt/archive/hunt/genotypes/vcf/CHR02_PID106764.vcf.gz'
+	output:
+		temp('/mnt/work/pol/metaGWAS/fetal_SNP/to_phase/data/temp/{sample}.txt')
+	shell:
+		"bcftools query -S {input[0]} -r 2:113521754 -f '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n' {input[1]} -o {output[0]}"
+
+rule add_header_GT_fetal_SNP:
+        'Add header to genotype files.'
+        input:
+                '/mnt/work/pol/metaGWAS/effect_origin/processed_data/{sample}_toextract.txt',
+                '/mnt/work/pol/metaGWAS/fetal_SNP/to_phase/data/temp/{sample}.txt'
+        output:
+                temp('/mnt/work/pol/metaGWAS/fetal_SNP/processed_data/GT/{sample}_GT')
+        run:
+                cols= ['chr', 'pos', 'ref', 'eff'] + [line.strip() for line in open(input[0], 'r')]
+                d= pd.read_csv(input[1], header= None, names= cols, sep= '\t')
+                d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule concat_GT_chr_fetal_SNP:
+        'Collect GT from all CHR.'
+        input:
+                '/mnt/work/pol/metaGWAS/fetal_SNP/processed_data/GT/{sample}_GT'
+        output:
+                '/mnt/work/pol/metaGWAS/fetal_SNP/processed_data/GT/allchr/{sample}_GT.txt'
+        shell:
+                '''
+                set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'chr' >> {output[0]}
+                '''
+
+rule get_allele_transmission_Fetal_SNP:
+        'Retrieve allele transmission from family trios (phasing included).'
+        input:
+                '/mnt/work/pol/metaGWAS/fetal_SNP/processed_data/GT/allchr/fets_GT.txt',
+                '/mnt/work/pol/metaGWAS/fetal_SNP/processed_data/GT/allchr/moms_GT.txt',
+                '/mnt/work/pol/metaGWAS/effect_origin/processed_data/parent_offspring_trios.txt',
+		'/mnt/work/pol/metaGWAS/fetal_SNP/processed_data/GT/allchr/dads_GT.txt'
+        output:
+                '/mnt/work/pol/metaGWAS/fetal_SNP/single_variant/processed_data/haplotypes/MT_PREG_ID',
+                '/mnt/work/pol/metaGWAS/fetal_SNP/single_variant/processed_data/haplotypes/MnT_PREG_ID',
+                '/mnt/work/pol/metaGWAS/fetal_SNP/single_variant/processed_data/haplotypes/PT_PREG_ID',
+		'/mnt/work/pol/metaGWAS/effect_origin/single_variant/processed_data/haplotypes/PnT_PREG_ID'
+        script:
+                'allele_transmission.py'
+
+rule haplotype_based_analysis_fetal_SNP:
+        ''
+        input:
+                '/mnt/work/pol/metaGWAS/fetal_SNP/single_variant/processed_data/haplotypes/MT_PREG_ID',
+                '/mnt/work/pol/metaGWAS/fetal_SNP/single_variant/processed_data/haplotypes/MnT_PREG_ID',
+                '/mnt/work/pol/metaGWAS/fetal_SNP/single_variant/processed_data/haplotypes/PT_PREG_ID',
+                '/mnt/work/pol/metaGWAS/pheno/trio_pheno.txt',
+		'/mnt/work/pol/metaGWAS/effect_origin/trio_confirmed.txt'
+        output:
+                '/mnt/work/pol/metaGWAS/fetal_SNP/results/HUNT.txt'
+        script:
+                'linear_hypotheses.R'
+

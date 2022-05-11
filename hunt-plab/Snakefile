@@ -7,6 +7,7 @@ include: 'scripts/reports/Snakefile'
 include: 'scripts/PGS_BW/Snakefile'
 include: 'scripts/effect_origin/Snakefile'
 include: 'scripts/PGS_repr_pheno/Snakefile'
+include: 'scripts/fetal_SNP/Snakefile'
 
 rule all:
 	'Collect all results'
@@ -17,7 +18,8 @@ rule all:
 #		expand('/mnt/work/pol/metaGWAS/to_phase/data/mother_child.{ext}', ext= ['bim', 'bed', 'fam'])
 		expand('/mnt/work/pol/metaGWAS/PGS/BW/GRS/BW_{haplo}.txt', haplo= ['MT', 'MnT', 'PT', 'PnT']),
 		'/mnt/work/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt',
-		'/mnt/work/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt'
+		'/mnt/work/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt',
+		'/mnt/work/pol/metaGWAS/fetal_SNP/results/HUNT.txt'
 
 rule phenofile:
 	''
