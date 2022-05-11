@@ -53,6 +53,8 @@ include: 'scripts/effect_origin/Snakefile'
 include: 'scripts/tables/Snakefile'
 include: 'scripts/LCV/Snakefile'
 include: 'scripts/fetal_SNP/Snakefile'
+include: 'scripts/EGG_sumstats/Snakefile'
+
 rule all:
 	'Files to collect'
 	input:
@@ -164,4 +166,6 @@ rule all:
 		expand('/mnt/hdd/common/pol/metaGWAS/Tables/2MR_repr_phenos_{pheno}.txt', pheno= pheno_nms),
 		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/PGS/IVS/PGS_repr_traits.txt',
 		'/mnt/hdd/common/pol/metaGWAS/BW/PGS_fetal_growth.txt',
-		'/mnt/hdd/common/pol/metaGWAS/fetal_SNP/META/all_cohort.txt'
+		'/mnt/hdd/common/pol/metaGWAS/fetal_SNP/META/all_cohort.txt',
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/EGG/top-10K/EGG_Maternal_GWAMA_{pheno}_top10K.txt', pheno= pheno_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/EGG/no_23andMe/EGG_Maternal_GWAMA_{phenotypes}.txt.gz', phenotypes= ['GAraw', 'postTerm', 'allPTD'])
