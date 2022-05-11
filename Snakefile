@@ -52,7 +52,7 @@ include: 'scripts/figures/Snakefile'
 include: 'scripts/effect_origin/Snakefile'
 include: 'scripts/tables/Snakefile'
 include: 'scripts/LCV/Snakefile'
-
+include: 'scripts/fetal_SNP/Snakefile'
 rule all:
 	'Files to collect'
 	input:
@@ -163,4 +163,5 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/Tables/genetic_instruments_MR_repr_phenos.txt',
 		expand('/mnt/hdd/common/pol/metaGWAS/Tables/2MR_repr_phenos_{pheno}.txt', pheno= pheno_nms),
 		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/PGS/IVS/PGS_repr_traits.txt',
-		'/mnt/hdd/common/pol/metaGWAS/BW/PGS_fetal_growth.txt'
+		'/mnt/hdd/common/pol/metaGWAS/BW/PGS_fetal_growth.txt',
+		'/mnt/hdd/common/pol/metaGWAS/fetal_SNP/META/all_cohort.txt'

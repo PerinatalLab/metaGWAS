@@ -1,0 +1,25 @@
+SCHEME   STDERR
+
+MARKER ID
+ALLELE EFF REF
+EFFECT BETA
+STDERR SE
+PVALUE pvalue 
+WEIGHT N
+SEPARATOR TAB
+
+PROCESS /mnt/hdd/common/pol/metaGWAS/fetal_SNP/processed_data/h1_MoBaGenetics.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/fetal_SNP/processed_data/h1_HUNT.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/fetal_SNP/processed_data/h1_ALSPAC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/fetal_SNP/processed_data/h1_DNBC.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/fetal_SNP/processed_data/h1_FIN.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/fetal_SNP/processed_data/h1_GPN.txt
+PROCESS /mnt/hdd/common/pol/metaGWAS/fetal_SNP/processed_data/h1_HAPO.txt
+
+
+OUTFILE /mnt/hdd/common/pol/metaGWAS/fetal_SNP/META/meta_h1_ .txt
+
+ANALYZE HETEROGENEITY
+
+QUIT
+
