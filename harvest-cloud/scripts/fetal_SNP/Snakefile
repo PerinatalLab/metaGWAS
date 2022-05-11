@@ -1,0 +1,51 @@
+rule get_fetal_SNP_GT:
+        'Extract GT from VCF file for a subset of genetic variants. Use IDs from the haplotype PGS.'
+        input:
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/{sample}_toextract.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/vcf/2.vcf.gz'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/GT/temp/{sample}_gt')
+        run:
+                shell("bcftools query -S {input[0]} -r 2:113521754 -f '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n' {input[1]} -o {output[0]}")
+
+rule add_header_GT_fetal_SNP:
+	'Add header to genotype files.'
+	input:
+		'/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/{sample}_toextract.txt',
+		'/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/GT/temp/{sample}_gt'
+	output:
+		temp('/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/GT/{sample}_GT')
+	run:
+		cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[0], 'r')]
+                d= pd.DataFrame(columns= cols)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+                shell('cat {input[1]} >> {output[0]} ')
+
+rule get_allele_transmission_fetal_SNP:
+        'Retrieve allele transmission from family trios (after phasing).'
+        input:
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/GT/fets_GT',
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/GT/moms_GT',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt',
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/GT/dads_GT'
+        output:
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/haplotypes/h1_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/haplotypes/h2_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/haplotypes/h3_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/haplotypes/h4_PREG_ID'
+        script:
+                'allele_transmission.py'
+
+rule haplotype_based_analysis_fetal_SNP:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/haplotypes/h1_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/haplotypes/h2_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/haplotypes/h3_PREG_ID',
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/processed_data/haplotypes/h4_PREG_ID',
+		'/mnt/work2/pol/metaGWAS/effect_origin/p1724/pheno/fets_pheno.txt'
+	output:
+                '/mnt/work2/pol/metaGWAS/fetal_SNP/results/MoBaGENETICS.txt'
+	script:
+		'linear_hypothesis.R'
+

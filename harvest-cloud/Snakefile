@@ -19,17 +19,19 @@ include: 'scripts/reports/Snakefile'
 include: 'scripts/COJO/Snakefile'
 include: 'scripts/mtCOJO/Snakefile'
 include: 'scripts/GREML/Snakefile'
-include: 'scripts/LDAK/Snakefile'
+#include: 'scripts/LDAK/Snakefile'
 include: 'scripts/BW_PGS/Snakefile'
 include: 'scripts/GxG/Snakefile'
 include: 'scripts/ADCY5/Snakefile'
 include: 'scripts/figures/Snakefile'
 include: 'scripts/MR_repr_phenos/Snakefile'
-include: 'scripts/growth_PGS/Snakefile'
+#include: 'scripts/growth_PGS/Snakefile'
+include: 'scripts/fetal_SNP/Snakefile'
+
 rule all:
 	'Collect all result files.'
 	input:
-		'/mnt/work2/pol/metaGWAS/pheno/pheno_trio.txt',
+#		'/mnt/work2/pol/metaGWAS/pheno/pheno_trio.txt',
 #		expand('/mnt/work2/pol/metaGWAS/PGS/GA/GRS/GA_GRS_{sample}.txt', sample= sample_nms),
 #		'/mnt/work2/pol/metaGWAS/pheno/TED/pheno_moms.txt',
 #		expand('/mnt/work2/pol/metaGWAS/PGS/GA/GRS/GA_{haplo}.txt', haplo= ['h1', 'h2', 'h3', 'h4']),
@@ -47,7 +49,7 @@ rule all:
 #		expand('/mnt/work2/pol/metaGWAS/PGS/BW/independent/MOBA_{sample}_BW_fetal_effect.clumped', sample= sample_nms),
 #		expand('/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_fetal_effect_GRS_{sample}.txt', sample= sample_nms),
 #		'/mnt/work2/pol/metaGWAS/GxE_BW/results/GAraw.txt',
-		expand('/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_{haplo}.txt', haplo= ['h1', 'h2', 'h3', 'h4']),
+#		expand('/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_{haplo}.txt', haplo= ['h1', 'h2', 'h3', 'h4']),
 #		expand('/mnt/work2/pol/metaGWAS/mtCOJO/results/{BW_pheno}_GA_fetal.mtcojo.cma', BW_pheno= BW_pheno_nms),
 #		'/mnt/work2/pol/metaGWAS/ADCY5/processed_data/haplotypes/h1_PREG_ID',
 #		expand('/mnt/work2/pol/metaGWAS/ADCY5/processed_data/dosages/{sample}_DS3', sample= sample_nms),
@@ -63,8 +65,9 @@ rule all:
 #		'/mnt/work2/pol/metaGWAS/haplotype_analysis/rsids/GAraw.txt',
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_GRS_{sample}_{haplotype}.txt', sample= sample_nms, haplotype= ['MT', 'MnT', 'PT']),
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_{haplotype}_{haplo}.txt', haplotype= ['MT', 'MnT', 'PT'], haplo= ['h1', 'h2', 'h3', 'h4'])
-		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt',
-		'/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt'
+#		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt',
+#		'/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt',
+		'/mnt/work2/pol/metaGWAS/fetal_SNP/results/MoBaGENETICS.txt'
 
 def selectUnrelated(input_kin, df, x):
 	kin= pd.read_csv(input_kin, header= 0, sep= '\t')
@@ -195,6 +198,39 @@ rule concat_phenos_PCA:
         output:
                 '/mnt/work2/pol/metaGWAS/effect_origin/pheno/{sample}_pheno.txt',
                 '/mnt/work2/pol/metaGWAS/effect_origin/pheno/aux/ids/samples/{sample}_ids.txt',
+        run:
+                d= pd.read_csv(input[1], header= 0, sep= '\t')
+                pca= pd.read_csv(input[0], header= 0, sep= '\t')
+                d= pd.merge(d, pca, how= 'inner', on= 'IID')
+                d.fillna('NA', inplace= True)
+                d['FID']= d.IID
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+                d.to_csv(output[1], sep= '\t', header= False, index= False, columns= ['FID', 'IID'])
+
+rule phenofile_trio_p1724:
+        'Pheno file for trio analysis.'
+        input:
+                '/mnt/archive2/p1724/v12/PDB1724_MFR_541_v12.csv',
+                '/mnt/work/pol/MOBAGENETICS/PREG_ID_to_IID.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/flaglist-merged/mobagen-flaglist-n99259.txt',
+                '/mnt/work/pol/MOBAGENETICS/pca_out.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/p1724/pheno/temp/temp_pheno_moms.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/p1724/pheno/temp/temp_pheno_fets.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/p1724/pheno/temp/temp_pheno_dads.txt'
+        script:
+                'scripts/trio_pheno_file_p1724.R'
+
+rule concat_phenos_PCA_p1724:
+        'Concat pheno files, and add PCA.'
+        input:
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pca/mobagen-total/mobagen-total-proj-pc',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/p1724/pheno/temp/temp_pheno_{sample}.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pedigree/mobagen-ethnic-core-samples.kin0'
+        output:
+                '/mnt/work2/pol/metaGWAS/effect_origin/p1724/pheno/{sample}_pheno.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/p1724/pheno/aux/ids/samples/{sample}_ids.txt',
         run:
                 d= pd.read_csv(input[1], header= 0, sep= '\t')
                 pca= pd.read_csv(input[0], header= 0, sep= '\t')
