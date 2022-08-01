@@ -175,4 +175,52 @@ rule COJO_slct:
 		x= pd.concat(cma_list)
 		x.to_csv(output[1], sep= '\t', header= True, index= False)
 
+rule extract_conditional_SNPs:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/cojo/results/GAraw.jma'
+	output:
+		'/mnt/work2/pol/metaGWAS/cojo/gene/SNPs_to_extract.txt'
+	run:
+		d= pd.DataFrame({'CHR': [5, 5, 3, 3], 'POS': [157895049, 158058432, 155862524, 156697097], 'POS1': [157895049, 158058432, 155862524, 156697097]})
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+
+
+rule get_DS_conditional_analysis:
+        'Extract GT from VCF file for a subset of genetic variants.'
+        input:
+                '/mnt/work2/pol/metaGWAS/cojo/gene/SNPs_to_extract.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/moms_toextract.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/vcf/{CHR}.vcf.gz'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/cojo/gene/DS/temp/moms_gt{CHR}')
+        run:
+                shell("bcftools query -S {input[1]} -R {input[0]} -f '%CHROM\t%POS\t%REF\t%ALT[\t%DS]\n' {input[2]} -o {output[0]}")
+
+rule add_header_cond_SNPs:
+        'Add header to genotype files.'
+        input:
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/moms_toextract.txt',
+                '/mnt/work2/pol/metaGWAS/cojo/gene/DS/temp/moms_gt{CHR}'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/cojo/gene/DS/temp/header/moms_gt{CHR}')
+        run:
+                cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[0], 'r')]
+                d= pd.DataFrame(columns= cols)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+                shell('cat {input[1]} >> {output[0]} ')
+
+rule concat_DS_chr_cond_SNPs:
+        'Collect GT from all CHR.'
+        input:
+                expand('/mnt/work2/pol/metaGWAS/cojo/gene/DS/temp/header/moms_gt{CHR}', CHR= CHR_nms)
+        output:
+                '/mnt/work2/pol/metaGWAS/cojo/gene/data/moms_DS.txt'
+        shell:
+                '''
+                set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'chr' >> {output[0]}
+                '''
 

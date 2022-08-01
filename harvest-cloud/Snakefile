@@ -67,7 +67,8 @@ rule all:
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_{haplotype}_{haplo}.txt', haplotype= ['MT', 'MnT', 'PT'], haplo= ['h1', 'h2', 'h3', 'h4'])
 #		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt',
 #		'/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt',
-		'/mnt/work2/pol/metaGWAS/fetal_SNP/results/MoBaGENETICS.txt'
+		'/mnt/work2/pol/metaGWAS/fetal_SNP/results/MoBaGENETICS.txt',
+		'/mnt/work2/pol/metaGWAS/cojo/gene/data/moms_DS.txt'
 
 def selectUnrelated(input_kin, df, x):
 	kin= pd.read_csv(input_kin, header= 0, sep= '\t')
