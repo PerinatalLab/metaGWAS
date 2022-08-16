@@ -27,6 +27,7 @@ include: 'scripts/figures/Snakefile'
 include: 'scripts/MR_repr_phenos/Snakefile'
 #include: 'scripts/growth_PGS/Snakefile'
 include: 'scripts/fetal_SNP/Snakefile'
+include: 'scripts/GA_BW_pleiotropy_PGS/Snakefile'
 
 rule all:
 	'Collect all result files.'
@@ -65,10 +66,15 @@ rule all:
 #		'/mnt/work2/pol/metaGWAS/haplotype_analysis/rsids/GAraw.txt',
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_GRS_{sample}_{haplotype}.txt', sample= sample_nms, haplotype= ['MT', 'MnT', 'PT']),
 #		expand('/mnt/work2/pol/metaGWAS/growth/GRS/growth_{haplotype}_{haplo}.txt', haplotype= ['MT', 'MnT', 'PT'], haplo= ['h1', 'h2', 'h3', 'h4'])
-#		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt',
+		'/mnt/work2/pol/metaGWAS/MR/repr_traits/delivery/lh/MR_repr_traits_indiv_level.txt',
 #		'/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt',
 		'/mnt/work2/pol/metaGWAS/fetal_SNP/results/MoBaGENETICS.txt',
-		'/mnt/work2/pol/metaGWAS/cojo/gene/data/moms_DS.txt'
+		'/mnt/work2/pol/metaGWAS/cojo/gene/data/moms_DS.txt',
+		'/mnt/work2/pol/metaGWAS/MR/repr_traits/PGS/delivery/lh/MR_repr_traits_indiv_level.txt',
+		expand('/mnt/work2/pol/metaGWAS/PGS/BW/maternal/processed_data/DS/{sample}_DS.txt', sample= sample_nms),
+		expand('/mnt/work2/pol/metaGWAS/PGS/BW/{BW}/pheno/delivery/BW_PGS.txt', BW= ['maternal_effect', 'fetal_effect']),
+		expand('/mnt/work2/pol/metaGWAS/PGS/GA/processed_data/delivery/BW_GA_PGS_{haplo}.txt', haplo= ['MT', 'MnT', 'PT']),
+		'/mnt/work2/pol/metaGWAS/PGS/GA/processed_data/delivery/lm_results/BW_GA_PGS.txt'
 
 def selectUnrelated(input_kin, df, x):
 	kin= pd.read_csv(input_kin, header= 0, sep= '\t')
