@@ -9,15 +9,16 @@ pheno_nms= ['allPTD', 'postTerm', 'GAraw', 'GAnrm']
 rule METAL:
 	''
 	input:
-		'scripts/meta/metal_script_{pheno}',
 		pheno_cohorts
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt',
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/log/METAL_{pheno}_log.txt'
+	params:
+		'scripts/meta/metal_script_{pheno}'
 	wildcard_constraints:
 		pheno= '|'.join(pheno_nms)
 	shell:
-		'/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+		'/home/pol/software/generic-metal/metal {params[0]} >> {output[1]}'
 
 rule METAL_noMOBA:
     'Inverse-variance weighted meta-analysis without MOBA samples.'
@@ -102,4 +103,17 @@ rule METAL_big5_GAraw:
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/log/big5/METAL_GAraw_log.txt'
         shell:
                 '/home/pol/software/generic-metal/metal {input[0]} >> {output[1]}'
+
+rule METAL_noMOBA_no23andMe:
+    'Inverse-variance weighted meta-analysis without MOBA and 23andMe samples.'
+    input:
+        'scripts/meta/noMOBA_no23andme_metal_script_GAraw',
+        expand('/mnt/hdd/common/pol/metaGWAS/sumstats/GAraw/filtered/{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms)
+    output:
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme_NOMOBA/meta_GAraw_1.txt',
+        '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/log/METAL_log.txt'
+    shell:
+        '''
+        /home/pol/software/generic-metal/metal {input[0]} >> {output[1]}
+        '''
 
