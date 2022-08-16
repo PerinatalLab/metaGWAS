@@ -79,7 +79,7 @@ p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
   geom_text_repel(data= filter(d, haplotype== 'Paternal\ntransmitted'), aes(x= rsid_lab, y= 4,
                 label= round(probability, 2)),  direction= 'y', size= 8/ .pt, box.padding = 0.01)  
 
-ggsave(snakemake@output[[1]], plot= p1, width= 185, height= 60, units= 'mm', dpi= 300)
+ggsave(snakemake@output[[1]], plot= p1, width= 180, height= 60, units= 'mm', dpi= 300)
 
 p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
   theme_cowplot(8) +
@@ -96,6 +96,6 @@ theme(axis.title= element_blank(),
   geom_text_repel(data= filter(d, haplotype== 'Paternal\ntransmitted'), aes(x= rsid_lab, y= -0.05,
                                                                                 label= round(probability, 2)), direction= "y" ,
                   size= 6.5/ .pt) 
-ggsave(snakemake@output[[2]], plot= p1, width= 185, height= 100, units= 'mm', dpi= 300)
+ggsave(snakemake@output[[2]], plot= p1, width= 180, height= 100, units= 'mm', dpi= 300)
 
 fwrite(d, snakemake@output[[3]], sep= '\t')
