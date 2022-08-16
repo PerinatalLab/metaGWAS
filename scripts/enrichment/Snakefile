@@ -147,3 +147,36 @@ rule enrichment_RNA_decidualization:
 		print(z)
 		with open(output[0], 'w') as file_handler:
 			file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+
+rule labor_associated_DEGS:
+	'Enrichment analysis for labor associated DEGs from A single-cell atlas of the myometrium in human parturition.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt',
+		'/mnt/hdd/common/pol/metaGWAS/references/labor-associated-DEGS.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/enrichment/labour_associated_DEGs/{pheno}.txt'
+	run:
+		pheno= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID', 'nearestGene'])
+		x= pd.read_csv(input[1], sep= '\t', header= None, names= ['CHR', 'start', 'end', 'gene', 'EnsembleID'])
+		lab= pd.read_csv(input[2], sep= '\t', header= 0)
+		for i in set(lab.Cell_type):
+			temp_df= lab.loc[lab.Cell_type== i, :]
+			df= pheno.loc[pheno.nearestGene.isin(temp_df.gene_name.to_list()), :]
+			b= len(temp_df.gene_name.to_list()) - df.shape[0]
+			c= pheno.shape[0] - df.shape[0]
+			d= df.shape[0]
+			a= x.shape[0] - b - d - c
+			oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+			z= [i, a, b, c, d, (d / (d+c)), (b / (a + b)), oddsratio, pvalue]
+			with open(output[0], 'a') as file_handler:
+				file_handler.write('\t'.join([str(item) for item in z]) + '\n')
+		df= pheno.loc[pheno.nearestGene.isin(lab.gene_name.to_list()), :]
+                b= len(lab.gene_name.to_list()) - df.shape[0]
+                c= pheno.shape[0] - df.shape[0]
+                d= df.shape[0]
+                a= x.shape[0] - b - d - c
+                oddsratio, pvalue = st.fisher_exact([[a, b],[c, d]], alternative= 'greater')
+                z= ['overall', a, b, c, d, (d / (d+c)), (b / (a + b)), oddsratio, pvalue] 
+                with open(output[0], 'a') as file_handler:
+                        file_handler.write('\t'.join([str(item) for item in z]) + '\n')
