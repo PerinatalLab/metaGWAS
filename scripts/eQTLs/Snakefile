@@ -1,0 +1,61 @@
+rule endometrium_eQTL_colocalization:
+        'Use data from https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7048713'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
+                '/mnt/hdd/common/pol/references/GTEx_Analysis_v7_eQTL/cis_eQTL_Gene_Tissue_206_chrALL_ENSEMBL_6M_GRCh38_P90_allcovar_All_SMR_Format.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/endometrium/pph_{pheno}.txt',
+                temp('/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/endometrium/results_{pheno}.txt')
+        conda:
+                'environments/coloc.yml'
+        script:
+                'coloc_endometrium.R'
+
+rule filter_GWAS_IDs:
+	'Obtain a list of unique genetic variant IDs.'
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz', pheno= pheno_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/temp/var_ids.txt'
+	run:
+		df_list= list()
+		for i in input:
+			d= pd.read_csv(i, header= 0, sep= '\t', usecols= ['ID'])
+			df_list.append(d)
+		x= pd.concat(df_list)
+		x.drop_duplicates('ID', keep= 'first', inplace= True)
+		x.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule format_GTEx_data:
+	'Format GTEx_data for easy crunching.'
+	input:
+		'/mnt/hdd/common/pol/references/GTEx_Analysis_v7_eQTL/{tissue}.allpairs.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/temp/var_ids.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/temp/data/{tissue}.txt')
+	run:
+		x= ['ID', 'gene_id', 'maf', 'slope', 'slope_se']
+		with open(output[0], mode="w") as file:
+			file.write("\t".join(x) + "\n")
+		d= pd.read_csv(input[1], sep= '\t', header= 0)
+		for chunk in pd.read_csv(input[0], sep= '\t', header= 0, chunksize= 500000, compression= 'gzip', usecols= ['gene_id', 'variant_id', 'maf', 'slope', 'slope_se']) :
+			chunk[['CHR', 'POS', 'REF', 'EFF', 'build']]= chunk.variant_id.str.split('_', expand= True)
+			chunk['ID']= np.where(chunk.REF> chunk.EFF, chunk.CHR + ':' + chunk.POS + ':' + chunk.EFF + ':' + chunk.REF, chunk.CHR + ':' + chunk.POS + ':' + chunk.REF + ':' + chunk.EFF)
+			chunk= chunk[['ID', 'gene_id', 'maf', 'slope', 'slope_se']]
+			chunk= pd.merge(chunk, d, on= 'ID')
+			chunk.to_csv(output[0], sep= '\t', header= False, index= False, mode= 'a')
+
+
+rule GTEx_eQTL_colocalization:
+        'Use data from GTEx v7.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
+                '/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/temp/data/{tissue}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/GTEx/pph_{pheno}_{tissue}.txt',
+                temp('/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/GTEx/results_{pheno}_{tissue}.txt')
+        conda:
+                'environments/coloc.yml'
+	threads: 4
+        script:
+                'coloc_GTEx.R'
