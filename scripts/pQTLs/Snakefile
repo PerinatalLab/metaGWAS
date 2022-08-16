@@ -1,0 +1,13 @@
+rule coloc_pQTL:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt',
+		'/mnt/hdd/common/pol/metaGWAS/references/res_invn_X{prot}_Fenland_MA_auto_chrX_filtered_1pc.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/pqtls/coloc/blood/{pheno}/pph_{prot}.txt',
+                temp('/mnt/hdd/common/pol/metaGWAS/pqtls/coloc/blood/{pheno}/results_{prot}.txt')
+	conda:
+		'environments/coloc.yml'
+	script:
+		'coloc_pQTL.R'

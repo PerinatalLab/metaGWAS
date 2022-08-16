@@ -2,11 +2,18 @@ library(MendelianRandomization)
 library(data.table)
 library(dplyr)
 
+if (!grepl('cluster', snakemake@output[[1]])){
 d= fread(snakemake@input[[1]])
 names(d)= c('ID', 'beta', 'se', 'pvalue', 'trait')
+} else {
+d= fread(snakemake@input[[1]])
 
+}
 x=fread(snakemake@input[[2]])
+x= filter(x, !duplicated(ID))
 d= inner_join(d, x, by= 'ID')
+
+
 
 funk= function(temp_df){
 

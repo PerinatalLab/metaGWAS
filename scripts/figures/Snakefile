@@ -96,7 +96,7 @@ rule ADCY5_Phewas:
 		'/mnt/hdd/common/pol/metaGWAS/ADCY5/PheWas/FINNGEN/results/pph_GAraw.txt',
 		'/mnt/hdd/common/pol/references/FINNGEN/manifest_R4.txt'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_PheWas.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_PheWas.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/data_figures/ADCY5_PheWas.txt'
 	script:
 		'ADCY5_pheWAS.R'
@@ -194,6 +194,19 @@ rule conditional_all:
 		'BW_conditioning.R'
 
 
+rule conditional_BW_top_SEM_classification:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/references/bw_classification.txt',
+                '/mnt/hdd/common/pol/metaGWAS/mtCOJO/BW_maternal_effect_GA.mtcojo.cma.gz',
+                '/mnt/hdd/common/pol/metaGWAS/mtCOJO/BW_fetal_effect_GA.mtcojo.cma.gz',
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning.tiff',
+                '/mnt/hdd/common/pol/metaGWAS/data_figures/top_BW_conditioning.txt',
+                '/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2.pdf'
+        script:
+                'BW_conditioning_top.R'
+
 rule MR_GA_BW_haplotype:
 	''
 	input:
@@ -251,7 +264,8 @@ rule RNA_enrichment:
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/enrichment/HPA/RNA_GAraw.txt'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/figures/RNA_enrichment.pdf'
+		'/mnt/hdd/common/pol/metaGWAS/figures/RNA_enrichment.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/RNA_enrichment_legend.pdf'
 	script:
 		'RNA_enrichment.R'
 
@@ -319,3 +333,78 @@ rule GAnrm_manhattan:
                 '/mnt/hdd/common/pol/metaGWAS/figures/GAnrm_manhattan.png'
         script:
                 'manhattan_plot_postTerm.R'
+
+rule forest_plot_EEFSEC:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/reports/forest/data/top_variants_GAraw.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_GAraw_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/topregions/final/GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/EEFSEC_forest.pdf'
+	script:
+		'forest_plot_EEFSEC.R'
+
+rule sex_hormones_MR:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/MR/raw_data/formatted_sex_hormones.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/MR/results/GAraw/MR_clusters.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/SHBG_GAraw_2SMR.png',
+		'/mnt/hdd/common/pol/metaGWAS/figures/Testosterone_GAraw_2SMR.png'
+	script:
+		'MR_sex_hormones_GA.R'
+
+rule cell_type_enrichmente:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/h2_cts/gene_expr/GAraw.cell_type_results.txt',
+		'/mnt/hdd/common/pol/metaGWAS/references/LD_score_categories.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/cell_type_enrichment.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/cell_type_enrichment_legend.pdf'
+	script:
+		'cell_type_enrichment.R'
+
+rule labor_deg_enrichment:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/all/GAraw_labor_DEGs.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/labor_deg_enrichment_pvalue.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/labor_deg_n_genes_pvalue.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/labor_deg_enrichmente_pvalue_legend.pdf'
+	script:
+		'labor_deg.R'
+
+rule ternary_coloc_sex_hormones:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/colocalization/SHBG_fem/pph_GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/colocalization/Testosterone_fem/pph_GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/shbg_coloc_GAraw_ternary.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/testo_coloc_GAraw_ternary.tiff'
+	script:
+		'coloc_sex_hormones.R'
+
+rule tile_plot_evo:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/references/all_z_score_pval.tsv',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/evo.pdf'
+	script:
+		'evo.R'
+
+rule PGS_correlations:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/references/GA_BW_PGS_correlations.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/GA_BW_PGS_correlations.pdf'
+	script:
+		'GA_BW_PGS_correlations.R'

@@ -104,6 +104,61 @@ rule MR_data:
         script:
                 'MR_reproductive_traits.R'
 
+
+rule format_clusters_sex_hormones:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/references/sex-hormones-clusters.txt',
+                '/mnt/hdd/data/geno/references/HRC.r1-1.GRCh37.wgs.mac5.sites.tab'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/MR/raw_data/formatted_sex_hormones.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header= 0)
+                x= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['#CHROM', 'POS', 'ID', 'REF', 'ALT'])
+                x.columns= ['CHR', 'POS', 'ID', 'REF', 'ALT']
+                df= d.loc[(d.OKG_proxy != 'Signal in 1KG') & (d.OKG_proxy != 'No 1KG proxy'), :]
+                okg= df.loc[(df.OKG_Other_allele.str.len() == 1) & (d.OKG_Trait_raising.str.len() == 1), :]
+                hm= df.loc[(df.OKG_Other_allele.str.len() != 1) | (d.OKG_Trait_raising.str.len() != 1), :]
+                hm['beta']= hm.HM_Weight
+                hm['ref']= hm.HM_Other_allele
+                hm['eff']= hm.HM_Trait_raising
+                hm['RSID']= hm.HM_proxy
+                hm['se']= hm.HM_SE_weight
+                hm= hm[['RSID', 'beta', 'se', 'ref', 'eff', 'Cluster']]
+                okg['beta']= okg.OKG_Weight
+                okg['ref']= okg.OKG_Other_allele
+                okg['eff']= okg.OKG_Trait_raising
+                okg['RSID']= okg.OKG_proxy
+                okg['se']= okg.OKG_SE_weight
+                okg= okg[['RSID', 'beta', 'se', 'ref', 'eff', 'Cluster']]
+                d= d.loc[(d.OKG_proxy == 'Signal in 1KG') | (d.OKG_proxy == 'No 1KG proxy'), :]
+                d['beta']= d.Weight
+                d['ref']= d.Other_allele
+                d['eff']= d.Trait_raising
+                d['RSID']= d.Signal
+                d['se']= d.SE_weight
+                d= d[['RSID', 'beta', 'se', 'ref', 'eff', 'Cluster']]
+                d= pd.concat([d, hm, okg])
+                d= pd.merge(d, x, left_on= ['RSID'], right_on= 'ID')
+                d= d.loc[(d.ALT== d.ref) | (d.REF== d.ref), :]
+                d= d.loc[(d.ALT== d.eff) | (d.REF== d.eff), :]
+                d['beta']= np.where(d.ref > d.eff, -1 * d.beta, d.beta)
+                d['ID']= np.where(d.ref > d.eff, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.eff + ':' + d.ref, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.ref + ':' + d.eff)
+                d['trait']= np.where(d.Cluster== 'Female SHBG cluster', 'SHBG_fem_cluster', 'Testosterone_fem_cluster')
+                d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['ID', 'beta', 'se', 'trait'])
+
+
+rule MR_data_clusters:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/MR/raw_data/formatted_sex_hormones.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/MR/results/{pheno}/MR_clusters.txt'
+        script:
+                'MR_reproductive_traits.R'
+
+
 rule filter_INFO_MVMR:
 	'Filter out variants with INFO score< 0.4.'
 	input:

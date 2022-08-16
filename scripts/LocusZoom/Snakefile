@@ -85,3 +85,49 @@ rule merge_locuszoom_outputs:
 			shell('qpdf --empty --pages {input} -- {output[0]}')
 #                'pdftk {input} cat output {output[0]}'
 
+rule format_locuszoom_WNT_SHBG_GA:
+        'Format locuszoom metal file.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/SHBG_fem.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/data/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/data/SHBG_fem.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['CHR', 'POS', 'pvalue'], compression= 'gzip')
+		d= d.loc[d.CHR== 3, :]
+		d= d.loc[(d.POS>= 14293832 - 260000) & (d.POS< 14293832 + 260000), :]
+                d.sort_values(['pvalue'], ascending=True, inplace= True)
+                d.drop_duplicates(['CHR', 'POS'], inplace= True, keep= 'first')
+                d['ID']= 'chr' + d.CHR.apply(str) + ':' + d.POS.apply(str)
+                d.columns= ['CHR', 'POS', 'P-value', 'MarkerName']
+                d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['MarkerName', 'P-value'])
+		d= pd.read_csv(input[1], sep= '\t', header=0, usecols= ['CHR', 'POS', 'pvalue'])
+                d= d.loc[d.CHR== 3, :]
+                d= d.loc[(d.POS>= 14293832 - 260000) & (d.POS< 14293832 + 260000), :]
+                d.sort_values(['pvalue'], ascending=True, inplace= True)
+                d.drop_duplicates(['CHR', 'POS'], inplace= True, keep= 'first')
+                d['ID']= 'chr' + d.CHR.apply(str) + ':' + d.POS.apply(str)
+                d.columns= ['CHR', 'POS', 'P-value', 'MarkerName']
+                d.to_csv(output[1], sep= '\t', header= True, index= False, columns= ['MarkerName', 'P-value'])
+
+rule locuszoom_plot_WNT4_SHBG:
+	'Plot locuszoom'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/data/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/data/SHBG_fem.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/plots/GAraw_rs9823520.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/plots/SHBG_fem_rs9823520.pdf'
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/plots/GAraw',
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/plots/',
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/plots/SHBG_fem'
+	run:
+		if not os.path.exists(params[1]):
+			os.makedirs(params[1])
+		shell('python2 /home/pol/software/locuszoom/bin/locuszoom --metal {input[0]} --refsnp rs9823520 --flank 250kb --plotonly --no-date --build hg19 --pop EUR --source 1000G_March2012 --prefix {params[0]} title="WNT4-GA" theme=publication')
+                shell('python2 /home/pol/software/locuszoom/bin/locuszoom --metal {input[1]} --refsnp rs9823520 --flank 250kb --plotonly --no-date --build hg19 --pop EUR --source 1000G_March2012 --prefix {params[2]} title="WNT4-SHBG" theme=publication')
+
+
+

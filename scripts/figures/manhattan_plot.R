@@ -127,5 +127,5 @@ p1= ggplot(data= don, aes(x= BPcum, y= logpval, colour= disc)) +
         text= element_text(family="arial", size= 9),
 	axis.line= element_line(size= 0.1)) 
 
-save_plot(snakemake@output[[1]], plot= p1, base_height= 90, base_width= 185, units= 'mm', dpi= 300)
+save_plot(snakemake@output[[1]], plot= p1, base_height= 90, base_width= 180, units= 'mm', dpi= 300)
 
