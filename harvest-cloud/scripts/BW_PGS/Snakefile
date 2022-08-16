@@ -139,3 +139,6 @@ rule linear_hypothesis:
 		'/mnt/work2/pol/metaGWAS/PGS/BW/pheno/delivery/results/MR_BW_PGS.txt'
 	script:
 		'MR_fetal_growth_pheno_individual_level.R'
+
+
+

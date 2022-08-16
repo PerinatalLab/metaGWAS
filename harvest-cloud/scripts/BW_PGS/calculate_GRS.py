@@ -22,27 +22,28 @@ def harmonize_alleles(d, REF_x, EFF_x, REF_y, EFF_y):
         return(d)
 
 def calculate_PGS(d, ID):
-        d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
-        d['chr']= d.chr.apply(str)
-        d= pd.merge(betas, d, on= ['chr', 'pos'])
-        d= harmonize_alleles(d, 'ref', 'eff', 'REF', 'EFF')
-        d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
-        betas_v= np.array(d.beta)
-        d.drop(['ref', 'eff', 'pos', 'chr', 'EFF', 'REF', 'beta'], axis= 1, inplace= True)
-        ids= d.columns
-        d= pd.DataFrame(np.array(d) * betas_v.reshape(-1, 1), columns= ids)
-        d= pd.DataFrame(d.sum(axis= 0))
-        d[ID]= d.index
-        return d
+	d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
+	d['chr']= d.chr.apply(str)
+	betas['chr']= betas.chr.apply(str)
+	d= pd.merge(betas, d, on= ['chr', 'pos'])
+	d= harmonize_alleles(d, 'ref', 'eff', 'REF', 'EFF')
+	d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
+	betas_v= np.array(d.beta)
+	d.drop(['ref', 'eff', 'pos', 'chr', 'EFF', 'REF', 'beta'], axis= 1, inplace= True)
+	ids= d.columns
+	d= pd.DataFrame(np.array(d) * betas_v.reshape(-1, 1), columns= ids)
+	d= pd.DataFrame(d.sum(axis= 0))
+	d[ID]= d.index
+	return d
 
 
 # Read data
 if 'haplotype' not in snakemake.input[0]:
-        cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(snakemake.input[0], 'r')]
-        betas= pd.read_csv(snakemake.input[2], sep= '\t', header= 0)
+#        cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(snakemake.input[0], 'r')]
+        betas= pd.read_csv(snakemake.input[1], sep= '\t', header= 0)
         betas['chr']= betas['chr'].apply(str)
         df_list= list()
-        for d in pd.read_csv(snakemake.input[1], header= None, names= cols, sep= '\t', chunksize= 600):
+        for d in pd.read_csv(snakemake.input[0], header= 0,  sep= '\t', chunksize= 600):
                 d= calculate_PGS(d, 'IID')
                 df_list.append(d)
         d= pd.concat(df_list)
@@ -58,9 +59,12 @@ else:
 if 'haplotype' in snakemake.input[0]:
         d= d.groupby('PREG_ID').sum().reset_index()
         d.columns= ['PREG_ID', snakemake.wildcards.haplo]
-else:
+elif 'decode' in snakemake.input[0]:
         d= d.groupby('IID').sum().reset_index()
-        d.columns.values[0]= snakemake.wildcards.sample + '_' + snakemake.wildcards.repr_trait + '_PGS'
+        d.columns= ['IID', snakemake.wildcards.sample + '_PGS']
+else:
+	d= d.groupby('IID').sum().reset_index()
+	d.columns['IID', snakemake.wildcards.sample + '_' + snakemake.wildcards.BW + '_PGS']
 
 
 d.to_csv(snakemake.output[0], sep ='\t', header= True, index= False)
