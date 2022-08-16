@@ -178,3 +178,41 @@ rule add_2nd_nearest_Gene:
 		d= d.loc[d.nearestGene != d.nearestGene2, :]
 		d= d[['ID', 'nearestGene', 'nearestGene2']]
 		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule VEP_suggestive_evidence:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/VEP/suggestive/to_VEP_{pheno}.txt')
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['MarkerName', 'Allele1', 'Allele2', 'P-value'])
+		d= d.loc[d['P-value']< 5e-5, :]
+                d[['CHR', 'POS', 'REF', 'EFF', 'SNP']]= d['MarkerName'].str.split(':', expand= True)
+                d= d.loc[d.SNP== 'SNP', :]
+                d['POS2']= d['POS']
+                d['CHR']= np.where(d['CHR']== '23', 'X', d['CHR'])
+                d['POS']= d['POS'].astype(str).astype(int)
+                d['Allele']= d['Allele1'].str.upper() + '/' + d['Allele2'].str.upper()
+                d['STRAND']= '+'
+                d.sort_values(by= ['CHR', 'POS'], inplace= True)
+                d.to_csv(output[0], sep= '\t', header= False, index= False, columns= ['CHR', 'POS', 'POS2', 'Allele', 'STRAND'])
+
+rule VEP_suggestive:
+        'Variant annotation using VEP.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/VEP/suggestive/to_VEP_{pheno}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/VEP/suggestive/VEP_{pheno}.txt'
+        shell:
+                '/home/pol/software/ensembl-vep/vep -i {input[0]} --check_existing --symbol --biotype --cache -O {output[0]} --offline --force_overwrite'
+
+rule format_sumstats_suggestive:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt',
+                '/mnt/hdd/common/pol/metaGWAS/VEP/suggestive/VEP_{pheno}.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/suggestive/Maternal_GWAMA_{pheno}.txt'
+        script:
+                'format_VEP.py'
