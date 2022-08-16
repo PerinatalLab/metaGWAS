@@ -29,6 +29,10 @@ big5_nms_allPTD= ['23andme', 'MOBAGENETICS', 'DECODE', 'FINNGEN', 'HUNT', 'DBDS'
 
 CCHMC_cohort_nms= ['ALSPAC', 'DNBC', 'FIN', 'GPN', 'HAPO']
 
+cell_types_names= ['LED', 'ILC', 'Decidual', 'Macrophage-2', 'Macrophage-3', 'Macrophage-1', 'Monocyte', 'Stromal-1', 'Stromal-2', 'Endothelial-2', 'CD4_T-cell', 'CD8_T-cell', 'Smooth-muscle-cells-1', 'Endothelial-1', 'overall']
+
+auto_CHR_nms= [1, 2, 3, 4, 5, 6, 7, 8,9, 10 ,11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+
 include: 'scripts/munge_stats/Snakefile'
 include: 'scripts/LDscore/Snakefile'
 include: 'scripts/repr_traits_PGS/Snakefile'
@@ -54,6 +58,8 @@ include: 'scripts/tables/Snakefile'
 include: 'scripts/LCV/Snakefile'
 include: 'scripts/fetal_SNP/Snakefile'
 include: 'scripts/EGG_sumstats/Snakefile'
+include: 'scripts/eQTLs/Snakefile'
+include: 'scripts/pQTLs/Snakefile'
 
 rule all:
 	'Files to collect'
@@ -69,7 +75,7 @@ rule all:
 		expand('/mnt/hdd/common/pol/metaGWAS/gene_based/fastBAT_{pheno}.txt.gene.fastbat', pheno= pheno_nms),
 		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/{pheno}_temp', pheno= pheno_nms),
 		expand('/mnt/hdd/common/pol/metaGWAS/reports/coloc/{pheno}_reproductive_traits.pdf', pheno= pheno_nms),
-		expand('/mnt/hdd/common/pol/metaGWAS/reports/forest/reports/forest_plot_{pheno}.pdf', pheno= pheno_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/reports/forest/reports/forest_plot_GAraw.pdf'),
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_GAraw.txt.gz',
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NOMOBA/noMOBA_Maternal_allPTD.txt.gz',
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_allPTD.txt.gz',
@@ -99,7 +105,7 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/figures/GAraw_manhattan.png',
 		'/mnt/hdd/common/pol/metaGWAS/figures/gene_based_coloc_eqtl.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/figures/spider_BW_coloc_maternal.png',
-		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_PheWas.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_PheWas.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/figures/ADCY5_FST_EUR_AFR.tiff',
 		'/mnt/hdd/common/pol/metaGWAS/figures/BW_genetic_correlations.tiff',
 #		'/mnt/hdd/common/pol/metaGWAS/figures/repr_pheno_genetic_correlations.tiff',
@@ -168,4 +174,23 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/BW/PGS_fetal_growth.txt',
 		'/mnt/hdd/common/pol/metaGWAS/fetal_SNP/META/all_cohort.txt',
 		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/EGG/top-10K/EGG_Maternal_GWAMA_{pheno}_top10K.txt', pheno= pheno_nms),
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/EGG/no_23andMe/EGG_Maternal_GWAMA_{phenotypes}.txt.gz', phenotypes= ['GAraw', 'postTerm', 'allPTD'])
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/EGG/no_23andMe/EGG_Maternal_GWAMA_{phenotypes}.txt.gz', phenotypes= ['GAraw', 'postTerm', 'allPTD']),
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme_NOMOBA/NO23andme_noMOBA_Maternal_GAraw.txt.gz',
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/META/suggestive/Maternal_GWAMA_{pheno}.txt', pheno= pheno_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/het/{pheno}.txt', pheno= pheno_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/endometrium/pph_{pheno}.txt', pheno= pheno_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/eqtls/coloc/GTEx/pph_{pheno}_{tissue}.txt', pheno= pheno_nms, tissue= ['Ovary', 'Uterus', 'Vagina']),
+		expand('/mnt/hdd/common/pol/metaGWAS/pqtls/coloc/blood/{pheno}/pph_{prot}.txt', pheno= pheno_nms, prot= ['13481_24', '15535_3', '15635_4', '18882_7', '3708_62', '6605_17', '9204_33']),
+		expand('/mnt/hdd/common/pol/metaGWAS/enrichment/labour_associated_DEGs/{pheno}.txt', pheno= pheno_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/all/{pheno}_labor_DEGs.txt', pheno= pheno_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/MR/results/{pheno}/MR_clusters.txt', pheno= pheno_nms),
+		'/mnt/hdd/common/pol/metaGWAS/figures/SHBG_GAraw_2SMR.png',
+		'/mnt/hdd/common/pol/metaGWAS/figures/cell_type_enrichment.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/labor_deg_enrichment_pvalue.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/shbg_coloc_GAraw_ternary.tiff',
+		'/mnt/hdd/common/pol/metaGWAS/locuszoom/WNT4/plots/GAraw_rs9823520.pdf',
+		expand('/mnt/hdd/common/pol/metaGWAS/colocalization/{repr_pheno}/pph_GAraw.txt', repr_pheno= repr_pheno_nms),
+		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/evo.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/EEFSEC_forest.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/GA_BW_PGS_correlations.pdf'
