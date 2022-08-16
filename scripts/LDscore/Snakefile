@@ -622,3 +622,251 @@ rule Genetic_correlation_two_pheno_big5:
                 set -eu
                 """)
 
+
+
+#### Creating own annotation for LD-score regression
+
+rule gene_set_file:
+	'Create gene-set file for annotations.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/references/labor-associated-DEGS.txt'
+	output:
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/gene_sets/{cell_types}.txt', cell_types= cell_types_names)
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/gene_sets/'
+	run:
+		d= pd.read_table(input[0], sep= '\t', header= 0)
+		d['kbid']= d.kbid.str.split('.', expand= True)[0]
+		d['Cell_type']= d.Cell_type.str.replace(' ', '-')
+		for k, g in d[d['Cell_type'].isin(set(d.Cell_type))].groupby('Cell_type'):
+			g.to_csv(params[0] + k + '.txt', header= False, sep= '\t', columns= ['kbid'], index= False)
+		d.drop_duplicates('kbid', inplace= True, keep= 'first')
+		d.to_csv(output[-1], sep= '\t', header= False, index= False, columns= ['kbid'])
+		
+
+rule annotation_file:
+	'Create annotation file using LD-score scripts.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/gene_sets/{cell_types}.txt',
+		'/home/pol/software/ldsc/resources/ENSG_coord.txt',
+		'/home/pol/software/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{auto_CHR}.bim'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.{auto_CHR}.annot.gz'
+	run:
+		shell("""
+		set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/make_annot.py \
+		--gene-set-file {input[0]} \
+		--gene-coord-file {input[1]} \
+		--windowsize 100000 \
+		--bimfile {input[2]} \
+		--annot-file {output[0]}
+		set -eu
+		""")
+
+rule calculate_LD_scores:
+	'Compute LD scores for the annotations generated in previous rule.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.{auto_CHR}.annot.gz',
+		'/home/pol/software/ldsc/resources/hapmap3_snps/hm.{auto_CHR}.snp',
+		expand('/home/pol/software/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{{auto_CHR}}.{ext}', ext= ['bed', 'bim', 'fam'])
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.{auto_CHR}.l2.ldscore.gz',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.{auto_CHR}.l2.M_5_50'
+	params:
+		'/home/pol/software/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{auto_CHR}',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.{auto_CHR}'
+	run:
+		shell("""
+		set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+		python2 /home/pol/software/ldsc/ldsc.py \
+		--l2 \
+		--bfile {params[0]} \
+		--ld-wind-cm 1 \
+		--annot {input[0]} \
+		--out {params[1]} \
+		--print-snps {input[1]} \
+		--thin-annot
+		""")
+
+rule partitioned_heritability_own_annotations:
+	'LDSC partitioned heritability.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/{pheno}.txt.sumstats.gz',
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{{cell_types}}.{auto_CHR}.l2.ldscore.gz', auto_CHR= auto_CHR_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{{cell_types}}.{auto_CHR}.l2.M_5_50', auto_CHR= auto_CHR_nms) , 
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{{cell_types}}.{auto_CHR}.annot.gz', auto_CHR= auto_CHR_nms)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/{pheno}_{cell_types}.log',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/{pheno}_{cell_types}.results'
+	params:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/{pheno}_{cell_types}',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}'
+	wildcard_constraints:
+		pheno= '|'.join(pheno_nms)
+	threads: 2
+	shell:
+                '''
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/ldsc.py \
+                --h2 {input[0]}\
+                --ref-ld-chr /home/pol/software/ldsc/baseline/baseline/baselineLD.,{params[1]}. \
+                --w-ld-chr /home/pol/software/ldsc/baseline/weights_hm3_no_hla/weights.\
+                --overlap-annot \
+                --frqfile-chr /home/pol/software/ldsc/baseline/1000G_Phase3_frq/1000G.EUR.QC. \
+                --out {params[0]} \
+		--thin-annot
+                conda deactivate
+                set -eu
+                '''
+
+rule intermediary_file_merging_enrichment:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/{pheno}_{cell_types}.results',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/gene_sets/{cell_types}.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/temp/{pheno}/{cell_types}.txt')
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d= d.loc[d.Category== 'L2_1', :]
+		x= pd.read_csv(input[1], sep= '\t', header= None, names= ['Gene'])
+		d['n_genes']= x.shape[0]
+		d['Category']= wildcards.cell_types
+		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule merge_partitioned_heritability:
+	''
+	input:
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/temp/{{pheno}}/{cell_types}.txt', cell_types= cell_types_names)
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/all/{pheno}_labor_DEGs.txt'
+	shell:
+		'''
+		head -1 {input[0]} > {output[0]}
+		tail -n +2 -q {input} >> {output[0]}
+		'''
+
+rule annotation_file_cts_control:
+	'Create annotation file using LD-score scripts for control.'
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/references/labor_associated_controls.txt',
+		'/home/pol/software/ldsc/resources/ENSG_coord.txt',
+		'/home/pol/software/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{auto_CHR}.bim'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/{auto_CHR}.annot.gz'
+	wildcard_constraints:
+		auto_CHR= '|'.join([str(i) for i in auto_CHR_nms])
+	run:
+		shell("""
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/make_annot.py \
+                --gene-set-file {input[0]} \
+                --gene-coord-file {input[1]} \
+                --windowsize 100000 \
+                --bimfile {input[2]} \
+                --annot-file {output[0]}
+                set -eu
+                """)
+
+rule calculate_LD_scores_control_annotation:
+        'Compute LD scores for the annotations generated in previous rule for control annotation.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/{auto_CHR}.annot.gz',
+                '/home/pol/software/ldsc/resources/hapmap3_snps/hm.{auto_CHR}.snp',
+                expand('/home/pol/software/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{{auto_CHR}}.{ext}', ext= ['bed', 'bim', 'fam'])
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/{auto_CHR}.l2.ldscore.gz',
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/{auto_CHR}.l2.M_5_50'
+        params:
+                '/home/pol/software/ldsc/1000G_EUR_Phase3_plink/1000G.EUR.QC.{auto_CHR}',
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/{auto_CHR}'
+	wildcard_constraints:
+		auto_CHR= '|'.join([str(i) for i in auto_CHR_nms])
+	run:
+		
+                shell("""
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/ldsc.py \
+                --l2 \
+                --bfile {params[0]} \
+                --ld-wind-cm 1 \
+                --annot {input[0]} \
+                --out {params[1]} \
+                --print-snps {input[1]} \
+                --thin-annot
+                """)
+
+rule prepare_ldct_file_labor_DEG:
+        'Prepare a file with two columns. The first column has a label, for example the name of the cell type in question. The second column has a comma delimited list of LD scores to include when doing the regression for that cell type.'
+        input:
+                expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{{cell_types}}.{auto_CHR}.l2.M_5_50', auto_CHR= auto_CHR_nms),
+                expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{{cell_types}}.{auto_CHR}.annot.gz', auto_CHR= auto_CHR_nms),
+                expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/{auto_CHR}.annot.gz', auto_CHR= auto_CHR_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/{auto_CHR}.l2.ldscore.gz', auto_CHR= auto_CHR_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/{auto_CHR}.l2.M_5_50', auto_CHR= auto_CHR_nms)
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/ldcts/temp/{cell_types}.txt')
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.',
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/'
+        run:
+                if wildcards.cell_types!= 'overall':
+                        d= pd.DataFrame({'V1': [wildcards.cell_types], 'V2': ','.join(params)})
+                        d.to_csv(output[0], sep= '\t', header= False, index= False)
+                else:
+                        open(output[0], 'a').close()
+
+rule merge_ldcts:
+        ''
+        input:
+                expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/ldcts/temp/{cell_types}.txt', cell_types= cell_types_names)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/ldcts/labor_DEG.ldcts'
+        shell:
+                'cat {input} > {output[0]}'
+
+rule partitioned_heritability_own_annotations_cts:
+        'LDSC partitioned heritability.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/{pheno}.txt.sumstats.gz',
+		'/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/controls/ldcts/labor_DEG.ldcts',
+                expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.{auto_CHR}.l2.ldscore.gz', auto_CHR= auto_CHR_nms, cell_types= cell_types_names),
+                expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.{auto_CHR}.l2.M_5_50', auto_CHR= auto_CHR_nms, cell_types= cell_types_names),
+                expand('/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/labor_degs/{cell_types}.{auto_CHR}.annot.gz', auto_CHR= auto_CHR_nms, cell_types= cell_types_names)
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/cts/{pheno}.log',
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/cts/{pheno}.results.txt'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/LDscore/own_annot/results/cts/{pheno}',
+        wildcard_constraints:
+                pheno= '|'.join(pheno_nms)
+        threads: 2
+        shell:
+                '''
+                set +eu
+                source /home/pol/miniconda3/etc/profile.d/conda.sh
+                conda activate ldsc
+                python2 /home/pol/software/ldsc/ldsc.py \
+                --h2-cts {input[0]}\
+                --ref-ld-chr /home/pol/software/ldsc/baseline/baseline/baselineLD. \
+		--ref-ld-chr-cts {input[1]} \
+                --w-ld-chr /home/pol/software/ldsc/baseline/weights_hm3_no_hla/weights.\
+                --overlap-annot \
+                --frqfile-chr /home/pol/software/ldsc/baseline/1000G_Phase3_frq/1000G.EUR.QC. \
+                --out {params[0]} \
+                --thin-annot
+                conda deactivate
+                set -eu
+                '''
+
