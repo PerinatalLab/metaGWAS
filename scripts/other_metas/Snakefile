@@ -107,3 +107,45 @@ rule add_missing_rsid_nearestGene_other_metas:
         	        d= pd.merge(d, ne, on= 'ID', how= 'left')
                 	d.to_csv(output[nfile], sep= '\t', header= True, index= False, compression= 'gzip')
 
+rule format_other_meta_sumstats_nomoba_no23andme:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme_NOMOBA/meta_GAraw_1.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme_NOMOBA/temp/meta_GAraw_1.txt'),
+        run:
+                for nfile in range(len(input)):
+                        d= pd.read_csv(input[nfile], sep= '\t', header= 0)
+                        d['Allele1']= d['Allele1'].str.upper()
+                        d['Allele2']= d['Allele2'].str.upper()
+                        d= d.loc[(d.TOTALSAMPLESIZE> (d['TOTALSAMPLESIZE'].max())/ 2), :]
+                        d[['CHR', 'POS', 'REF','EFF', 'SNP']]= d['MarkerName'].str.split(':', expand= True)
+                        d['CHR']= d['CHR'].astype(str).astype(int)
+                        d['POS']= d['POS'].astype(str).astype(int)
+                        d= d[['CHR', 'POS', 'Allele1', 'Allele2', 'TOTALSAMPLESIZE', 'Freq1', 'Effect', 'StdErr', 'P-value']]
+                        d.columns= ['CHR', 'POS', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']
+                        d['BETA']=np.where(d.REF > d.EFF, -1* d.BETA, d.BETA)
+                        d['EAF']= np.where(d.REF > d.EFF, 1 - d.EAF, d.EAF)
+                        d['CHR']= d['CHR'].astype(str).astype(int)
+                        d['POS']= d['POS'].astype(str).astype(int)
+                        d['pvalue']= d['pvalue'].astype(str).astype(float)
+                        d.loc[d.REF > d.EFF, ['REF', 'EFF']] = d.loc[d.REF > d.EFF, ['EFF', 'REF']].values
+                        d['ID']= d.CHR.astype(int).astype(str) + ':' + d.POS.astype(int).astype(str) + ':' + d.REF + ':' + d.EFF
+                        d= d.loc[((d.pvalue>0) & (d.pvalue <1)), :]
+                        d.to_csv(output[nfile], header=True, index= False, sep= '\t')
+
+rule add_missing_rsid_nearestGene_other_metas_nomoba_no23andme:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/dbSNP153.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme_NOMOBA/temp/meta_GAraw_1.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme_NOMOBA/NO23andme_noMOBA_Maternal_GAraw.txt.gz',
+        run:
+                rs= pd.read_csv(input[0], sep= '\t', header=0)
+                d= pd.read_csv(input[1], sep= '\t', header=0)
+                d= pd.merge(d, rs, on= 'ID', how= 'left')
+                d['RSID']= d.name
+                d.drop('name', 1, inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
+
