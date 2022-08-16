@@ -79,12 +79,13 @@ rule coloc_GW_BW_GA:
         ''
         input:
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
-                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/BW_maternal_effect.txt',
+                '/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt',
                 '/mnt/hdd/common/pol/references/approx_LD_blocks.txt'
         output:
-                '/mnt/hdd/common/pol/metaGWAS/colocalization/BW/GW/pph_GAraw_BW.txt',
-                '/mnt/hdd/common/pol/metaGWAS/colocalization/BW/GW/results_GAraw_BW.txt'
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/{repr_pheno}/pph_GAraw.txt',
+                '/mnt/hdd/common/pol/metaGWAS/colocalization/{repr_pheno}/results_GAraw.txt'
         conda:
                 'environments/coloc.yml'
         script:
                 'coloc_BW_GA_GW.R'
+
