@@ -144,15 +144,36 @@ rule table_IV_repr_phenos:
 rule table_2SMR_repr_phenos:
 	''
 	input:
-		'/mnt/hdd/common/pol/metaGWAS/MR/results/{pheno}/MR_repr_phenos.txt'
+		'/mnt/hdd/common/pol/metaGWAS/MR/results/{pheno}/MR_repr_phenos.txt',
+		'/mnt/hdd/common/pol/metaGWAS/MR/results/{pheno}/MR_clusters.txt'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/Tables/2MR_repr_phenos_{pheno}.txt'
 	run:
 		d= pd.read_csv(input[0], sep= '\t', header= 0)
-		horm= ['CBAT_fem', 'SHBG_fem', 'Testosterone_fem']
+		x= pd.read_csv(input[1], sep= '\t', header= 0)
+		d= pd.concat([d, x])
+		horm= ['CBAT_fem', 'SHBG_fem', 'Testosterone_fem', 'SHBG_fem_cluster', 'Testosterone_fem_cluster']
 		df= d.loc[d.trait.isin(horm), :]
-		ivw= df.loc[d.method== 'IVW', :]
-		egger= df.loc[d.method== 'MR-Egger', :]
+		ivw= df.loc[df.method== 'IVW', :]
+		egger= df.loc[df.method== 'MR-Egger', :]
 		egger_int= df.loc[np.array(df.index[df.method== 'MR-Egger' ] + 1), :]
 		d= pd.concat([ivw, egger, egger_int])
 		d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule table_heterogeneity:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_{pheno}_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/het/{pheno}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['MarkerName', 'HetISq', 'HetPVal'])
+		d[['CHR', 'POS', 'REF','EFF', 'SNP']]= d['MarkerName'].str.split(':', expand= True)
+		x= pd.read_csv(input[1], sep= '\t', header= 0)
+		d['REF'], d['EFF']= np.where(d.REF> d.EFF, [d.EFF, d.REF], [d.REF, d.EFF])
+		d['ID']= np.where(d.REF> d.EFF, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.EFF + ':' + d.REF, d.CHR.apply(str) + ':' + d.POS.apply(str) + ':' + d.REF + ':' + d.EFF)
+		d= pd.merge(d, x, on= 'ID')
+		d.to_csv(output[0], sep= '\t', header= True, index= False, columns= ['ID', 'HetISq', 'HetPVal'])
+
+
