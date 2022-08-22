@@ -1,0 +1,16 @@
+name: run_r
+
+channels: 
+        - conda-forge 
+        - bioconda
+        - defaults
+        - eikematthias
+
+dependencies:
+        - R=4.1
+        - zlib=1.2.11
+        - r-data.table
+        - r-dplyr
+        - r-r.utils
+        - r-stringr
+        - r-bigsnpr

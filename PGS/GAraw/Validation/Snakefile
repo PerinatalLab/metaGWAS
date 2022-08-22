@@ -1,0 +1,88 @@
+import pandas as pd
+import numpy as np
+
+ext_nms=("log","nopred","nosex","profile")
+
+rule all:
+        ''
+        input:
+               '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model7.txt' 
+
+rule best_betas:
+        'get weighted betas from results of the training and match them to rsid'
+        input:
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/beta_grid',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/r2_matrix',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/result_grid',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/info_snp'
+
+        output:
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/best_beta',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/best_beta_snps',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/snp_beta.txt'
+
+        script:
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/scripts/best_beta_merge.R'  
+
+rule reduce_validation_genotypes:
+        'reduce the snps in the validation genotype files to only include snps from the best betas'
+        input:
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Data/validation/Filtered_Merged/validation_genotypes.bed',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/snp_beta.txt'
+        params:
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Data/validation/Filtered_Merged/validation_genotypes',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/Genotypes/best_beta_validation'
+        output:
+                expand('/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/Genotypes/best_beta_validation.{ext}', ext=ext_nms)
+        shell:
+                '''
+                   plink \
+                        --bfile {params[0]} \
+                        --score {input[1]} sum  \
+                        --out {params[1]}
+                '''  
+              
+
+#rule filter_best_beta_results:
+#        'need to filter the best beta results as not all snps are in the best beta validation genotype files'
+#        input:
+  #             '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Training/Results/training/best_beta',
+ #              '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/Genotypes/best_beta_validation.bim'
+ #       output:
+ #              '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/best_beta_validation'
+ #       script:
+ #               '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/scripts/filter_best_betas.R'
+
+                
+#rule calculate_prs_validation:
+#        'calculate the prs for the validation cohort'        
+#        input:
+#                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/best_beta_validation',
+#                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/Genotypes/best_beta_validation.bed'
+#        params:
+#                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/Genotypes/best_beta_validation.rds',
+#                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/Genotypes/best_beta_validation.bk'
+#        output:
+#                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Data/prs_validation.txt'
+#        script:
+#                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/scripts/calculate_prs_validation.R'
+
+### Couldn't get below to run and performed it in R no worries
+rule validation_models:
+        'predict gest age with PRS validation cohort'
+        input:
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/GAraw/Validation/Data/Genotypes/best_beta_validation.profile',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Garaw/Training/Data/GAraw_pheno_validation.txt'
+        output:
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model1.txt',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model2.txt',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model3.txt',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model4.txt',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model5.txt',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model6.txt',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model7.txt',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model8.txt',
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/Results/model9.txt'
+        script:
+                '/mnt/work2/chrisf/meta_gest_duration/prs_80-20_split/Validation/scripts/validation_models.R'
+            

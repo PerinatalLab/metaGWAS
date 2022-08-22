@@ -1,0 +1,185 @@
+import pandas as pd
+import numpy as np
+import os
+import time
+
+
+#pheno_nms=['GAraw','allPTD']
+pheno_nms=['GAraw']
+CHR_nms= range(1,24)
+ext_nms= ['bed','bim','fam']
+
+#batch_nms= ['Rotterdam2', 'Rotterdam1', 'Harvest', 'Norment']
+batch_nms= ['training','validation']
+
+rule all:
+	''
+	input:
+		expand('Training/Data/{batch}/Filtered_Merged/{batch}_genotypes.{ext_bfile}', ext_bfile=ext_nms, batch= batch_nms),
+                expand('Training/Results/{batch}/result_grid', batch= 'training')
+
+rule create_training_dataset:
+    'create dataset from Moba that excludes Rotterdam2 and TED as well as using other exclusion criteria'
+        input:
+	        '/mnt/archive/moba/pheno/v10/V10_1.1.1-200701/child.gz',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pedigree/mobagen-ethnic-core-samples.kin0',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/flaglist-merged/mobagen-flaglist-n99259.txt',
+                '/mnt/archive/moba/pheno/v10/V10_1.1.1-200701/delivery.gz',
+                '/mnt/archive/moba/pheno/v10/V10_1.1.1-200701/mother_health.gz',
+                '/mnt/archive/moba/pheno/v10/V10_1.1.1-200701/pregnancy.gz',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/aux/pca/mobagen-total/mobagen-total-proj-pc'
+        output:
+                'Training/Data/GAraw_pheno_training.txt',
+                'Training/Data/GAraw_pheno_validation.txt'
+
+        script:
+                'scripts/PRS_training_cohort.R'
+
+rule filter_info_score:
+	''
+#HQ_snps is high quality snps after filtering on info and EAF
+	input:
+		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/markerinfo/{CHR}-markerinfo'
+	output:
+		'Training/Data/HQ_snps/snp_list_range_{CHR}.txt'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d.columns= ['CHR', 'POS', 'ID', 'REF', 'ALT', 'TYPED', 'INFO', 'EAF']
+		d= d.loc[d.INFO> 0.7, :]
+		d= d.loc[(d.EAF> 0.01) & (d.EAF< 0.99), :]
+		if '23' in input[0]: d.CHR= 23
+		d['POS2']= d.POS
+		d= d[['CHR', 'POS', 'POS2', 'ID']]
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule remove_duplicates:
+     'Remove all duplicated RISDs'
+        input:
+                '/mnt/work2/pol/metaGWAS/results/other_meta/noMOBA_Maternal_GAraw.txt.gz'
+        output:
+                'Training/Data/noMOBA_Maternal_nodups_GAraw.txt'
+        script:
+                'scripts/remove_duplicated_rsid.R'
+
+
+rule QC_training_genotypes:
+      'Need to QC the MoBa Genotpyed data to only include the training cohort'
+        input:
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/plink/{CHR}.bed',
+                'Training/Data/GAraw_pheno_{batch}.txt',
+		'Training/Data/HQ_snps/snp_list_range_{CHR}.txt'
+        params:
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/plink/{CHR}', 
+                'Training/Data/Plink_QC_snplist/{batch}/{CHR}.QC'
+        output:
+                temp(expand('Training/Data/Plink_QC_snplist/{{batch}}/{{CHR}}.QC.{ext}',  ext=['snplist', 'nosex', 'log', 'fam']))
+        shell:
+                '''
+                   plink \
+                        --bfile {params[0]} \
+                        --keep {input[1]} \
+                        --extract range {input[2]} \
+			--maf 0.01 \
+                        --hwe 1e-6 \
+                        --geno 0.01 \
+                        --mind 0.01 \
+                        --write-snplist \
+                        --make-just-fam \
+                        --out {params[1]}
+                '''
+
+rule Filter_snps:
+     'filter genotypes keeping only snps for only people in training data set'
+        input:
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/plink/{CHR}.bed',
+                'Training/Data/Plink_QC_snplist/{batch}/{CHR}.QC.snplist', 
+                'Training/Data/GAraw_pheno_{batch}.txt'
+        params:
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/plink/{CHR}',
+                'Training/Data/{batch}/Filtered/filtered.{CHR}'
+        output:
+                temp(expand('Training/Data/{{batch}}/Filtered/filtered.{{CHR}}.{ext_bfile}', ext_bfile=ext_nms))
+        shell:
+                '''
+                   plink \
+                        --bfile {params[0]} \
+                        --make-bed \
+                        --extract {input[1]} \
+                        --keep {input[2]} \
+                        --out {params[1]}
+                '''
+
+rule bed_file_list:
+	''
+	input:
+		expand('Training/Data/{{batch}}/Filtered/filtered.{CHR}.{ext_bfile}', ext_bfile= ext_nms, CHR=CHR_nms)
+	output:
+		'Training/Data/{batch}/Filtered/file_list/merge_list.txt'
+	run:
+		bed= [i for i in input if i.endswith('.bed')]
+		bim= [i for i in input if i.endswith('.bim')]
+		fam= [i for i in input if i.endswith('.fam')]
+		d= pd.DataFrame({'bed': bed, 'bim': bim, 'fam': fam})
+		d= d.loc[~d.bed.str.endswith('.1.bed'), :]
+		d.to_csv(output[0], sep= '\t', header= False, index= False)
+		
+rule Merge_filtered:
+      'Use plink to merge all of the filtered genotyped data together'
+        input:
+                'Training/Data/{batch}/Filtered/filtered.1.bed',
+                'Training/Data/{batch}/Filtered/file_list/merge_list.txt',
+                expand('Training/Data/{{batch}}/Filtered/filtered.{CHR}.{ext_bfile}', ext_bfile= ext_nms, CHR=CHR_nms)
+        params:
+                'Training/Data/{batch}/Filtered/filtered.1',
+                'Training/Data/{batch}/Filtered_Merged/{batch}_genotypes'
+        output:
+                expand('Training/Data/{{batch}}/Filtered_Merged/{{batch}}_genotypes.{ext_bfile}', ext_bfile=ext_nms)
+        shell:
+                '''
+                   plink \
+                        --bfile {params[0]} \
+                        --merge-list {input[1]} \
+                        --make-bed \
+                        --out {params[1]}
+                '''
+
+rule LDpred:
+	'run the LDpred Script'
+	input:
+		'Training/Data/GAraw_pheno_{batch}.txt', 
+		'/mnt/work2/chrisf/meta_gest_duration/New_PRS/HapMap3_snps/EUR_hapmap_freq_allchr.txt',
+		'Training/Data/noMOBA_Maternal_nodups_GAraw.txt',
+		'Training/Data/{batch}/Filtered_Merged/{batch}_genotypes.bed'
+	params:
+		'Training/Data/{batch}/Filtered_Merged/{batch}_genotypes.rds'
+	threads: 20
+#	conda:
+#		'envs/bigsnpr.yml'
+	output:
+                'Training/Results/{batch}/info_snp',
+                'Training/Results/{batch}/fam.order',
+                'Training/Results/{batch}/h2_est',
+                'Training/Results/{batch}/beta_grid',
+                'Training/Results/{batch}/grid.param',
+                'Training/Results/{batch}/pred_grid',
+                'Training/Results/{batch}/result_grid',
+                'Training/Results/{batch}/grid_prs',
+                'Training/Results/{batch}/r2_matrix',
+                'Training/Results/{batch}/map',
+		temp('Training/Data/{batch}/Filtered_Merged/{batch}_genotypes.bk')
+	script:
+		'scripts/LDpred_run.R'
+
+rule best_PRS_betas:
+     'choose the best betas from beta_result and r2_matrix to merge into RSIDs from info_snp'
+        input:
+                '/mnt/work2/chrisf/meta_gest_duration/New_PRS/Training/Results/beta_grid',
+                '/mnt/work2/chrisf/meta_gest_duration/New_PRS/Training/Results/r2_matrix',
+                '/mnt/work2/chrisf/meta_gest_duration/New_PRS/Training/Results/result_grid',
+                '/mnt/work2/chrisf/meta_gest_duration/New_PRS/Training/Results/info_snp'
+
+        output:
+                '/mnt/work2/chrisf/meta_gest_duration/New_PRS/Training/Results/best_beta'
+
+        script:
+                '/mnt/work2/chrisf/meta_gest_duration/New_PRS/Training/R_Scripts/best_beta_merge.R'
