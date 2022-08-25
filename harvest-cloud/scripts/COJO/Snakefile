@@ -12,7 +12,7 @@ rule filter_INFO_COJO:
 		'/mnt/archive/MOBAGENETICS/genotypes-base/aux/markerinfo/{allchrs}-markerinfo',
 		'/mnt/work2/pol/metaGWAS/results/meta/Maternal_GWAMA_{pheno}.txt.gz'
 	output:
-		'/mnt/work2/pol/metaGWAS/processed_data/cojo/{pheno}_filter_{allchrs}_variants.txt'
+		temp('/mnt/work2/pol/metaGWAS/processed_data/cojo/{pheno}_filter_{allchrs}_variants.txt')
 	run:
 		d= pd.read_csv(input[0], sep='\t', header=0, usecols= ['# [1]CHROM', '[2]POS', '[7]INFO'])
                 d.columns= ['CHR', 'POS', 'INFO']
@@ -66,10 +66,10 @@ rule modify_bim:
 		'/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}.bed',
 		'/mnt/work2/pol/metaGWAS/cojo/data/plink/temp/{pheno}/{allchrs}.fam'
 	output:
-		'/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.bim',
-		'/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.bed',
-		'/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.fam',
-		'/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/duplicates_{allchrs}.norsid.txt'
+		temp('/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.bim'),
+		temp('/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.bed'),
+		temp('/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/{allchrs}_norsid.fam'),
+		temp('/mnt/work2/pol/metaGWAS/cojo/data/plink/{pheno}/duplicates_{allchrs}.norsid.txt')
 	run:
 		d= pd.read_csv(input[0], sep= '\t', header= None, names= ['CHR', 'SNP', 'x1', 'POS', 'A1', 'A2'])
                 d['A1']= np.where(len(d.A1) > len(d.A2), 'I', d.A1)
@@ -106,7 +106,7 @@ rule format_sumstats_cojo:
 	input:
 		'/mnt/work2/pol/metaGWAS/results/meta/Maternal_GWAMA_{pheno}.txt.gz'
 	output:
-		'/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_{pheno}.txt'
+		temp('/mnt/work2/pol/metaGWAS/cojo/sumstats/sumstats_{pheno}.txt')
 	run:
 		d= pd.read_csv(input[0], sep= '\t', header= 0, compression= 'gzip', usecols= ['CHR', 'POS', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue', 'ID'])[['CHR', 'POS', 'ID', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue']]
 		d.columns= ['CHR', 'POS', 'SNP', 'A1', 'A2', 'N', 'freq', 'b', 'se', 'p']

@@ -59,12 +59,12 @@ else:
 if 'haplotype' in snakemake.input[0]:
         d= d.groupby('PREG_ID').sum().reset_index()
         d.columns= ['PREG_ID', snakemake.wildcards.haplo]
-elif 'GA' in snakemake.input[0]:
+elif 'decode' in snakemake.input[0]:
         d= d.groupby('IID').sum().reset_index()
-        d.columns= ['IID', snakemake.wildcards.haplo + 'GA_PGS']
+        d.columns= ['IID', snakemake.wildcards.sample + '_PGS']
 else:
 	d= d.groupby('IID').sum().reset_index()
-	d.columns= ['IID', snakemake.wildcards.BW + '_PGS']
+	d.columns['IID', snakemake.wildcards.sample + '_' + snakemake.wildcards.BW + '_PGS']
 
 
 d.to_csv(snakemake.output[0], sep ='\t', header= True, index= False)

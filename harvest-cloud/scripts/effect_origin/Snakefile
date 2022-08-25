@@ -42,7 +42,7 @@ rule list_trio_ids:
                 '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/dads_toextract.txt',
                 '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt'
         run:
-                d= pd.read_csv(input[0], sep= '\t', header= None, names= ['PREG_ID', 'IID', 'BATCH', 'Role'])
+                d= pd.read_csv(input[0], sep= '\t', header= None, names= ['IID', 'BATCH', 'PREG_ID', 'Role'])
                 x= pd.read_csv(input[1], sep= '\t', header= 0)
                 x= x.loc[x.genotypesOK== True, :]
                 x= x.loc[x.phenoOK== True, :]

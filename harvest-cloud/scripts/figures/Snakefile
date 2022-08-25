@@ -1,0 +1,80 @@
+repr_trait_nms= ['GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male', 'Testosterone_only_fem', 'CBAT_only_fem']
+
+
+rule data_plot_ADCY_individual_genetic_data:
+	''
+	input:
+		'/mnt/work/pol/rotterdam1/pheno/q1_v9.txt',
+		'/mnt/work2/pol/metaGWAS/ADCY5/processed_data/dosages/fets_DS3',
+		'/mnt/work2/pol/metaGWAS/ADCY5/processed_data/dosages/moms_DS3',
+		'/mnt/work2/pol/metaGWAS/ADCY5/processed_data/dosages/dads_DS3',
+		'/mnt/work2/pol/metaGWAS/pheno/pheno_trio.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/figures/data/ADCY5_individual_level.txt'
+	script:
+		'ADCY5_individual_variants.R'
+
+rule MR_data:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/MR/raw_data/all_traits_GAraw.txt',
+		'/mnt/work2/pol/metaGWAS/results/meta/Maternal_GWAMA_GAraw.txt.gz'
+	output:
+		'/mnt/work2/pol/metaGWAS/figures/data/MR_repr_phenos.txt'
+	script:
+		'MR_reproductive_traits.R'
+
+rule BW_MR_data:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/PGS/BW/raw_data/bw_SEM.txt',
+                '/mnt/work2/pol/metaGWAS/results/meta/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/work2/pol/metaGWAS/haplotype_analysis/pheno/spont_GA.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_fetal_effect_GRS_moms.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_fetal_effect_GRS_fets.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_fetal_effect_GRS_dads.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_h1.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_h2.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_h3.txt',
+		'/mnt/work2/pol/metaGWAS/PGS/BW/GRS/BW_h4.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/figures/data/MR_BW.txt'
+        script:
+                'MR_BW_GA.R'
+
+rule MR_fetal_GA:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/MR/raw_data/all_traits_GAraw.txt',
+		'/mnt/work2/pol/metaGWAS/results/GA_fetal.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/figures/data/MR_repr_phenos_GA_fetal.txt'
+	script:
+		'MR_reproductive_traits_fetal.R'
+
+
+rule MR_repr_pheno_individual_level:
+        ''
+        input:
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt',
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_h1.txt',
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_h2.txt',
+                '/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_h3.txt',
+		'/mnt/work2/pol/metaGWAS/MR/haplotypes/{repr_trait}_h4.txt'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/figures/data/MR_{repr_trait}.txt')
+        script:
+                'MR_repr_pheno_individual_level.R'
+
+rule concat_MR_repr_pheno_individual_level:
+	''
+	input:
+		expand('/mnt/work2/pol/metaGWAS/figures/data/MR_{repr_trait}.txt', repr_trait= repr_trait_nms)
+	output:
+		'/mnt/work2/pol/metaGWAS/figures/data/MR_repr_phenos_individual_level.txt'
+	shell:
+		'''
+		set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'estimate' >> {output[0]}
+		'''

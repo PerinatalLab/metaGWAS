@@ -70,7 +70,7 @@ freq_h3= mean(d$h3, na.rm= T)
 pval_maternal= tryCatch(linearHypothesis(m1, 'h1 + h2 = h3')[['Pr(>F)']][2], warning= function(w){NA}, error= function(w) {NA})
 pval_fetal= tryCatch(linearHypothesis(m1, 'h1 + h3 = h2')[['Pr(>F)']][2], warning= function(w){NA}, error= function(w) {NA})
 pval_poe= tryCatch(linearHypothesis(m1, 'h1 - h2 = h3')[['Pr(>F)']][2], warning= function(w){NA}, error= function(w) {NA})
-pval_h2_vs_h3= tryCatch(linearHypothesis(m1, 'h2 = h3')[['Pr(>F)']][2], warning= function(w){NA}, error= function(w) {NA})
+pval_h2_vs_h3= tryCatch(linearHypothesis(m1, 'h1 = h2')[['Pr(>F)']][2], warning= function(w){NA}, error= function(w) {NA})
 
 print(pval_maternal)
 results= paste(snp, n, freq_h1, freq_h2, freq_h3, beta_h1, se_h1, pvalue_h1, beta_h2, se_h2, pvalue_h2, beta_h3, se_h3, pvalue_h3, pval_maternal, pval_fetal, pval_poe, pval_h2_vs_h3, sep= '\t')

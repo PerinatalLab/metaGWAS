@@ -38,11 +38,10 @@ def calculate_PGS(d, ID):
 
 # Read data
 if 'haplotype' not in snakemake.input[0]:
-        cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(snakemake.input[0], 'r')]
-        betas= pd.read_csv(snakemake.input[2], sep= '\t', header= 0)
+        betas= pd.read_csv(snakemake.input[1], sep= '\t', header= 0)
         betas['chr']= betas['chr'].apply(str)
         df_list= list()
-        for d in pd.read_csv(snakemake.input[1], header= None, names= cols, sep= '\t', chunksize= 600):
+        for d in pd.read_csv(snakemake.input[0], header= 0, sep= '\t', chunksize= 600):
                 d= calculate_PGS(d, 'IID')
                 df_list.append(d)
         d= pd.concat(df_list)
@@ -60,7 +59,8 @@ if 'haplotype' in snakemake.input[0]:
         d.columns= ['PREG_ID', snakemake.wildcards.haplo]
 else:
         d= d.groupby('IID').sum().reset_index()
-        d.columns.values[0]= snakemake.wildcards.sample + '_' + snakemake.wildcards.repr_trait + '_PGS'
+        d.columns= ['IID', snakemake.wildcards.sample + '_' + snakemake.wildcards.repr_trait + '_PGS']
+	
 
 
 d.to_csv(snakemake.output[0], sep ='\t', header= True, index= False)
