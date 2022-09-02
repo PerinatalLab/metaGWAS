@@ -13,20 +13,15 @@ repr_trait_nms= ['GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'N
 
 
 include: 'scripts/effect_origin/Snakefile'
-#include: 'scripts/LDSCORE/Snakefile'
 include: 'scripts/PGS/Snakefile'
 include: 'scripts/reports/Snakefile'
 include: 'scripts/COJO/Snakefile'
 include: 'scripts/mtCOJO/Snakefile'
-include: 'scripts/GREML/Snakefile'
-#include: 'scripts/LDAK/Snakefile'
 include: 'scripts/BW_PGS/Snakefile'
-include: 'scripts/ADCY5/Snakefile'
 include: 'scripts/figures/Snakefile'
 include: 'scripts/MR_repr_phenos/Snakefile'
-#include: 'scripts/growth_PGS/Snakefile'
 include: 'scripts/fetal_SNP/Snakefile'
-include: 'scripts/GA_BW_pleiotropy_PGS/Snakefile'
+include: 'scripts/mediation_analysis/Snakefile'
 
 rule all:
 	'Collect all result files.'
@@ -74,7 +69,8 @@ rule all:
 		expand('/mnt/work2/pol/metaGWAS/PGS/BW/{BW}/pheno/delivery/BW_PGS.txt', BW= ['maternal_effect', 'fetal_effect']),
 		expand('/mnt/work2/pol/metaGWAS/PGS/GA/processed_data/delivery/BW_GA_PGS_{haplo}.txt', haplo= ['MT', 'MnT', 'PT']),
 		'/mnt/work2/pol/metaGWAS/PGS/GA/processed_data/delivery/lm_results/BW_GA_PGS.txt',
-		'/mnt/work2/pol/metaGWAS/GA_PGS/GRS/all_subjects.txt'
+		'/mnt/work2/pol/metaGWAS/GA_PGS/GRS/all_subjects.txt',
+		'/mnt/work2/pol/metaGWAS/mediation/delivery/BW_GA_mediation_analysis.txt'
 
 def selectUnrelated(input_kin, df, x):
 	kin= pd.read_csv(input_kin, header= 0, sep= '\t')

@@ -1,0 +1,107 @@
+import pandas as pd
+import numpy as np
+
+
+sexCHR_nms= ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22', 'X']
+
+CHR_nms= ['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16','17','18','19','20','21','22']
+
+sample_nms= ['moms', 'dads', 'fets']
+cohort_nms= ['harvestm12', 'harvestm24', 'rotterdam1', 'rotterdam2', 'normentfeb', 'normentmay']
+
+rule extract_regions_BW:
+	'Obtain two files (regions to extract in one, betas in the other).'
+	input:
+		'/mnt/work2/pol/metaGWAS/PGS/BW/raw_data/bw_SEM.txt'
+	output:
+		'/mnt/work2/pol/metaGWAS/mediation/BW/processed_data/regions_extract_{effect_origin_BW}.txt'
+	run:
+		eff= np.where(wildcards.effect_origin_BW== 'maternal_effect', 'Maternal Only', 'Fetal Only' )
+		d= pd.read_csv(input[0], sep= '\t', header= 0)
+		d= d.loc[d.classification== eff, :]
+		df= d[['chr', 'pos','pos']]
+		df.to_csv(output[0], sep= '\t', header= False, index= False)
+
+
+rule get_GT_BW:
+        'Extract GT from VCF file for a subset of genetic variants.'
+        input:
+                '/mnt/work2/pol/metaGWAS/mediation/BW/processed_data/regions_extract_{effect_origin_BW}.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/{sample}_toextract.txt',
+                '/mnt/archive/MOBAGENETICS/genotypes-base/imputed/all/vcf/{CHR}.vcf.gz'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/mediation/processed_data/GT/temp/{sample}/gt{CHR}/{effect_origin_BW}')
+        run:
+                shell("bcftools query -S {input[1]} -R {input[0]} -f '%CHROM\t%POS\t%REF\t%ALT[\t%GT]\n' {input[2]} -o {output[0]}")
+
+rule add_header_GT_BW:
+        'Add header to genotype files.'
+        input:
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/{sample}_toextract.txt',
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/GT/temp/{sample}/gt{CHR}/{effect_origin_BW}'
+        output:
+                temp('/mnt/work2/pol/metaGWAS/mediation/processed_data/GT/{sample}_GT{CHR}/{effect_origin_BW}')
+        run:
+                cols= ['chr','pos','ref','eff'] + [line.strip() for line in open(input[0], 'r')]
+                d= pd.read_csv(input[1], header= None, names= cols, sep= '\t')
+                d.drop_duplicates(['chr', 'pos'], keep=False, inplace= True)
+                d.to_csv(output[0], sep= '\t', header= True, index= False)
+
+rule concat_GT_chr_BW:
+        'Collect GT from all CHR.'
+        input:
+                expand('/mnt/work2/pol/metaGWAS/mediation/processed_data/GT/{{sample}}_GT{CHR}/{{effect_origin_BW}}', CHR= CHR_nms)
+        output:
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/GT/{sample}_GT_{effect_origin_BW}.txt'
+        shell:
+                '''
+                set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'chr' >> {output[0]}
+                '''
+
+
+
+rule get_allele_transmission_BW:
+        'Retrieve allele transmission from family trios (after phasing).'
+        input:
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/GT/fets_GT_{effect_origin_BW}.txt',
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/GT/moms_GT_{effect_origin_BW}.txt',
+                '/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt',
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/GT/dads_GT_{effect_origin_BW}.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/haplotypes/h1_PREG_ID_{effect_origin_BW}',
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/haplotypes/h2_PREG_ID_{effect_origin_BW}',
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/haplotypes/h3_PREG_ID_{effect_origin_BW}',
+                '/mnt/work2/pol/metaGWAS/mediation/processed_data/haplotypes/h4_PREG_ID_{effect_origin_BW}'
+        script:
+                'allele_transmission.py'
+
+
+rule linear_test:
+	''
+	input:
+		'/mnt/work2/pol/metaGWAS/mediation/processed_data/haplotypes/h1_PREG_ID_{effect_origin_BW}',
+		'/mnt/work2/pol/metaGWAS/mediation/processed_data/haplotypes/h2_PREG_ID_{effect_origin_BW}',
+		'/mnt/work2/pol/metaGWAS/mediation/processed_data/haplotypes/h3_PREG_ID_{effect_origin_BW}',
+		'/mnt/work2/pol/metaGWAS/mediation/processed_data/haplotypes/h4_PREG_ID_{effect_origin_BW}',
+		'/mnt/work2/pol/metaGWAS/effect_origin/p1724/pheno/fets_pheno.txt',
+		'/mnt/work2/pol/metaGWAS/effect_origin/aux/ids/parent_offspring_trios.txt'
+	output:
+		temp('/mnt/work2/pol/metaGWAS/mediation/delviery/temp/{effect_origin_BW}.txt')
+	script:
+		'linear_hypothesis.R'
+
+rule concat_BW_effect:
+        'Remove related individuals'
+        input:
+                '/mnt/work2/pol/metaGWAS/mediation/delviery/temp/fetal_effect.txt',
+		'/mnt/work2/pol/metaGWAS/mediation/delviery/temp/maternal_effect.txt'
+        output:
+                '/mnt/work2/pol/metaGWAS/mediation/delivery/BW_GA_mediation_analysis.txt'
+	shell:
+		'''
+                set +o pipefail;
+                head -1 {input[0]} > {output[0]}
+                cat {input} | grep -v 'freq' >> {output[0]}
+                '''
