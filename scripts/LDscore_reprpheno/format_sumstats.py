@@ -43,6 +43,8 @@ def select_format(repr_pheno, row):
 		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= pritchard(row)
 	if repr_pheno == 'PCOS':
 		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= PCOS(row)
+	if repr_pheno in ['Ruth_CBAT_female', 'Ruth_CBAT_male', 'Ruth_SHBG_female', 'Ruth_SHBG_male', 'Ruth_Testosterone_female', 'Ruth_Testosterone_male', 'Ruth_oestradiol']:
+		rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue= Ruth(row, repr_pheno) 
 	return [rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue]
 
 
@@ -62,6 +64,26 @@ def AMenopause(row):
 	rsid= ''
 	return [rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue]
 
+def Ruth(row, repr_pheno):
+	''
+	EAF= float(row['effect_allele_frequency'])
+	CHR= row['chromosome']
+	if CHR== 'X': CHR= 23
+	CHR= int(CHR)
+	POS= int(row['base_pair_location'])
+	REF= row['other_allele']
+	EFF= row['effect_allele']
+	BETA= float(row['beta'])
+	pvalue= float(row['p_value'])
+	SE= float(row['standard_error'])
+	N= np.where(repr_pheno== 'Ruth_SHBG_female', 189473,
+	np.where(repr_pheno== 'Ruth_SHBG_make', 180726,
+	np.where(repr_pheno== 'Ruth_Testosterone_female', 230454,
+	np.where(repr_pheno== 'Ruth_SHBG_male',194453 ,
+	np.where(repr_pheno== 'Ruth_CBAT_female', 188507,
+	np.where(repr_pheno== 'Ruth_SHBG_male', 178782, 206927))))))
+	rsid= row['variant_id']
+	return [rsid, CHR, POS, EAF, N, REF, EFF, BETA, SE, pvalue]
 
 def pritchard(row):
 	''

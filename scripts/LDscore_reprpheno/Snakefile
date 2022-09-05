@@ -1,4 +1,3 @@
-repr_pheno_nms= ['miscarriage', 'GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male']
 
 rule format_sumstats_repr_pheno:
 	''

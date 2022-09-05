@@ -5,7 +5,7 @@ rule colocalization:
 	input:
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_{pheno}.txt.gz',
 		'/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt',
-		'/mnt/hdd/common/pol/metaGWAS/topregions/final/{pheno}.txt'
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/{pheno}.txt'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/colocalization/{pheno}/pph_{repr_pheno}.txt',
 		'/mnt/hdd/common/pol/metaGWAS/colocalization/{pheno}/results_{repr_pheno}.txt'

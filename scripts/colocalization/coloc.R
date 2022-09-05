@@ -6,11 +6,11 @@ prior1= 1 * 10**-4
 prior2= 1 * 10**-4
 prior12= 5 * 10**-6
 
-d= fread(snakemake@input[[1]])
+d= fread(snakemake@input[[1]], select= c('ID', 'CHR', 'POS', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue', 'EAF'))
 d= select(d, ID, CHR, POS, TOTALSAMPLESIZE, BETA, SE, pvalue, EAF)
 d$MAF= ifelse(d$EAF>0.5, 1 - d$EAF, d$EAF)
 
-x= fread(snakemake@input[[2]])
+x= fread(snakemake@input[[2]], select= c('ID', 'REF', 'EFF', 'BETA', 'EAF', 'SE', 'N', 'pvalue'))
 
 x$BETA= ifelse(x$REF > x$EFF, -1 * x$BETA, x$BETA)
 
@@ -34,7 +34,7 @@ res_list= list()
 for(i in 1:nrow(z)) {
         row <- z[i,]
 	locus= paste0('chr', row[,'CHR'], '_', row[,'nearestGene'])
-        temp_df= filter(d, CHR== as.integer(row[, 'CHR']), POS >= as.integer(row[, 'pos1']), POS<= as.integer(row[, 'pos2']))
+        temp_df= filter(d, CHR== as.integer(row[, 'CHR']), POS >= as.integer(row[, 'POS']) - 250000, POS<= as.integer(row[, 'POS']) + 25000)
 	
 	if (nrow(temp_df)== 0) { 
 	PPH= data.frame(nsnps= 0, PP.H0.abf= 0,PP.H1.abf= 0,  PP.H2.abf= 0, PP.H3.abf= 0, PP.H4.abf= 0, locus= locus)

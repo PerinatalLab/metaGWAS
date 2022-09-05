@@ -207,6 +207,17 @@ rule conditional_BW_top_SEM_classification:
         script:
                 'BW_conditioning_top.R'
 
+rule mediation_individual_SNPs_BW_GA:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/mediation/BW_GA_mediation_analysis.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning_individual.tiff',
+                '/mnt/hdd/common/pol/metaGWAS/data_figures/top_BW_conditioning_individual.txt',
+                '/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual.pdf'
+        script:
+                'mediation_BW_GA_individual_level_data.R'
+
 rule MR_GA_BW_haplotype:
 	''
 	input:
@@ -341,7 +352,7 @@ rule forest_plot_EEFSEC:
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_GAraw_1.txt',
                 '/mnt/hdd/common/pol/metaGWAS/topregions/final/GAraw.txt'
 	output:
-		'/mnt/hdd/common/pol/metaGWAS/figures/EEFSEC_forest.pdf'
+		'/mnt/hdd/common/pol/metaGWAS/figures/{prev_locus}_forest.pdf'
 	script:
 		'forest_plot_EEFSEC.R'
 
@@ -408,3 +419,16 @@ rule PGS_correlations:
 		'/mnt/hdd/common/pol/metaGWAS/figures/GA_BW_PGS_correlations.pdf'
 	script:
 		'GA_BW_PGS_correlations.R'
+
+rule top_SNPs:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/GAraw.txt',
+		'/mnt/hdd/common/pol/metaGWAS/topregions/top_variants/allPTD.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_allPTD.txt.gz'
+	output:
+		'/mnt/hdd/common/pol/metaGWAS/figures/GA_PTD_BETA_correlations.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/GA_PTD_BETA_correlations_legend.pdf'
+	script:
+		'GAraw_vs_allPTD.R'

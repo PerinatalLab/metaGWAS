@@ -8,9 +8,9 @@ library('showtext')
 options(warn=-1)
 
 
-d= fread(snakemake@input[[1]], h= T)
+d= fread(snakemake@input[[1]], h= T, select= c('ID', 'CHR', 'POS', 'pvalue', 'nearestGene'))
 d$pheno= 'GAraw'
-x= fread(snakemake@input[[3]], h= T)
+x= fread(snakemake@input[[3]], h= T, select= c('ID', 'CHR', 'POS', 'pvalue', 'nearestGene'))
 x$pheno= 'allPTD'
 
 d= rbind(d, x)

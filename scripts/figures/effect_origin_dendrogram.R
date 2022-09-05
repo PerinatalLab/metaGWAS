@@ -10,7 +10,7 @@ library(gridExtra)
 library(dendextend)
 library(plyr)
 library(ggtree)
-
+library(scales)
 
 colorBlindBlack8= c("#000000", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7")
 
@@ -46,7 +46,8 @@ d$beta_MT= with(d, ifelse(beta_MT<0, -1 * beta_MT, beta_MT))
 
 d= gather(d, haplotype, beta, c('beta_MT', 'beta_MNT', 'beta_PT'))
 
-max_beta= max(abs(d$beta))
+max_beta= max(d$beta)
+min_beta= min(d$beta)
 
 
 d$haplotype= with(d, ifelse(haplotype== 'beta_MT', 'Maternal\ntransmitted', ifelse(haplotype== 'beta_MNT', 'Maternal\nnon-transmitted', 'Paternal\ntransmitted')))
@@ -66,7 +67,8 @@ labs <- sapply(
 p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
   theme_cowplot(8) +
   geom_tile() +
-  scale_fill_gradient2(low= colorBlindBlack8[4], high= colorBlindBlack8[2], mid= 'white', limits= c(-max_beta, max_beta), guide= 'none') +
+  #scale_fill_gradient2(low= colorBlindBlack8[4], high= colorBlindBlack8[2], mid= 'white', limits= c(min_beta, max_beta), guide= 'none', midpoint= 0) +
+scale_fill_gradientn(colours=c(colorBlindBlack8[4], 'white', colorBlindBlack8[2]), values= rescale(c(min_beta, 0, max_beta)), limits= c(min_beta, max_beta), guide= 'none') +
   coord_equal() +
   scale_x_discrete(labels= labs) +
   theme(axis.title= element_blank(),
@@ -77,14 +79,14 @@ p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
 	axis.text.x= element_text(angle= 45, hjust= 1),
         axis.line = element_line(colour = 'black', size = 0.2)) +
   geom_text_repel(data= filter(d, haplotype== 'Paternal\ntransmitted'), aes(x= rsid_lab, y= 4,
-                label= round(probability, 2)),  direction= 'y', size= 8/ .pt, box.padding = 0.01)  
+                label= round(probability, 2)),  direction= 'y', size= 8/ .pt, box.padding = 0.01)
 
 ggsave(snakemake@output[[1]], plot= p1, width= 180, height= 60, units= 'mm', dpi= 300)
 
 p1= ggplot(d, aes(rsid_lab, haplotype, fill= beta)) +
   theme_cowplot(8) +
   geom_tile() +
-  scale_fill_gradient2(low= colorBlindBlack8[4], high= colorBlindBlack8[2], mid= 'white', limits= c(-max_beta, max_beta), name= 'Effect size') +
+  scale_fill_gradientn(colours=c(colorBlindBlack8[4], 'white', colorBlindBlack8[2]), values= rescale(c(min_beta, 0, max_beta)), limits= c(min_beta, max_beta), name= 'Effect size') +
   coord_equal() +
 scale_x_discrete(labels= labs) +  
 theme(axis.title= element_blank(),
@@ -92,10 +94,13 @@ theme(axis.title= element_blank(),
         plot.margin = margin(0, 9, 0,0, "mm"),
         text= element_text(size= 9/ .pt),
         axis.text.y= element_text(hjust= 0.5),
-        axis.line = element_line(colour = 'black', size = 0.2)) +
+        axis.line = element_line(colour = 'black', size = 0.2),
+	legend.position= 'bottom') +
   geom_text_repel(data= filter(d, haplotype== 'Paternal\ntransmitted'), aes(x= rsid_lab, y= -0.05,
                                                                                 label= round(probability, 2)), direction= "y" ,
                   size= 6.5/ .pt) 
 ggsave(snakemake@output[[2]], plot= p1, width= 180, height= 100, units= 'mm', dpi= 300)
 
 fwrite(d, snakemake@output[[3]], sep= '\t')
+
+

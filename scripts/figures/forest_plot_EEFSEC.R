@@ -44,21 +44,30 @@ d= filter(d, !(cohort %in% c('PGPII', 'PGPIII', 'BIB', 'DNBCPTD', 'STORK', 'STOR
 
 d$cohort= paste0(d$cohort, ' (n= ', d$N, ')')
 
-temp_df= d[d$nearestGene== 'EEFSEC', ]
+temp_df= d[d$nearestGene== snakemake@wildcards[['prev_locus']], ]
 
 temp_df= temp_df[order(temp_df$N, decreasing= T), ]
 
+rsid= ifelse(snakemake@wildcards[['prev_locus']]== 'EEFSEC', 'rs2659685', 
+ifelse(snakemake@wildcards[['prev_locus']]== 'WNT4', 'rs12037376', 
+ifelse(snakemake@wildcards[['prev_locus']]== 'EBF1', 'rs2963463',
+ifelse(snakemake@wildcards[['prev_locus']]== 'AGTR2', 'rs5991030', 'rs28654158'))))
+
+gene= unique(temp_df$nearestGene)
+my_title = expression(paste0(italic(gene), " (,", rsid, ")"))
+
 p1= ggplot(temp_df, aes(x=factor(cohort, level = factor(cohort)), y=BETA, ymin= BETA - 1.96 * SE, ymax= BETA + 1.96 * SE, colour= !is.na(HetISq), shape= !is.na(HetISq)), alpha= 0.5) +
- geom_pointrange(size= 1) +
+ geom_pointrange(size= 0.4) +
 scale_shape_manual(values= c(15, 18), guide= F) +
  geom_hline(yintercept = 0, linetype=2) +
 scale_y_continuous(sec.axis = dup_axis()) +
- coord_flip() +
+ggtitle(parse(text = paste0(rsid, ' - ', "~italic('", unique(temp_df$nearestGene), "')"))) + 
+coord_flip() +
 scale_colour_manual(values= c(colorBlindBlack8[3], colorBlindBlack8[4]), guide= F) +
-theme_cowplot() +
+theme_cowplot(8) +
  xlab('') +
     ylab('Beta [95% CI]') +
 geom_vline(xintercept= 0, linetype= "dotted", colour= 'grey') 
 
-ggsave(snakemake@output[[1]], plot= p1, width= 120, height= 90, units= 'mm', dpi= 300)
+ggsave(snakemake@output[[1]], plot= p1, width= 140, height= 30.5  + 50/13 * nrow(temp_df), units= 'mm', dpi= 300)
 

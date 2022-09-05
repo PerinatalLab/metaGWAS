@@ -15,7 +15,7 @@ GAraw_coh_nms= ['23andme', 'ALSPAC', 'CHOP', 'DECODE',  'NFBC1966', 'STORK', 'ST
 GAnrm_coh_nms= ['ALSPAC', 'CHOP', 'DECODE',  'NFBC1966', 'STORK', 'STORKGROR', 'MOBAGENETICS', 'DBDS', 'DNBCGOYACASES', 'DNBCGOYACONTROLS', 'HUNT', 'DNBCPTD', 'DILT1DGC', 'WTCCC58BC', 'PGPIII', 'PGPII', 'BIB', 'HAPO', 'Viva', 'Gen3G', 'EFSOCH']
 
 
-repr_pheno_nms= ['miscarriage', 'GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male']
+repr_pheno_nms= ['miscarriage', 'GA_fetal', 'BW_maternal', 'AFB', 'AMenarche', 'AMenopause', 'NLB', 'Testosterone_fem', 'SHBG_fem', 'Oestradiol_fem', 'POP', 'Testosterone_male', 'PCOS', 'endometriosis', 'BW_fetal', 'BW_maternal_effect', 'BW_fetal_effect', 'leiomyoma_uterus', 'Preeclampsia', 'CBAT_fem', 'CBAT_male', 'SHBG_male', 'Ruth_CBAT_female', 'Ruth_CBAT_male', 'Ruth_SHBG_female', 'Ruth_SHBG_male', 'Ruth_Testosterone_female', 'Ruth_Testosterone_male', 'Ruth_oestradiol']
 
 top_coh_PTD_nms= ['23andme', 'DECODE', 'EGCUT', 'MOBAGENETICS', 'DBDS', 'FINNGEN']
 top_coh_GAraw_nms= ['23andme', 'DECODE', 'MOBAGENETICS', 'DBDS']
@@ -192,5 +192,8 @@ rule all:
 		expand('/mnt/hdd/common/pol/metaGWAS/colocalization/{repr_pheno}/pph_GAraw.txt', repr_pheno= repr_pheno_nms),
 		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/figures/evo.pdf',
-		'/mnt/hdd/common/pol/metaGWAS/figures/EEFSEC_forest.pdf',
-		'/mnt/hdd/common/pol/metaGWAS/figures/GA_BW_PGS_correlations.pdf'
+		expand('/mnt/hdd/common/pol/metaGWAS/figures/{prev_locus}_forest.pdf', prev_locus= ['EEFSEC', 'AGTR2', 'WNT4', 'EBF1', 'ADCY5']),
+		'/mnt/hdd/common/pol/metaGWAS/figures/GA_BW_PGS_correlations.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/GA_PTD_BETA_correlations.pdf',
+		expand('/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt', repr_pheno= repr_pheno_nms),
+		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual.pdf'
