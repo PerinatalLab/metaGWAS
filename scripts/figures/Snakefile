@@ -207,7 +207,7 @@ rule conditional_BW_top_SEM_classification:
         script:
                 'BW_conditioning_top.R'
 
-rule mediation_individual_SNPs_BW_GA:
+rule mediation_individual_SNPs_BW_GA_MoBa:
         ''
         input:
                 '/mnt/hdd/common/pol/metaGWAS/mediation/BW_GA_mediation_analysis.txt'
@@ -217,6 +217,18 @@ rule mediation_individual_SNPs_BW_GA:
                 '/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual.pdf'
         script:
                 'mediation_BW_GA_individual_level_data.R'
+
+rule mediation_individual_SNPs_BW_GA_deCODE:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/mediation/Birthweight_own_4Rev_adjSexYob_adjSonar_220905.txt',
+		'/mnt/hdd/common/pol/metaGWAS/mediation/Birthweight_mother_1stCh_4Rev_adjSexYobMAge_adjSonar_220905.txt'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning_individual_decode.tiff',
+                '/mnt/hdd/common/pol/metaGWAS/data_figures/top_BW_conditioning_individual_decode.txt',
+                '/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual_decode.pdf'
+        script:
+                'mediation_BW_GA_individual_level_data_decode.R'
 
 rule MR_GA_BW_haplotype:
 	''

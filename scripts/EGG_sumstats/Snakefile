@@ -11,48 +11,66 @@ rule format_EGG_sumstats_top10K:
 		d.drop_duplicates(['ID'], keep= 'first', inplace= True)
 		d.sort_values('pvalue', inplace= True, ascending= True)
 		d= d.iloc[0:99999, :]
-		d= d[['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue']]
+		d= d[['RSID', 'CHR', 'POS', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue']]
 		d.columns= ['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'PVALUE']
 		d.to_csv(output[0], sep= '\t', header= True, index= False)
 
 rule format_EGG_sumstats_no_23andMe_GAraw:
 	''
 	input:
-		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_GAraw.txt.gz'
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_GAraw.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_GAraw_1.txt'
 	output:
 		'/mnt/hdd/common/pol/metaGWAS/sumstats/EGG/no_23andMe/EGG_Maternal_GWAMA_GAraw.txt.gz'
 	run:
 		d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue'])
                 d.drop_duplicates(['ID'], keep= 'first', inplace= True)
-		d= d[['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue']]
-                d.columns= ['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'PVALUE']
-		d.sort_values(['CHR', 'POS'], ascending= True, inplace= True)
+		x= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['MarkerName', 'HetISq', 'HetPVal'])
+		x[['CHR', 'POS', 'REF', 'EFF', 'SNP']]= x['MarkerName'].str.split(':', expand= True)
+		x['ID']= x.CHR.astype(int).astype(str) + ':' + x.POS.astype(int).astype(str) + ':' + x.REF + ':' + x.EFF
+		x= x[['ID', 'HetISq', 'HetPVal']]
+		d= pd.merge(d, x, on= 'ID')
+		d= d[['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue', 'HetISq', 'HetPVal']]
+                d.columns= ['CHR_hg19', 'POS_hg19', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'PVALUE', 'HetISq', 'HetPVal']
+		d.sort_values(['CHR_hg19', 'POS_hg19'], ascending= True, inplace= True)
                 d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
 
 rule format_EGG_sumstats_no_23andMe_allPTD:
         ''
         input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_allPTD.txt.gz'
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/no23andme_Maternal_allPTD.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_1.txt'
         output:
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/EGG/no_23andMe/EGG_Maternal_GWAMA_allPTD.txt.gz'
         run:
                 d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue'])
                 d.drop_duplicates(['ID'], keep= 'first', inplace= True)
-		d= d[['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue']]
-                d.columns= ['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'PVALUE']
-		d.sort_values(['CHR', 'POS'], ascending= True, inplace= True)
+		x= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['MarkerName', 'HetISq', 'HetPVal'])
+                x[['CHR', 'POS', 'REF', 'EFF', 'SNP']]= x['MarkerName'].str.split(':', expand= True)
+                x['ID']= x.CHR.astype(int).astype(str) + ':' + x.POS.astype(int).astype(str) + ':' + x.REF + ':' + x.EFF
+                x= x[['ID', 'HetISq', 'HetPVal']]
+                d= pd.merge(d, x, on= 'ID')
+                d= d[['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue', 'HetISq', 'HetPVal']]
+                d.columns= ['CHR_hg19', 'POS_hg19', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'PVALUE', 'HetISq', 'HetPVal']
+                d.sort_values(['CHR_hg19', 'POS_hg19'], ascending= True, inplace= True)
                 d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
 
 rule format_EGG_sumstats_no_23andMe_postTerm:
         ''
         input:
-                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_postTerm.txt.gz'
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/Maternal_GWAMA_postTerm.txt.gz',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/meta_postTerm_1.txt'
         output:
                 '/mnt/hdd/common/pol/metaGWAS/sumstats/EGG/no_23andMe/EGG_Maternal_GWAMA_postTerm.txt.gz'
         run:
                 d= pd.read_csv(input[0], sep= '\t', header= 0, usecols= ['CHR', 'POS', 'ID', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue'])
-                d.drop_duplicates(['ID'], keep= 'first', inplace= True)
-		d= d[['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue']]
-                d.columns= ['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'PVALUE']
-		d.sort_values(['CHR', 'POS'], ascending= True, inplace= True)
+		d.drop_duplicates(['ID'], keep= 'first', inplace= True)
+		x= pd.read_csv(input[1], sep= '\t', header= 0, usecols= ['MarkerName', 'HetISq', 'HetPVal'])
+                x[['CHR', 'POS', 'REF', 'EFF', 'SNP']]= x['MarkerName'].str.split(':', expand= True)
+                x['ID']= x.CHR.astype(int).astype(str) + ':' + x.POS.astype(int).astype(str) + ':' + x.REF + ':' + x.EFF
+                x= x[['ID', 'HetISq', 'HetPVal']]
+                d= pd.merge(d, x, on= 'ID')
+                d= d[['CHR', 'POS', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'pvalue', 'HetISq', 'HetPVal']]
+                d.columns= ['CHR_hg19', 'POS_hg19', 'RSID', 'REF', 'EFF', 'EAF', 'TOTALSAMPLESIZE', 'BETA', 'SE', 'PVALUE', 'HetISq', 'HetPVal']
+                d.sort_values(['CHR_hg19', 'POS_hg19'], ascending= True, inplace= True)
                 d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')

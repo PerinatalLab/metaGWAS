@@ -196,4 +196,5 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/figures/GA_BW_PGS_correlations.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/figures/GA_PTD_BETA_correlations.pdf',
 		expand('/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt', repr_pheno= repr_pheno_nms),
-		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual.pdf'
+		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual.pdf',
+		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual_decode.pdf'
