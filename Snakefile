@@ -60,6 +60,7 @@ include: 'scripts/fetal_SNP/Snakefile'
 include: 'scripts/EGG_sumstats/Snakefile'
 include: 'scripts/eQTLs/Snakefile'
 include: 'scripts/pQTLs/Snakefile'
+include: 'scripts/LOCO_meta/Snakefile'
 
 rule all:
 	'Files to collect'
@@ -197,4 +198,5 @@ rule all:
 		'/mnt/hdd/common/pol/metaGWAS/figures/GA_PTD_BETA_correlations.pdf',
 		expand('/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt', repr_pheno= repr_pheno_nms),
 		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual.pdf',
-		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual_decode.pdf'
+		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual_decode.pdf',
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/topregions/{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms)
