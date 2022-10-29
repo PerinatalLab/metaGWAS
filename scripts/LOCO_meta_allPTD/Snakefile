@@ -1,0 +1,119 @@
+rule create_METAL_scripts_LOCO_allPTD:
+	''
+	input:
+		'scripts/LOCO_meta_allPTD/no23andme_metal_script_allPTD',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt'
+	output:
+		temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/scripts/meta_script_{allPTD_coh}.txt')
+	params:
+		'meta_allPTD_{allPTD_coh}_'
+	shell:
+		'grep -v {wildcards.allPTD_coh} {input[0]} | sed -e "s/to_replace/{params[0]}/g" > {output[0]}'
+
+rule METAL_LOCO_no23andme_allPTD:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/scripts/meta_script_{allPTD_coh}.txt',#'scripts/LOCO_meta/no23andme_meta_script_GAraw',
+                expand('/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms),
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/{allPTD_coh}.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/meta_allPTD_{allPTD_coh}_1.txt'),
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/log/METAL_log_{allPTD_coh}_allPTD.txt'
+        params:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/scripts/meta_script_{allPTD_coh}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/meta_allPTD_{allPTD_coh}_'
+	shell:
+#                grep -v {wildcards.GAraw_coh} {input[0]} > {params[0]}
+#		sed -i "s/to_replace/{{params[1]}}/g" {params[0]}
+		'''
+                /home/pol/software/generic-metal/metal {input[0]} >> {output[1]}
+                '''
+
+rule format_GWAS_bedtools_LOCO_allPTD:
+        ''
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/meta_allPTD_{allPTD_coh}_1.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/bed_meta_{allPTD_coh}.txt')
+        run:
+                d= pd.read_csv(input[0], sep= '\t', header=0, usecols= ['MarkerName', 'Allele1', 'P-value'])
+		d= d.loc[d['P-value']< 5e-3, :]
+                d['CHR']= d.MarkerName.str.split(':').str[0]
+                d['end']= d.MarkerName.str.split(':').str[1]
+                d['CHR']= d.CHR.astype('str').astype('int')
+                d['end']= d.end.astype('str').astype('int')
+                d['start']= d.end - 1
+                d['MarkerName']= d.MarkerName.str.replace(':SNP', '')
+                d['MarkerName']= d.MarkerName.str.replace(':INDEL', '')
+                d.sort_values(by= ['CHR', 'start'], inplace= True)
+                d= d[['CHR', 'start', 'end', 'MarkerName']]
+                d.to_csv(output[0], sep= '\t', header= False, index= False)
+
+rule bedtools_nearest_gene_LOCO_allPTD:
+        'Use bedtools to ad nearest protein coding gene.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/bed_meta_{allPTD_coh}.txt',
+                '/mnt/hdd/common/pol/metaGWAS/processed_data/UCSC_gene_cds.txt'
+        output:
+                temp('/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/NearestGene_{allPTD_coh}.txt')
+        shell:
+                'bedtools closest -t all -a {input[0]} -b {input[1]} > {output[0]}'
+
+rule QC_add_missing_nearestGene_LOCO_allPTD:
+	''
+	input:
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/meta_allPTD_{allPTD_coh}_1.txt',
+		'/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/NearestGene_{allPTD_coh}.txt'
+	output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/Maternal_GWAMA_{allPTD_coh}.txt.gz'
+	run:
+		d= pd.read_csv(input[0], sep= '\t', header=0)
+		d['Allele1']= d['Allele1'].str.upper()
+		d['Allele2']= d['Allele2'].str.upper()
+		d= d.loc[(d.TOTALSAMPLESIZE> (d['TOTALSAMPLESIZE'].max())/ 2), :]
+		d[['CHR', 'POS', 'REF','EFF', 'SNP']]= d['MarkerName'].str.split(':', expand= True)
+		d['CHR']= d['CHR'].astype(str).astype(int)
+		d['POS']= d['POS'].astype(str).astype(int)
+		d= d[['CHR', 'POS', 'Allele1', 'Allele2', 'TOTALSAMPLESIZE', 'Freq1', 'Effect', 'StdErr', 'P-value', 'HetISq', 'HetPVal']]
+		d.columns= ['CHR', 'POS', 'EFF', 'REF', 'TOTALSAMPLESIZE', 'EAF', 'BETA', 'SE', 'pvalue', 'HetISq', 'HetPVal']
+		d['BETA']=np.where(d.REF > d.EFF, -1* d.BETA, d.BETA)
+		d['EAF']= np.where(d.REF > d.EFF, 1 - d.EAF, d.EAF)
+		d['CHR']= d['CHR'].astype(str).astype(int)
+		d['POS']= d['POS'].astype(str).astype(int)
+		d['pvalue']= d['pvalue'].astype(str).astype(float)
+		d.loc[d.REF > d.EFF, ['REF', 'EFF']] = d.loc[d.REF > d.EFF, ['EFF', 'REF']].values
+		d['ID']= d.CHR.astype(int).astype(str) + ':' + d.POS.astype(int).astype(str) + ':' + d.REF + ':' + d.EFF
+		d= d.loc[((d.pvalue>0) & (d.pvalue <1)), :]
+                ne= pd.read_csv(input[1], sep= '\t', header= None, names= ['CHR', 'X', 'POS', 'ID', 'c1', 'p1', 'p2', 'nearestGene', 'Ensembl_gene'])
+                ne= ne[['ID', 'nearestGene']]
+                d= pd.merge(d, ne, on= 'ID', how= 'left')
+                d.to_csv(output[0], sep= '\t', header= True, index= False, compression= 'gzip')
+
+rule independent_GWAS_regions_LOCO_allPTD:
+        'Obtain a file with independent regions for top loci with a radius of 1.5 Mb.'
+        input:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/Maternal_GWAMA_{allPTD_coh}.txt.gz'
+        output:
+                '/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/topregions/{allPTD_coh}.txt'
+        run:
+                d= pd.read_csv(input[0], sep= '\t', compression= 'gzip', usecols= ['CHR', 'POS', 'pvalue', 'nearestGene', 'ID'])
+                df= d.loc[d.pvalue< 5*10**-8, :]
+                df.sort_values(by= 'pvalue', ascending= True, inplace= True)
+                df.drop_duplicates(subset= ['CHR', 'POS'], keep= 'first', inplace= True)
+                df_list= list()
+                for chrom in set(df.CHR):
+                        d_temp= df.loc[df.CHR== chrom, :]
+                        positions= d_temp.POS.values
+                        for pos in positions:
+                                if pos in d_temp.POS.values:
+                                        df_list.append(d_temp.loc[d_temp.POS== pos, :])
+                                        d_temp= d_temp.loc[(d_temp.POS < pos - (1.5*10**6)) | (d_temp.POS> pos + (1.5 * 10**6)), :]
+                                else:
+                                        continue
+                x= pd.concat(df_list)
+                x['pos1']= x.POS - 1.5*10**6
+                x['pos2']= x.POS + 1.5*10**6
+                x['CHR']= x.CHR.astype(str)
+                x['CHR']= np.where(x.CHR== '23', 'X', x.CHR)
+                x.to_csv(output[0], sep='\t', header= True, index= False, columns= ['CHR', 'pos1', 'pos2', 'nearestGene', 'ID', 'pvalue'])
+

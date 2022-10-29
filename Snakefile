@@ -61,6 +61,7 @@ include: 'scripts/EGG_sumstats/Snakefile'
 include: 'scripts/eQTLs/Snakefile'
 include: 'scripts/pQTLs/Snakefile'
 include: 'scripts/LOCO_meta/Snakefile'
+include: 'scripts/LOCO_meta_allPTD/Snakefile'
 
 rule all:
 	'Files to collect'
@@ -199,4 +200,5 @@ rule all:
 		expand('/mnt/hdd/common/pol/metaGWAS/repr_phenos/sumstats/{repr_pheno}.txt', repr_pheno= repr_pheno_nms),
 		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual.pdf',
 		'/mnt/hdd/common/pol/metaGWAS/figures/top_BW_conditioning2_individual_decode.pdf',
-		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/topregions/{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms)
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/topregions/{GAraw_coh}.txt', GAraw_coh= GAraw_coh_nms),
+		expand('/mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/topregions/{allPTD_coh}.txt', allPTD_coh= allPTD_coh_nms)

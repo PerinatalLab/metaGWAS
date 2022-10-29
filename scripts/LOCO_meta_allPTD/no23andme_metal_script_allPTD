@@ -30,7 +30,7 @@ PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/WTCCC58BC.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/PGPIII.txt
 PROCESS /mnt/hdd/common/pol/metaGWAS/sumstats/allPTD/filtered/PGPII.txt
 
-OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/other_meta/NO23andme/meta_allPTD_ .txt
+OUTFILE /mnt/hdd/common/pol/metaGWAS/sumstats/META/LOCO/allPTD/to_replace .txt
 
 ANALYZE HETEROGENEITY
 
