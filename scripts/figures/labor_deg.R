@@ -21,7 +21,7 @@ d$Category= factor(d$Category, levels= unique(d$Category))
 p1= ggplot(d, aes(Enrichment, -log10(Enrichment_p))) + 
 geom_point(aes(size= Enrichment_p< 0.05/ (nrow(d)-1)), shape= 21, stroke= 0.1, fill= colorBlindBlack8[4]) +
 xlab('Heritability enrichment') +
-ylab('-log10(Enrichment)') +
+ylab('-log10(P-value)') +
 theme_cowplot(font_size= 8) +
 geom_hline(yintercept= 0, size= 0.1) +
 geom_vline(xintercept= 0, size= 0.1) +
